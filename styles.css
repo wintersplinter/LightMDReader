@@ -1,4 +1,5 @@
 :root {
+  /* default theme = dark */
   --bg: #0f0f10;
   --panel: #151518;
   --text: #eaeaea;
@@ -7,7 +8,81 @@
   --btn: #2b2b31;
   --btn2: #1e1e23;
   --accent: #9ad3ff;
-  --content: #ffffff;
+
+  /* reader surface */
+  --reader-bg: rgba(255, 255, 255, 0.02);
+  --reader-border: var(--line);
+
+  /* markdown styling tokens */
+  --md-text: #e9e9ea;
+  --md-code-bg: rgba(255, 255, 255, 0.08);
+  --md-pre-bg: rgba(0, 0, 0, 0.35);
+  --md-quote-bg: rgba(154, 211, 255, 0.08);
+  --md-quote-border: rgba(154, 211, 255, 0.5);
+
+  /* “designer” heading + quote blocks (defaults for dark) */
+  --md-title-bg: transparent;
+  --md-title-text: var(--text);
+  --md-title-radius: 10px;
+
+  --md-quote-block-bg: var(--md-quote-bg);
+  --md-quote-block-text: var(--text);
+}
+
+/* LIGHT THEME */
+html[data-theme="light"] {
+  --bg: #f6f6f7;
+  --panel: #ffffff;
+  --text: #111214;
+  --muted: #4f5560;
+  --line: #d9dbe1;
+  --btn: #ffffff;
+  --btn2: #f0f1f3;
+  --accent: #0b66ff;
+
+  --reader-bg: #ffffff;
+  --reader-border: var(--line);
+
+  --md-text: #111214;
+  --md-code-bg: rgba(0, 0, 0, 0.06);
+  --md-pre-bg: rgba(0, 0, 0, 0.04);
+  --md-quote-bg: rgba(11, 102, 255, 0.08);
+  --md-quote-border: rgba(11, 102, 255, 0.35);
+
+  --md-title-bg: transparent;
+  --md-title-text: #111214;
+
+  --md-quote-block-bg: var(--md-quote-bg);
+  --md-quote-block-text: #111214;
+}
+
+/* DESIGNER THEME (brown + green) */
+html[data-theme="designer"] {
+  --bg: #e9ddcf; /* soft brown background */
+  --panel: #f2e9df; /* slightly lighter panel */
+  --text: #3b2a1f; /* dark brown base text */
+  --muted: #5a4334;
+  --line: #cbb8a6;
+  --btn: #f2e9df;
+  --btn2: #eadccc;
+  --accent: #2f6f4e; /* green accent */
+
+  --reader-bg: rgba(255, 255, 255, 0.35);
+  --reader-border: var(--line);
+
+  --md-text: #3b2a1f;
+  --md-code-bg: rgba(59, 42, 31, 0.1);
+  --md-pre-bg: rgba(59, 42, 31, 0.07);
+
+  /* Headings and blockquotes become “green blocks” with white text */
+  --md-title-bg: #2f6f4e; /* darker green */
+  --md-title-text: #ffffff;
+
+  --md-quote-block-bg: #2f6f4e;
+  --md-quote-block-text: #ffffff;
+
+  --md-quote-bg: rgba(47, 111, 78, 0.12);
+  --md-quote-border: rgba(47, 111, 78, 0.55);
 }
 
 * {
@@ -61,6 +136,14 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+.select {
+  background: var(--btn);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 .btn {
   background: var(--btn);
@@ -137,8 +220,8 @@ body {
 .reader {
   max-width: 900px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--line);
+  background: var(--reader-bg);
+  border: 1px solid var(--reader-border);
   border-radius: 18px;
   padding: 24px;
 }
@@ -158,22 +241,23 @@ body {
 }
 .reader p,
 .reader li {
-  color: #e9e9ea;
+  color: var(--md-text);
 }
 .reader a {
   color: var(--accent);
 }
 .reader code {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--md-code-bg);
   padding: 2px 6px;
   border-radius: 8px;
 }
+
 .reader pre {
   padding: 14px;
   border-radius: 14px;
   overflow: auto;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--md-pre-bg);
 }
 .reader pre code {
   background: transparent;
@@ -185,6 +269,42 @@ body {
   border-left: 4px solid rgba(154, 211, 255, 0.5);
   background: rgba(154, 211, 255, 0.08);
   border-radius: 10px;
+}
+/* Headings: normal in dark/light, green blocks in designer */
+.reader h1,
+.reader h2,
+.reader h3 {
+  color: var(--md-title-text);
+  background: var(--md-title-bg);
+  border-radius: var(--md-title-radius);
+  padding: 6px 10px;
+  display: inline-block;
+}
+.reader h1 {
+  font-size: 28px;
+  margin: 0 0 14px;
+}
+.reader h2 {
+  font-size: 22px;
+  margin: 22px 0 10px;
+}
+.reader h3 {
+  font-size: 18px;
+  margin: 18px 0 8px;
+}
+
+/* Blockquote: becomes green block in designer */
+.reader blockquote {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--md-quote-border);
+  background: var(--md-quote-block-bg);
+  color: var(--md-quote-block-text);
+  border-radius: 10px;
+}
+.reader blockquote p,
+.reader blockquote li {
+  color: inherit;
 }
 .reader table {
   border-collapse: collapse;

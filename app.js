@@ -8,6 +8,20 @@ const reader = document.getElementById("reader");
 
 const fileNameEl = document.getElementById("fileName");
 const fileSizeEl = document.getElementById("fileSize");
+const themeSelect = document.getElementById("themeSelect");
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("lightmdreader-theme", theme);
+}
+
+const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
+applyTheme(savedTheme);
+themeSelect.value = savedTheme;
+
+themeSelect.addEventListener("change", (e) => {
+  applyTheme(e.target.value);
+});
 
 function formatBytes(bytes) {
   if (bytes === 0) return "0 B";
