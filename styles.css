@@ -17,16 +17,17 @@
   --md-text: #e9e9ea;
   --md-code-bg: rgba(255, 255, 255, 0.08);
   --md-pre-bg: rgba(0, 0, 0, 0.35);
+
+  /* quote styling */
   --md-quote-bg: rgba(154, 211, 255, 0.08);
   --md-quote-border: rgba(154, 211, 255, 0.5);
+  --md-quote-block-bg: var(--md-quote-bg);
+  --md-quote-block-text: var(--text);
 
-  /* “designer” heading + quote blocks (defaults for dark) */
+  /* heading blocks (used by designer) */
   --md-title-bg: transparent;
   --md-title-text: var(--text);
   --md-title-radius: 10px;
-
-  --md-quote-block-bg: var(--md-quote-bg);
-  --md-quote-block-text: var(--text);
 }
 
 /* LIGHT THEME */
@@ -46,14 +47,14 @@ html[data-theme="light"] {
   --md-text: #111214;
   --md-code-bg: rgba(0, 0, 0, 0.06);
   --md-pre-bg: rgba(0, 0, 0, 0.04);
+
   --md-quote-bg: rgba(11, 102, 255, 0.08);
   --md-quote-border: rgba(11, 102, 255, 0.35);
+  --md-quote-block-bg: var(--md-quote-bg);
+  --md-quote-block-text: #111214;
 
   --md-title-bg: transparent;
   --md-title-text: #111214;
-
-  --md-quote-block-bg: var(--md-quote-bg);
-  --md-quote-block-text: #111214;
 }
 
 /* DESIGNER THEME (brown + green) */
@@ -78,11 +79,37 @@ html[data-theme="designer"] {
   --md-title-bg: #2f6f4e; /* darker green */
   --md-title-text: #ffffff;
 
-  --md-quote-block-bg: #2f6f4e;
-  --md-quote-block-text: #ffffff;
-
   --md-quote-bg: rgba(47, 111, 78, 0.12);
   --md-quote-border: rgba(47, 111, 78, 0.55);
+  --md-quote-block-bg: #2f6f4e;
+  --md-quote-block-text: #ffffff;
+}
+
+/* VS CODE BARS THEME */
+html[data-theme="vscode"] {
+  --bg: #0f0f10;
+  --panel: #151518;
+  --text: #eaeaea;
+  --muted: #a6a6a6;
+  --line: #2a2a2f;
+  --btn: #2b2b31;
+  --btn2: #1e1e23;
+
+  /* your look */
+  --accent: #5c80b1;
+
+  --reader-bg: rgba(255, 255, 255, 0.02);
+  --reader-border: var(--line);
+
+  --md-text: #e9e9ea;
+  --md-code-bg: rgba(255, 255, 255, 0.08);
+  --md-pre-bg: rgba(0, 0, 0, 0.35);
+
+  /* blockquote accent */
+  --md-quote-bg: rgba(92, 128, 177, 0.08);
+  --md-quote-border: #5c80b1;
+
+  /* (We will style headings for this theme with scoped CSS below) */
 }
 
 * {
@@ -227,18 +254,6 @@ body {
 }
 
 /* Reader typography */
-.reader h1 {
-  font-size: 28px;
-  margin: 0 0 14px;
-}
-.reader h2 {
-  font-size: 22px;
-  margin: 22px 0 10px;
-}
-.reader h3 {
-  font-size: 18px;
-  margin: 18px 0 8px;
-}
 .reader p,
 .reader li {
   color: var(--md-text);
@@ -263,14 +278,8 @@ body {
   background: transparent;
   padding: 0;
 }
-.reader blockquote {
-  margin: 12px 0;
-  padding: 10px 14px;
-  border-left: 4px solid rgba(154, 211, 255, 0.5);
-  background: rgba(154, 211, 255, 0.08);
-  border-radius: 10px;
-}
-/* Headings: normal in dark/light, green blocks in designer */
+
+/* Default headings: inline blocks using the designer variables (works for dark/light too) */
 .reader h1,
 .reader h2,
 .reader h3 {
@@ -293,7 +302,7 @@ body {
   margin: 18px 0 8px;
 }
 
-/* Blockquote: becomes green block in designer */
+/* Blockquote (designer uses green block, others use tinted background) */
 .reader blockquote {
   margin: 12px 0;
   padding: 10px 14px;
@@ -306,6 +315,8 @@ body {
 .reader blockquote li {
   color: inherit;
 }
+
+/* Tables */
 .reader table {
   border-collapse: collapse;
   width: 100%;
@@ -318,6 +329,43 @@ body {
 }
 .reader th {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================
+   DARK DESIGN THEME: Full-width heading bars
+   ============================ */
+html[data-theme="vscode"] .reader h1,
+html[data-theme="vscode"] .reader h2,
+html[data-theme="vscode"] .reader h3 {
+  display: block; /* full width bars */
+  padding: 0.6em 1em;
+  border-radius: 8px;
+  margin: 1.4em 0 0.7em 0;
+
+  color: #fbd904; /* your yellow */
+  font-weight: 400; /* not bold */
+  background: transparent; /* set per-level below */
+}
+
+html[data-theme="vscode"] .reader h1 {
+  background: #1e3a2f;
+  font-size: 1.9em;
+}
+
+html[data-theme="vscode"] .reader h2 {
+  background: #1a3329;
+  font-size: 1.6em;
+}
+
+html[data-theme="vscode"] .reader h3 {
+  background: #162b23;
+  font-size: 1.3em;
+}
+
+html[data-theme="vscode"] .reader h1 + p,
+html[data-theme="vscode"] .reader h2 + p,
+html[data-theme="vscode"] .reader h3 + p {
+  margin-top: 0.6em;
 }
 
 /* PRINT (PDF EXPORT) */
