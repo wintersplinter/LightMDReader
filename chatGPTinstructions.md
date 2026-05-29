@@ -1,0 +1,3 @@
+- i want to render the markdown using MDrender.js & customMarkdown.css
+- evaluate current functionality
+- improve app so it is a stable usable version
