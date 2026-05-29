@@ -163,6 +163,7 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .select {
   background: var(--btn);
@@ -223,13 +224,31 @@ body {
   padding: 22px;
 }
 
+.drop-zone {
+  min-height: calc(100vh - 101px);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.drop-zone.is-dragging {
+  border-color: var(--accent);
+  background: rgba(154, 211, 255, 0.06);
+}
+
 .empty {
   max-width: 780px;
   margin: 40px auto;
   padding: 26px;
   border: 1px dashed var(--line);
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.empty.error {
+  border-color: #d66;
 }
 .empty h1 {
   margin: 0 0 6px;
@@ -249,7 +268,7 @@ body {
   margin: 0 auto;
   background: var(--reader-bg);
   border: 1px solid var(--reader-border);
-  border-radius: 18px;
+  border-radius: 8px;
   padding: 24px;
 }
 
@@ -406,5 +425,44 @@ html[data-theme="vscode"] .reader h3 + p {
   }
   .reader table {
     page-break-inside: avoid;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .btn,
+  .select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .layout {
+    display: block;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .content {
+    padding: 14px;
+  }
+
+  .drop-zone {
+    min-height: 55vh;
+  }
+
+  .reader {
+    padding: 16px;
   }
 }

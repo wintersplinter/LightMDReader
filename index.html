@@ -7,6 +7,7 @@
     <title>LightMDReader</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./customMarkdown.css" />
   </head>
   <body>
     <header class="topbar">
@@ -26,7 +27,7 @@
           />
         </label>
 
-        <select id="themeSelect" class="select">
+        <select id="themeSelect" class="select" aria-label="Theme">
           <option value="dark" selected>Dark</option>
           <option value="light">Light</option>
           <option value="designer">Designer</option>
@@ -43,34 +44,39 @@
       <aside class="sidebar">
         <h2>Document</h2>
         <div class="meta">
-          <div><span class="k">File:</span> <span id="fileName">—</span></div>
-          <div><span class="k">Size:</span> <span id="fileSize">—</span></div>
+          <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
+          <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
+          <div><span class="k">Status:</span> <span id="statusText">Ready</span></div>
         </div>
 
         <h2>Tips</h2>
         <ul class="tips">
           <li>PDF export uses your browser print dialog.</li>
-          <li>Install as PWA via “Install app” in your browser menu.</li>
+          <li>You can also drop a markdown file into the reader.</li>
         </ul>
       </aside>
 
       <section class="content">
-        <div id="emptyState" class="empty">
-          <h1>Open a Markdown file</h1>
-          <p>
-            Choose a <code>.md</code> file to preview it. Then export it to PDF.
-          </p>
-        </div>
+        <div id="dropZone" class="drop-zone">
+          <div id="emptyState" class="empty">
+            <h1>Open a Markdown file</h1>
+            <p>
+              Choose a <code>.md</code> file to preview it. Then export it to PDF.
+            </p>
+          </div>
 
-        <article id="reader" class="reader" hidden></article>
+          <div id="errorState" class="empty error" hidden>
+            <h1>Could not render this file</h1>
+            <p id="errorMessage">Something went wrong while reading the markdown.</p>
+          </div>
+
+          <article id="reader" class="reader markdown-body" hidden></article>
+        </div>
       </section>
     </main>
 
-    <!-- Markdown renderer -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Sanitizer -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-
+    <script src="./MDrender.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

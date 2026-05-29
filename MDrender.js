@@ -1,33 +1,66 @@
-function loadScript(src, callback) {
-  const script = document.createElement("script");
-  script.src = src;
-  script.onload = callback;
-  document.head.appendChild(script);
-}
+(function () {
+  const scripts = [
+    "https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-footnote@4.0.0/dist/markdown-it-footnote.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-deflist@3.0.0/dist/markdown-it-deflist.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-sub@2.0.0/dist/markdown-it-sub.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-sup@2.0.0/dist/markdown-it-sup.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-attrs@4.3.1/markdown-it-attrs.browser.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js",
+  ];
 
-function loadScripts(scripts, callback) {
-  if (scripts.length === 0) {
-    callback();
-    return;
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+
+      if (existing?.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+
+      const script = existing || document.createElement("script");
+      script.src = src;
+      script.async = false;
+
+      script.addEventListener("load", () => {
+        script.dataset.loaded = "true";
+        resolve();
+      });
+
+      script.addEventListener("error", () => {
+        reject(new Error(`Could not load ${src}`));
+      });
+
+      if (!existing) {
+        document.head.appendChild(script);
+      }
+    });
   }
 
-  const [first, ...rest] = scripts;
-  loadScript(first, () => loadScripts(rest, callback));
-}
+  function addCustomMarkdown(text) {
+    return text.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
+  }
 
-loadScripts(
-  [
-    "https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-deflist/dist/markdown-it-deflist.min.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-sub/dist/markdown-it-sub.min.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-sup/dist/markdown-it-sup.min.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-attrs/markdown-it-attrs.browser.js",
-    "https://cdn.jsdelivr.net/npm/markdown-it-task-lists/dist/markdown-it-task-lists.min.js",
-  ],
-  function () {
+  function openLinksOutsidePreview(tokens, index, options, env, self) {
+    const token = tokens[index];
+    const hrefIndex = token.attrIndex("href");
+
+    if (hrefIndex >= 0 && /^https?:\/\//i.test(token.attrs[hrefIndex][1])) {
+      token.attrSet("target", "_blank");
+      token.attrSet("rel", "noopener noreferrer");
+    }
+
+    return self.renderToken(tokens, index, options);
+  }
+
+  function configureRenderer() {
+    if (!window.markdownit) {
+      throw new Error("markdown-it is unavailable.");
+    }
+
     const md = window
       .markdownit({
+        breaks: false,
         html: true,
         linkify: true,
         typographer: true,
@@ -37,29 +70,30 @@ loadScripts(
       .use(window.markdownitSub)
       .use(window.markdownitSup)
       .use(window.markdownItAttrs)
-      .use(window.markdownitTaskLists);
+      .use(window.markdownitTaskLists, {
+        enabled: false,
+        label: true,
+        labelAfter: true,
+      });
 
-    function addCustomMarkdown(text) {
-      return text.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
-    }
+    md.renderer.rules.link_open = openLinksOutsidePreview;
 
-    window.renderMarkdown = function (markdownText) {
-      return md.render(addCustomMarkdown(markdownText));
+    window.renderMarkdown = function renderMarkdown(markdownText) {
+      return md.render(addCustomMarkdown(markdownText || ""));
     };
 
     window.markdownReady = true;
     window.dispatchEvent(new Event("markdown-ready"));
+  }
 
-    const editor = document.getElementById("editor");
-    const preview = document.getElementById("preview");
+  const ready = scripts
+    .reduce((chain, src) => chain.then(() => loadScript(src)), Promise.resolve())
+    .then(configureRenderer)
+    .catch((error) => {
+      window.markdownReady = false;
+      window.dispatchEvent(new CustomEvent("markdown-error", { detail: { error } }));
+      throw error;
+    });
 
-    if (editor && preview) {
-      function update() {
-        preview.innerHTML = window.renderMarkdown(editor.value);
-      }
-
-      editor.addEventListener("input", update);
-      update();
-    }
-  },
-);
+  window.LightMDRenderer = { ready };
+})();
