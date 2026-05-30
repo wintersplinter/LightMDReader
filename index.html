@@ -29,6 +29,10 @@
           />
         </label>
 
+        <button id="folderBtn" class="btn" type="button">
+          Open folder
+        </button>
+
         <select id="themeSelect" class="select" aria-label="Theme">
           <option value="dark" selected>Dark</option>
           <option value="light">Light</option>
@@ -48,6 +52,11 @@
           <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
           <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
           <div><span class="k">Status:</span> <span id="statusText">Ready</span></div>
+        </div>
+
+        <div id="folderSection" hidden>
+          <h2>Folder</h2>
+          <div id="folderNav" class="folder-nav"></div>
         </div>
 
         <h2>Tips</h2>

@@ -1,6 +1,7 @@
 /* global DOMPurify */
 
 const fileInput = document.getElementById("fileInput");
+const folderBtn = document.getElementById("folderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const dropZone = document.getElementById("dropZone");
 
@@ -12,8 +13,17 @@ const reader = document.getElementById("reader");
 const fileNameEl = document.getElementById("fileName");
 const fileSizeEl = document.getElementById("fileSize");
 const statusText = document.getElementById("statusText");
+const folderSection = document.getElementById("folderSection");
+const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
 const availableThemes = new Set(["dark", "light", "brown"]);
+const markdownFilePattern = /\.(md|markdown|txt)$/i;
+const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
+const externalUrlPattern = /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i;
+
+let folderFiles = new Map();
+let markdownFiles = [];
+let objectUrls = [];
 
 function setStatus(message) {
   statusText.textContent = message;
@@ -44,6 +54,42 @@ function formatBytes(bytes) {
   );
 
   return `${(bytes / Math.pow(k, index)).toFixed(index === 0 ? 0 : 1)} ${sizes[index]}`;
+}
+
+function clearObjectUrls() {
+  objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  objectUrls = [];
+}
+
+function normalizePath(path) {
+  const parts = [];
+
+  path
+    .replace(/\\/g, "/")
+    .split("/")
+    .forEach((part) => {
+      if (!part || part === ".") return;
+      if (part === "..") {
+        parts.pop();
+        return;
+      }
+      parts.push(part);
+    });
+
+  return parts.join("/");
+}
+
+function dirname(path) {
+  const index = path.lastIndexOf("/");
+  return index >= 0 ? path.slice(0, index) : "";
+}
+
+function resolveRelativePath(fromPath, targetPath) {
+  const cleanTarget = targetPath.split("#")[0].split("?")[0];
+  const decodedTarget = decodeURIComponent(cleanTarget);
+  const basePath = dirname(fromPath);
+
+  return normalizePath(basePath ? `${basePath}/${decodedTarget}` : decodedTarget);
 }
 
 function waitForMarkdownRenderer() {
@@ -81,6 +127,7 @@ function waitForMarkdownRenderer() {
 }
 
 function showEmpty() {
+  clearObjectUrls();
   emptyState.hidden = false;
   errorState.hidden = true;
   reader.hidden = true;
@@ -88,6 +135,7 @@ function showEmpty() {
 }
 
 function showError(message) {
+  clearObjectUrls();
   errorMessage.textContent = message;
   emptyState.hidden = true;
   errorState.hidden = false;
@@ -96,6 +144,7 @@ function showError(message) {
 }
 
 function showReader(html) {
+  clearObjectUrls();
   reader.innerHTML = html;
   reader.hidden = false;
   emptyState.hidden = true;
@@ -114,7 +163,55 @@ function sanitizeHtml(html) {
   });
 }
 
-async function renderDocument(markdownText) {
+async function hydrateLocalImages(context) {
+  if (!context?.path || !folderFiles.size) return;
+
+  const images = [...reader.querySelectorAll("img[src]")];
+
+  await Promise.all(
+    images.map(async (image) => {
+      const src = image.getAttribute("src");
+
+      if (!src || externalUrlPattern.test(src)) return;
+
+      const imagePath = resolveRelativePath(context.path, src);
+      const handle = folderFiles.get(imagePath);
+
+      if (!handle || !imageFilePattern.test(imagePath)) return;
+
+      try {
+        const file = await handle.getFile();
+        const objectUrl = URL.createObjectURL(file);
+        objectUrls.push(objectUrl);
+        image.src = objectUrl;
+      } catch (error) {
+        console.warn(`Could not load local image: ${imagePath}`, error);
+      }
+    }),
+  );
+}
+
+function wireLocalMarkdownLinks(context) {
+  if (!context?.path || !markdownFiles.length) return;
+
+  [...reader.querySelectorAll("a[href]")].forEach((link) => {
+    const href = link.getAttribute("href");
+
+    if (!href || externalUrlPattern.test(href)) return;
+
+    const targetPath = resolveRelativePath(context.path, href);
+    const targetExists = markdownFiles.some((entry) => entry.path === targetPath);
+
+    if (!targetExists) return;
+
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openFolderMarkdown(targetPath);
+    });
+  });
+}
+
+async function renderDocument(markdownText, context = null) {
   setStatus("Loading renderer...");
   await waitForMarkdownRenderer();
 
@@ -122,18 +219,28 @@ async function renderDocument(markdownText) {
   const rawHtml = window.renderMarkdown(markdownText);
   const safeHtml = sanitizeHtml(rawHtml);
   showReader(safeHtml);
+  await hydrateLocalImages(context);
+  wireLocalMarkdownLinks(context);
   setStatus("Rendered");
+}
+
+function clearFolderMode() {
+  folderFiles = new Map();
+  markdownFiles = [];
+  folderNav.innerHTML = "";
+  folderSection.hidden = true;
 }
 
 async function openMarkdownFile(file) {
   if (!file) return;
 
-  if (!/\.(md|markdown|txt)$/i.test(file.name)) {
+  if (!markdownFilePattern.test(file.name)) {
     showError("Choose a markdown or plain text file.");
     setStatus("Unsupported file");
     return;
   }
 
+  clearFolderMode();
   fileNameEl.textContent = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
   setStatus("Reading...");
@@ -150,8 +257,115 @@ async function openMarkdownFile(file) {
   }
 }
 
+async function scanDirectory(directoryHandle, basePath = "") {
+  for await (const [name, handle] of directoryHandle.entries()) {
+    const path = basePath ? `${basePath}/${name}` : name;
+
+    if (handle.kind === "directory") {
+      await scanDirectory(handle, path);
+      continue;
+    }
+
+    if (handle.kind !== "file") continue;
+
+    const normalizedPath = normalizePath(path);
+    folderFiles.set(normalizedPath, handle);
+
+    if (markdownFilePattern.test(name)) {
+      markdownFiles.push({ name, path: normalizedPath, handle });
+    }
+  }
+}
+
+function renderFolderNav() {
+  folderNav.innerHTML = "";
+
+  markdownFiles.forEach((entry) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "folder-item";
+    button.textContent = entry.path;
+    button.dataset.path = entry.path;
+    button.addEventListener("click", () => openFolderMarkdown(entry.path));
+    folderNav.appendChild(button);
+  });
+
+  folderSection.hidden = markdownFiles.length === 0;
+}
+
+function setActiveFolderItem(path) {
+  [...folderNav.querySelectorAll(".folder-item")].forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.path === path);
+  });
+}
+
+async function openFolderMarkdown(path) {
+  const entry = markdownFiles.find((file) => file.path === path);
+  if (!entry) return;
+
+  setActiveFolderItem(path);
+  setStatus("Reading...");
+
+  try {
+    const file = await entry.handle.getFile();
+    const text = await file.text();
+    fileNameEl.textContent = entry.path;
+    fileSizeEl.textContent = formatBytes(file.size);
+    await renderDocument(text, { path: entry.path });
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Something went wrong while reading the file.");
+    setStatus("Error");
+  }
+}
+
+async function openFolder() {
+  if (!window.showDirectoryPicker) {
+    showError("Folder opening is not supported in this browser. Use a Chromium-based browser, or open a single markdown file.");
+    setStatus("Folder unsupported");
+    return;
+  }
+
+  setStatus("Choosing folder...");
+
+  try {
+    const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
+    clearObjectUrls();
+    folderFiles = new Map();
+    markdownFiles = [];
+    fileNameEl.textContent = directoryHandle.name;
+    fileSizeEl.textContent = "Folder";
+    setStatus("Scanning folder...");
+
+    await scanDirectory(directoryHandle);
+    markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
+    renderFolderNav();
+
+    if (!markdownFiles.length) {
+      showError("This folder does not contain markdown files.");
+      setStatus("No markdown files");
+      return;
+    }
+
+    await openFolderMarkdown(markdownFiles[0].path);
+  } catch (error) {
+    if (error.name === "AbortError") {
+      setStatus("Ready");
+      return;
+    }
+
+    console.error(error);
+    showError(error.message || "Could not open this folder.");
+    setStatus("Error");
+  }
+}
+
 fileInput.addEventListener("change", (e) => {
   openMarkdownFile(e.target.files?.[0]);
+});
+
+folderBtn.addEventListener("click", () => {
+  openFolder();
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {

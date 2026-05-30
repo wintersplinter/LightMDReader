@@ -195,6 +195,38 @@ body {
   color: var(--muted);
 }
 
+.folder-nav {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.folder-item {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.folder-item:hover,
+.folder-item:focus {
+  border-color: var(--line);
+  background: var(--btn2);
+  outline: none;
+}
+
+.folder-item.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .content {
   padding: 22px;
 }
