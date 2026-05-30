@@ -118,6 +118,7 @@
   display: block;
   margin: 1.4em 0 1em 0;
   color: var(--md-text);
+  border-radius: 0;
   /*font-weight: 400;*/
   line-height: 1.25;
   padding: 1.2em 0.5em 0.2em 0.5em;
@@ -130,7 +131,7 @@
   border-left: none; /*4px solid var(--md-hard-accent-color);*/
   border-right: none; /*4px solid var(--md-hard-accent-color);*/
   /*border-bottom: 2.5px solid var(--md-brown-medium);*/
-  border-radius: 8px;
+  border-radius: 0px;
   color: var(--md-brown-white);
   font-family: var(--font-Title);
   letter-spacing: -0.01em;
@@ -449,6 +450,7 @@
 .markdown-body blockquote {
   color: var(--md-text);
   border-left: 4px solid var(--md-blue);
+  border-radius: 0;
   padding: 0.2em 0 0.2em 1em;
   margin-left: 0;
   margin-right: 0;
@@ -753,6 +755,18 @@
 .markdown-body pre::-webkit-scrollbar-thumb {
   background: var(--md-border);
   border-radius: 3px;
+}
+
+/* Final corner guard for rendered markdown structure.
+   Kept late in the file so app-level reader rules cannot round these shapes. */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6,
+.markdown-body blockquote {
+  border-radius: 0 !important;
 }
 
 /* ==========================================================

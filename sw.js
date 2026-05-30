@@ -1,9 +1,11 @@
-const CACHE_NAME = "lightmdreader-v0-2";
+const CACHE_NAME = "lightmdreader-v0-4";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./customMarkdown.css",
+  "./customMarkdown.light.css",
+  "./customMarkdown.brown.css",
   "./MDrender.js",
   "./app.js",
   "./manifest.webmanifest",

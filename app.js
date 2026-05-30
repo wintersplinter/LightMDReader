@@ -13,19 +13,21 @@ const fileNameEl = document.getElementById("fileName");
 const fileSizeEl = document.getElementById("fileSize");
 const statusText = document.getElementById("statusText");
 const themeSelect = document.getElementById("themeSelect");
+const availableThemes = new Set(["dark", "light", "brown"]);
 
 function setStatus(message) {
   statusText.textContent = message;
 }
 
 function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("lightmdreader-theme", theme);
+  const safeTheme = availableThemes.has(theme) ? theme : "dark";
+  document.documentElement.setAttribute("data-theme", safeTheme);
+  localStorage.setItem("lightmdreader-theme", safeTheme);
+  themeSelect.value = safeTheme;
 }
 
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
 applyTheme(savedTheme);
-themeSelect.value = savedTheme;
 
 themeSelect.addEventListener("change", (e) => {
   applyTheme(e.target.value);

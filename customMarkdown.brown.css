@@ -1,0 +1,41 @@
+/* Brown markdown color overrides.
+   customMarkdown.css remains the dark/default structure and style. */
+
+html[data-theme="brown"] .markdown-body {
+  --md-bg: transparent;
+  --md-text: #261f18;
+  --md-text-muted: #554634;
+  --md-text-dim: #725f47;
+
+  --md-green: #2f6f4e;
+  --md-green-soft: #2f6f4e1c;
+  --md-color-code: #4f4537;
+
+  --md-blue: #416f7b;
+  --md-blue-soft: #416f7b1c;
+
+  --md-brown-white: #211a13;
+  --md-brown-light: #332718;
+  --md-brown-medium: #5e482f;
+  --md-brown-dark: #765c3d;
+  --md-brown-dark-backdrop: #765c3d24;
+
+  --md-border: #9f8968;
+  --md-border-soft: #b8a27e;
+  --md-code-bg: #d3c09d;
+  --md-table-bg: transparent;
+  --md-table-header-bg: #d1bd98;
+  --md-table-row-alt-bg: #c2ad87;
+
+  --md-link: #1e5964;
+  --md-link-hover: #153f47;
+}
+
+html[data-theme="brown"] .markdown-body kbd,
+html[data-theme="brown"] .markdown-body details {
+  background: #d7c4a1;
+}
+
+html[data-theme="brown"] .markdown-body input[type="checkbox"] {
+  background: #e1d0ad;
+}
