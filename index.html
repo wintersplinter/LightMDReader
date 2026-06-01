@@ -19,18 +19,26 @@
       </div>
 
       <div class="actions">
-        <label class="btn">
+        <button id="openFileBtn" class="btn" type="button">
           Open .md
-          <input
-            id="fileInput"
-            type="file"
-            accept=".md,.markdown,text/markdown,text/plain"
-            hidden
-          />
-        </label>
+        </button>
+        <input
+          id="fileInput"
+          type="file"
+          accept=".md,.markdown,text/markdown,text/plain"
+          hidden
+        />
 
         <button id="folderBtn" class="btn" type="button">
           Open folder
+        </button>
+
+        <button id="refreshFileBtn" class="btn secondary" type="button" disabled>
+          Refresh file
+        </button>
+
+        <button id="refreshFolderBtn" class="btn secondary" type="button" disabled>
+          Refresh folder
         </button>
 
         <select id="themeSelect" class="select" aria-label="Theme">

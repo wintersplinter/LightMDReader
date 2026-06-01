@@ -1,7 +1,10 @@
 /* global DOMPurify */
 
 const fileInput = document.getElementById("fileInput");
+const openFileBtn = document.getElementById("openFileBtn");
 const folderBtn = document.getElementById("folderBtn");
+const refreshFileBtn = document.getElementById("refreshFileBtn");
+const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const dropZone = document.getElementById("dropZone");
 
@@ -24,6 +27,11 @@ const externalUrlPattern = /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i;
 let folderFiles = new Map();
 let markdownFiles = [];
 let objectUrls = [];
+let currentFile = null;
+let currentFileHandle = null;
+let currentDirectoryHandle = null;
+let currentFolderPath = "";
+let currentMode = "empty";
 
 function setStatus(message) {
   statusText.textContent = message;
@@ -132,6 +140,7 @@ function showEmpty() {
   errorState.hidden = true;
   reader.hidden = true;
   exportBtn.disabled = true;
+  refreshFileBtn.disabled = true;
 }
 
 function showError(message) {
@@ -150,6 +159,7 @@ function showReader(html) {
   emptyState.hidden = true;
   errorState.hidden = true;
   exportBtn.disabled = false;
+  refreshFileBtn.disabled = currentMode === "empty";
 }
 
 function sanitizeHtml(html) {
@@ -225,13 +235,23 @@ async function renderDocument(markdownText, context = null) {
 }
 
 function clearFolderMode() {
+  currentDirectoryHandle = null;
+  currentFolderPath = "";
   folderFiles = new Map();
   markdownFiles = [];
   folderNav.innerHTML = "";
   folderSection.hidden = true;
+  refreshFolderBtn.disabled = true;
 }
 
-async function openMarkdownFile(file) {
+function setSingleFileMode(file, fileHandle = null) {
+  clearFolderMode();
+  currentFile = file;
+  currentFileHandle = fileHandle;
+  currentMode = "file";
+}
+
+async function openMarkdownFile(file, fileHandle = null) {
   if (!file) return;
 
   if (!markdownFilePattern.test(file.name)) {
@@ -240,7 +260,7 @@ async function openMarkdownFile(file) {
     return;
   }
 
-  clearFolderMode();
+  setSingleFileMode(file, fileHandle);
   fileNameEl.textContent = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
   setStatus("Reading...");
@@ -254,6 +274,42 @@ async function openMarkdownFile(file) {
     setStatus("Error");
   } finally {
     fileInput.value = "";
+  }
+}
+
+async function openFile() {
+  if (!window.showOpenFilePicker) {
+    fileInput.click();
+    return;
+  }
+
+  setStatus("Choosing file...");
+
+  try {
+    const [fileHandle] = await window.showOpenFilePicker({
+      multiple: false,
+      types: [
+        {
+          description: "Markdown and text files",
+          accept: {
+            "text/markdown": [".md", ".markdown"],
+            "text/plain": [".txt"],
+          },
+        },
+      ],
+    });
+
+    const file = await fileHandle.getFile();
+    await openMarkdownFile(file, fileHandle);
+  } catch (error) {
+    if (error.name === "AbortError") {
+      setStatus("Ready");
+      return;
+    }
+
+    console.error(error);
+    showError(error.message || "Could not open this file.");
+    setStatus("Error");
   }
 }
 
@@ -303,6 +359,10 @@ async function openFolderMarkdown(path) {
   const entry = markdownFiles.find((file) => file.path === path);
   if (!entry) return;
 
+  currentFile = null;
+  currentFileHandle = null;
+  currentFolderPath = path;
+  currentMode = "folder";
   setActiveFolderItem(path);
   setStatus("Reading...");
 
@@ -331,8 +391,15 @@ async function openFolder() {
   try {
     const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
     clearObjectUrls();
+    currentFile = null;
+    currentFileHandle = null;
+    currentDirectoryHandle = directoryHandle;
+    currentFolderPath = "";
+    currentMode = "folder";
     folderFiles = new Map();
     markdownFiles = [];
+    refreshFileBtn.disabled = true;
+    refreshFolderBtn.disabled = true;
     fileNameEl.textContent = directoryHandle.name;
     fileSizeEl.textContent = "Folder";
     setStatus("Scanning folder...");
@@ -340,8 +407,11 @@ async function openFolder() {
     await scanDirectory(directoryHandle);
     markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
     renderFolderNav();
+    refreshFolderBtn.disabled = false;
 
     if (!markdownFiles.length) {
+      currentFolderPath = "";
+      refreshFileBtn.disabled = true;
       showError("This folder does not contain markdown files.");
       setStatus("No markdown files");
       return;
@@ -360,12 +430,80 @@ async function openFolder() {
   }
 }
 
+async function refreshCurrentFile() {
+  if (currentMode === "folder" && currentFolderPath) {
+    await openFolderMarkdown(currentFolderPath);
+    return;
+  }
+
+  if (currentMode !== "file") return;
+
+  setStatus("Refreshing file...");
+
+  try {
+    const file = currentFileHandle ? await currentFileHandle.getFile() : currentFile;
+    await openMarkdownFile(file, currentFileHandle);
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Could not refresh this file.");
+    setStatus("Error");
+  }
+}
+
+async function refreshCurrentFolder() {
+  if (!currentDirectoryHandle) return;
+
+  const pathToReopen = currentFolderPath;
+  setStatus("Refreshing folder...");
+
+  try {
+    clearObjectUrls();
+    folderFiles = new Map();
+    markdownFiles = [];
+    folderNav.innerHTML = "";
+
+    await scanDirectory(currentDirectoryHandle);
+    markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
+    renderFolderNav();
+    refreshFolderBtn.disabled = false;
+
+    if (!markdownFiles.length) {
+      currentFolderPath = "";
+      refreshFileBtn.disabled = true;
+      showError("This folder does not contain markdown files.");
+      setStatus("No markdown files");
+      return;
+    }
+
+    const nextPath = markdownFiles.some((entry) => entry.path === pathToReopen)
+      ? pathToReopen
+      : markdownFiles[0].path;
+    await openFolderMarkdown(nextPath);
+  } catch (error) {
+    console.error(error);
+    showError(error.message || "Could not refresh this folder.");
+    setStatus("Error");
+  }
+}
+
+openFileBtn.addEventListener("click", () => {
+  openFile();
+});
+
 fileInput.addEventListener("change", (e) => {
   openMarkdownFile(e.target.files?.[0]);
 });
 
 folderBtn.addEventListener("click", () => {
   openFolder();
+});
+
+refreshFileBtn.addEventListener("click", () => {
+  refreshCurrentFile();
+});
+
+refreshFolderBtn.addEventListener("click", () => {
+  refreshCurrentFolder();
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {
