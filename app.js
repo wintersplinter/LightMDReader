@@ -19,6 +19,10 @@ const statusText = document.getElementById("statusText");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
+const imagePreview = document.getElementById("imagePreview");
+const imagePreviewStage = document.getElementById("imagePreviewStage");
+const imagePreviewImg = document.getElementById("imagePreviewImg");
+const imagePreviewClose = document.getElementById("imagePreviewClose");
 const availableThemes = new Set(["dark", "light", "brown"]);
 const markdownFilePattern = /\.(md|markdown|txt)$/i;
 const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
@@ -32,6 +36,18 @@ let currentFileHandle = null;
 let currentDirectoryHandle = null;
 let currentFolderPath = "";
 let currentMode = "empty";
+let previewScale = 1;
+let previewX = 0;
+let previewY = 0;
+let previewStartX = 0;
+let previewStartY = 0;
+let previewStartTranslateX = 0;
+let previewStartTranslateY = 0;
+let previewStartDistance = 0;
+let previewStartScale = 1;
+let previewIsDragging = false;
+let previewWasDragged = false;
+const previewPointers = new Map();
 
 function setStatus(message) {
   statusText.textContent = message;
@@ -65,6 +81,7 @@ function formatBytes(bytes) {
 }
 
 function clearObjectUrls() {
+  closeImagePreview();
   objectUrls.forEach((url) => URL.revokeObjectURL(url));
   objectUrls = [];
 }
@@ -162,6 +179,87 @@ function showReader(html) {
   refreshFileBtn.disabled = currentMode === "empty";
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function setPreviewTransform() {
+  imagePreviewImg.style.transform = `translate(${previewX}px, ${previewY}px) scale(${previewScale})`;
+}
+
+function resetImagePreview() {
+  previewScale = 1;
+  previewX = 0;
+  previewY = 0;
+  previewIsDragging = false;
+  previewWasDragged = false;
+  previewPointers.clear();
+  imagePreviewStage.classList.remove("is-dragging");
+  setPreviewTransform();
+}
+
+function openImagePreview(image) {
+  const src = image.currentSrc || image.src;
+  if (!src) return;
+
+  imagePreviewImg.src = src;
+  imagePreviewImg.alt = image.alt || "";
+  resetImagePreview();
+  imagePreview.hidden = false;
+  document.body.classList.add("preview-open");
+  imagePreviewClose.focus();
+}
+
+function closeImagePreview() {
+  if (imagePreview.hidden) return;
+
+  imagePreview.hidden = true;
+  document.body.classList.remove("preview-open");
+  imagePreviewImg.removeAttribute("src");
+  resetImagePreview();
+}
+
+function zoomImagePreview(nextScale) {
+  const previousScale = previewScale;
+  previewScale = clamp(nextScale, 1, 8);
+
+  if (previewScale === 1) {
+    previewX = 0;
+    previewY = 0;
+  } else if (previousScale !== previewScale) {
+    const ratio = previewScale / previousScale;
+    previewX *= ratio;
+    previewY *= ratio;
+  }
+
+  setPreviewTransform();
+}
+
+function getPointerDistance() {
+  const points = [...previewPointers.values()];
+  if (points.length < 2) return 0;
+
+  return Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY);
+}
+
+function wireImagePreview() {
+  [...reader.querySelectorAll("img[src]")].forEach((image) => {
+    image.tabIndex = 0;
+    image.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openImagePreview(image);
+    });
+    image.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      openImagePreview(image);
+    });
+  });
+}
+
 function sanitizeHtml(html) {
   if (!window.DOMPurify) {
     throw new Error("The sanitizer did not load.");
@@ -231,6 +329,7 @@ async function renderDocument(markdownText, context = null) {
   showReader(safeHtml);
   await hydrateLocalImages(context);
   wireLocalMarkdownLinks(context);
+  wireImagePreview();
   setStatus("Rendered");
 }
 
@@ -504,6 +603,99 @@ refreshFileBtn.addEventListener("click", () => {
 
 refreshFolderBtn.addEventListener("click", () => {
   refreshCurrentFolder();
+});
+
+imagePreviewClose.addEventListener("click", () => {
+  closeImagePreview();
+});
+
+imagePreviewStage.addEventListener("click", (event) => {
+  if (event.target === imagePreviewStage && !previewWasDragged) {
+    closeImagePreview();
+  }
+});
+
+imagePreviewStage.addEventListener(
+  "wheel",
+  (event) => {
+    if (imagePreview.hidden) return;
+
+    event.preventDefault();
+    const zoomFactor = event.deltaY < 0 ? 1.12 : 0.88;
+    zoomImagePreview(previewScale * zoomFactor);
+  },
+  { passive: false },
+);
+
+imagePreviewStage.addEventListener("dblclick", () => {
+  zoomImagePreview(previewScale === 1 ? 2 : 1);
+});
+
+imagePreviewStage.addEventListener("pointerdown", (event) => {
+  if (imagePreview.hidden) return;
+
+  imagePreviewStage.setPointerCapture(event.pointerId);
+  previewPointers.set(event.pointerId, event);
+  previewWasDragged = false;
+
+  if (previewPointers.size === 1) {
+    previewIsDragging = true;
+    previewStartX = event.clientX;
+    previewStartY = event.clientY;
+    previewStartTranslateX = previewX;
+    previewStartTranslateY = previewY;
+    imagePreviewStage.classList.add("is-dragging");
+  }
+
+  if (previewPointers.size === 2) {
+    previewStartDistance = getPointerDistance();
+    previewStartScale = previewScale;
+  }
+});
+
+imagePreviewStage.addEventListener("pointermove", (event) => {
+  if (!previewPointers.has(event.pointerId)) return;
+
+  previewPointers.set(event.pointerId, event);
+
+  if (previewPointers.size >= 2 && previewStartDistance > 0) {
+    zoomImagePreview(previewStartScale * (getPointerDistance() / previewStartDistance));
+    previewWasDragged = true;
+    return;
+  }
+
+  if (!previewIsDragging || previewScale <= 1) return;
+
+  const deltaX = event.clientX - previewStartX;
+  const deltaY = event.clientY - previewStartY;
+  if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+    previewWasDragged = true;
+  }
+
+  previewX = previewStartTranslateX + deltaX;
+  previewY = previewStartTranslateY + deltaY;
+  setPreviewTransform();
+});
+
+["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+  imagePreviewStage.addEventListener(eventName, (event) => {
+    previewPointers.delete(event.pointerId);
+
+    if (previewPointers.size < 2) {
+      previewStartDistance = 0;
+    }
+
+    if (previewPointers.size === 0) {
+      previewIsDragging = false;
+      imagePreviewStage.classList.remove("is-dragging");
+    }
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeImagePreview();
+  }
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {
