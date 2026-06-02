@@ -124,8 +124,14 @@ body.preview-open {
 }
 
 body.topbar-locked .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+}
+
+body.topbar-locked .layout {
+  padding-top: 57px;
 }
 
 .brand {
@@ -491,6 +497,10 @@ body.topbar-locked .topbar {
 
   .layout {
     display: block;
+  }
+
+  body.topbar-locked .layout {
+    padding-top: 109px;
   }
 
   .sidebar {
