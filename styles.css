@@ -112,8 +112,7 @@ body.preview-open {
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -122,6 +121,11 @@ body.preview-open {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
   z-index: 10;
+}
+
+body.topbar-locked .topbar {
+  position: sticky;
+  top: 0;
 }
 
 .brand {
@@ -163,6 +167,11 @@ body.preview-open {
 }
 .btn.secondary {
   background: var(--btn2);
+}
+.icon-btn {
+  width: 38px;
+  padding: 8px 0;
+  line-height: 1;
 }
 .btn:disabled {
   opacity: 0.45;

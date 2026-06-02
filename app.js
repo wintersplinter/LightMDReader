@@ -6,6 +6,7 @@ const folderBtn = document.getElementById("folderBtn");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
+const topbarLockBtn = document.getElementById("topbarLockBtn");
 const dropZone = document.getElementById("dropZone");
 
 const emptyState = document.getElementById("emptyState");
@@ -62,6 +63,17 @@ function applyTheme(theme) {
 
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
 applyTheme(savedTheme);
+
+function setTopbarLocked(isLocked) {
+  document.body.classList.toggle("topbar-locked", isLocked);
+  localStorage.setItem("lightmdreader-topbar-locked", isLocked ? "true" : "false");
+  topbarLockBtn.innerHTML = isLocked ? "&#x1F512;&#xFE0E;" : "&#x1F513;&#xFE0E;";
+  topbarLockBtn.setAttribute("aria-pressed", String(isLocked));
+  topbarLockBtn.setAttribute("aria-label", isLocked ? "Unlock top menu" : "Lock top menu");
+  topbarLockBtn.title = isLocked ? "Unlock top menu" : "Lock top menu";
+}
+
+setTopbarLocked(localStorage.getItem("lightmdreader-topbar-locked") === "true");
 
 themeSelect.addEventListener("change", (e) => {
   applyTheme(e.target.value);
@@ -587,6 +599,10 @@ async function refreshCurrentFolder() {
 
 openFileBtn.addEventListener("click", () => {
   openFile();
+});
+
+topbarLockBtn.addEventListener("click", () => {
+  setTopbarLocked(!document.body.classList.contains("topbar-locked"));
 });
 
 fileInput.addEventListener("change", (e) => {
