@@ -1,4 +1,4 @@
-const CACHE_NAME = "lightmdreader-v0-6";
+const CACHE_NAME = "lightmdreader-v0-7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,22 +15,14 @@ const ASSETS = [
 
 // Install: cache core assets
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)),
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
   self.skipWaiting();
 });
 
 // Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))),
-        ),
-      ),
+    caches.keys().then((keys) => Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))),
   );
   self.clients.claim();
 });
@@ -41,9 +33,7 @@ function shouldUseNetworkFirst(request) {
   if (request.mode === "navigate") return true;
   if (url.origin !== self.location.origin) return false;
 
-  return ["document", "script", "style", "worker", "manifest"].includes(
-    request.destination,
-  );
+  return ["document", "script", "style", "worker", "manifest"].includes(request.destination);
 }
 
 async function fetchAndCache(request) {
@@ -68,7 +58,5 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(req).then((cached) => cached || fetchAndCache(req)),
-  );
+  event.respondWith(caches.match(req).then((cached) => cached || fetchAndCache(req)));
 });
