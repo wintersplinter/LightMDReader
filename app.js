@@ -7,6 +7,7 @@ const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const topbarLockBtn = document.getElementById("topbarLockBtn");
+const returnTopBtn = document.getElementById("returnTopBtn");
 const dropZone = document.getElementById("dropZone");
 
 const emptyState = document.getElementById("emptyState");
@@ -793,6 +794,10 @@ dropZone.addEventListener("drop", (event) => {
 exportBtn.addEventListener("click", () => {
   if (reader.hidden) return;
   window.print();
+});
+
+returnTopBtn.addEventListener("click", () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 waitForMarkdownRenderer()

@@ -416,6 +416,11 @@
   color: var(--md-ul-first-letter);
 }
 
+.markdown-body ul ul > li::first-letter,
+.markdown-body ul ul > li > p:first-child::first-letter {
+  color: inherit;
+}
+
 /* Remove markers only from unordered lists */
 .markdown-body ul > li::marker {
   content: "";
