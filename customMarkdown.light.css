@@ -9,6 +9,7 @@ html[data-theme="light"] .markdown-body {
 
   --md-green: #1f7a4a;
   --md-green-soft: #1f7a4a18;
+  --md-ul-first-letter: var(--md-green);
   --md-color-code: #3f464d;
 
   --md-blue: #376b9d;

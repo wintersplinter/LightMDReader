@@ -26,6 +26,7 @@
 
   --md-green: #29dd6e;
   --md-green-soft: #29dd6e20;
+  --md-ul-first-letter: var(--md-green);
   --md-color-code: #8c8c8c;
 
   --md-blue: #5c80b1;
@@ -408,6 +409,11 @@
 .markdown-body li {
   margin: 0.45em 0;
   padding-left: 0.35em;
+}
+
+.markdown-body ul > li::first-letter,
+.markdown-body ul > li > p:first-child::first-letter {
+  color: var(--md-ul-first-letter);
 }
 
 /* Remove markers only from unordered lists */

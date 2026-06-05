@@ -17,6 +17,8 @@ const reader = document.getElementById("reader");
 const fileNameEl = document.getElementById("fileName");
 const fileSizeEl = document.getElementById("fileSize");
 const statusText = document.getElementById("statusText");
+const tocSection = document.getElementById("tocSection");
+const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
@@ -165,6 +167,7 @@ function waitForMarkdownRenderer() {
 
 function showEmpty() {
   clearObjectUrls();
+  clearTableOfContents();
   emptyState.hidden = false;
   errorState.hidden = true;
   reader.hidden = true;
@@ -174,6 +177,7 @@ function showEmpty() {
 
 function showError(message) {
   clearObjectUrls();
+  clearTableOfContents();
   errorMessage.textContent = message;
   emptyState.hidden = true;
   errorState.hidden = false;
@@ -184,11 +188,65 @@ function showError(message) {
 function showReader(html) {
   clearObjectUrls();
   reader.innerHTML = html;
+  buildTableOfContents();
   reader.hidden = false;
   emptyState.hidden = true;
   errorState.hidden = true;
   exportBtn.disabled = false;
   refreshFileBtn.disabled = currentMode === "empty";
+}
+
+function clearTableOfContents() {
+  tocNav.innerHTML = "";
+  tocSection.hidden = true;
+}
+
+function slugifyHeading(text) {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function buildTableOfContents() {
+  clearTableOfContents();
+
+  const headings = [...reader.querySelectorAll("h1, h2, h3, h4, h5, h6")].filter(
+    (heading) => heading.textContent.trim(),
+  );
+
+  if (!headings.length) return;
+
+  const usedIds = new Map();
+
+  headings.forEach((heading, index) => {
+    const level = Number(heading.tagName.slice(1));
+    const text = heading.textContent.trim();
+    const baseId = heading.id || slugifyHeading(text) || `heading-${index + 1}`;
+    const currentCount = usedIds.get(baseId) || 0;
+    const nextCount = currentCount + 1;
+    const headingId = currentCount ? `${baseId}-${nextCount}` : baseId;
+
+    usedIds.set(baseId, nextCount);
+    heading.id = headingId;
+
+    const link = document.createElement("a");
+    link.className = `toc-item toc-level-${Math.min(level, 6)}`;
+    link.href = `#${headingId}`;
+    link.textContent = text;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      heading.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", `#${headingId}`);
+    });
+
+    tocNav.appendChild(link);
+  });
+
+  tocSection.hidden = false;
 }
 
 function clamp(value, min, max) {
