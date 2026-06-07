@@ -26,7 +26,6 @@
 
   --md-green: #29dd6e;
   --md-green-soft: #29dd6e20;
-  --md-ul-first-letter: var(--md-green);
   --md-color-code: #8c8c8c;
 
   --md-blue: #5c80b1;
@@ -409,16 +408,20 @@
 .markdown-body li {
   margin: 0.9em 0;
   padding-left: 0.35em;
+  position: relative;
 }
 
-.markdown-body ul > li::first-letter,
-.markdown-body ul > li > p:first-child::first-letter {
-  color: var(--md-ul-first-letter);
-}
-
-.markdown-body ul ul > li::first-letter,
-.markdown-body ul ul > li > p:first-child::first-letter {
-  color: inherit;
+body.list-markers-enabled .markdown-body ul > li::before {
+  content: "\1047E";
+  color: color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
+  display: inline-block;
+  font-size: 0.78em;
+  left: -1.05em;
+  line-height: 1;
+  position: absolute;
+  top: 0.42em;
+  transform: rotate(-90deg);
+  transform-origin: center;
 }
 
 /* Remove markers only from unordered lists */

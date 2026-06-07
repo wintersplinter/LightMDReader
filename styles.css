@@ -179,6 +179,14 @@ body.topbar-locked .layout {
   padding: 8px 0;
   line-height: 1;
 }
+.btn[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+.list-marker-icon {
+  display: inline-block;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
