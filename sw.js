@@ -1,4 +1,4 @@
-const CACHE_NAME = "lightmdreader-v0-11";
+const CACHE_NAME = "lightmdreader-v0-12";
 const ASSETS = [
   "./",
   "./index.html",

@@ -5,6 +5,7 @@
     "https://cdn.jsdelivr.net/npm/markdown-it-deflist@3.0.0/dist/markdown-it-deflist.min.js",
     "https://cdn.jsdelivr.net/npm/markdown-it-sub@2.0.0/dist/markdown-it-sub.min.js",
     "https://cdn.jsdelivr.net/npm/markdown-it-sup@2.0.0/dist/markdown-it-sup.min.js",
+    "https://cdn.jsdelivr.net/npm/markdown-it-mark@4.0.0/dist/markdown-it-mark.min.js",
     "https://cdn.jsdelivr.net/npm/markdown-it-attrs@4.3.1/markdown-it-attrs.browser.js",
     "https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js",
   ];
@@ -19,6 +20,7 @@
       }
 
       const script = existing || document.createElement("script");
+
       script.src = src;
       script.async = false;
 
@@ -35,10 +37,6 @@
         document.head.appendChild(script);
       }
     });
-  }
-
-  function addCustomMarkdown(text) {
-    return text.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
   }
 
   function openLinksOutsidePreview(tokens, index, options, env, self) {
@@ -69,6 +67,7 @@
       .use(window.markdownitDeflist)
       .use(window.markdownitSub)
       .use(window.markdownitSup)
+      .use(window.markdownitMark)
       .use(window.markdownItAttrs)
       .use(window.markdownitTaskLists, {
         enabled: false,
@@ -79,7 +78,7 @@
     md.renderer.rules.link_open = openLinksOutsidePreview;
 
     window.renderMarkdown = function renderMarkdown(markdownText) {
-      return md.render(addCustomMarkdown(markdownText || ""));
+      return md.render(markdownText || "");
     };
 
     window.markdownReady = true;
