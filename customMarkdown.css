@@ -36,6 +36,10 @@
   --md-brown-medium: #ad9f78;
   --md-brown-dark: #85795a;
   --md-brown-dark-backdrop: #85795a20;
+  --md-list-marker-line-left: 0em;
+  --md-list-marker-line-top: 1.5em;
+  --md-list-marker-line-width: 1.8em;
+  --md-list-marker-line-weight: 1.5px;
 
   --md-border: #2a2a2a;
   --md-border-soft: #1f1f1f;
@@ -412,16 +416,12 @@
 }
 
 body.list-markers-enabled .markdown-body ul > li::before {
-  content: "\1047E";
-  color: color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
-  display: inline-block;
-  font-size: 0.78em;
-  left: -1.05em;
-  line-height: 1;
+  border-top: var(--md-list-marker-line-weight) solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
+  content: "";
+  left: var(--md-list-marker-line-left);
   position: absolute;
-  top: 0.42em;
-  transform: rotate(-90deg);
-  transform-origin: center;
+  top: var(--md-list-marker-line-top);
+  width: var(--md-list-marker-line-width);
 }
 
 /* Remove markers only from unordered lists */

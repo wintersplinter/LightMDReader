@@ -184,8 +184,9 @@ body.topbar-locked .layout {
 }
 .list-marker-icon {
   display: inline-block;
-  transform: rotate(-90deg);
-  transform-origin: center;
+  border-top: 1px solid currentColor;
+  vertical-align: 0.2em;
+  width: 1.4em;
 }
 .btn:disabled {
   opacity: 0.45;
