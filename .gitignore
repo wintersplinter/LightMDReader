@@ -3,3 +3,6 @@
 
 # Python cache files
 __pycache__/
+
+# Documentation, internal notes, and other non-code files
+/overview.md
