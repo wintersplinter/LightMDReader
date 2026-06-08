@@ -1,0 +1,5 @@
+# Local helper scripts
+/serve.py
+
+# Python cache files
+__pycache__/
