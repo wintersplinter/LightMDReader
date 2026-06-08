@@ -647,9 +647,21 @@ body.editor-active .return-top-btn {
   .reader h2,
   .reader h3 {
     page-break-after: avoid;
+    break-after: avoid;
+  }
+  .reader h1,
+  .reader h2 {
+    page-break-before: always;
+    break-before: page;
+  }
+  .reader h1:first-child,
+  .reader h2:first-child {
+    page-break-before: auto;
+    break-before: auto;
   }
   .reader table {
     page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
 

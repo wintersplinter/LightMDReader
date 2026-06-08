@@ -32,11 +32,13 @@ const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
+const pdfPaperSelect = document.getElementById("pdfPaperSelect");
 const imagePreview = document.getElementById("imagePreview");
 const imagePreviewStage = document.getElementById("imagePreviewStage");
 const imagePreviewImg = document.getElementById("imagePreviewImg");
 const imagePreviewClose = document.getElementById("imagePreviewClose");
 const availableThemes = new Set(["dark", "light", "brown"]);
+const availablePdfPaperSizes = new Set(["browser", "a4", "letter"]);
 const markdownFilePattern = /\.(md|markdown|txt)$/i;
 const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 const externalUrlPattern = /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i;
@@ -82,6 +84,27 @@ function applyTheme(theme) {
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
 applyTheme(savedTheme);
 
+function setPdfPaperSize(size) {
+  const safeSize = availablePdfPaperSizes.has(size) ? size : "browser";
+  let printPageStyle = document.getElementById("printPageSizeStyle");
+
+  if (!printPageStyle) {
+    printPageStyle = document.createElement("style");
+    printPageStyle.id = "printPageSizeStyle";
+    document.head.appendChild(printPageStyle);
+  }
+
+  printPageStyle.textContent =
+    safeSize === "browser"
+      ? ""
+      : `@media print { @page { size: ${safeSize === "a4" ? "A4" : "Letter"}; } }`;
+
+  localStorage.setItem("lightmdreader-pdf-paper", safeSize);
+  pdfPaperSelect.value = safeSize;
+}
+
+setPdfPaperSize(localStorage.getItem("lightmdreader-pdf-paper") || "browser");
+
 function updateTopbarOffset() {
   document.documentElement.style.setProperty("--topbar-height", `${topbar.offsetHeight}px`);
 }
@@ -113,6 +136,10 @@ setListMarkersEnabled(localStorage.getItem("lightmdreader-list-markers") === "tr
 
 themeSelect.addEventListener("change", (e) => {
   applyTheme(e.target.value);
+});
+
+pdfPaperSelect.addEventListener("change", (e) => {
+  setPdfPaperSize(e.target.value);
 });
 
 function formatBytes(bytes) {
@@ -1219,8 +1246,22 @@ dropZone.addEventListener("drop", (event) => {
   openMarkdownFile(event.dataTransfer?.files?.[0]);
 });
 
-exportBtn.addEventListener("click", () => {
-  if (reader.hidden) return;
+exportBtn.addEventListener("click", async () => {
+  if (reader.hidden && editorShell.hidden) return;
+
+  if (!editorShell.hidden) {
+    window.clearTimeout(editorPreviewTimer);
+
+    try {
+      await renderEditorPreview();
+    } catch (error) {
+      console.error(error);
+      showError(error.message || "Could not prepare the PDF preview.");
+      setStatus("Error");
+      return;
+    }
+  }
+
   window.print();
 });
 

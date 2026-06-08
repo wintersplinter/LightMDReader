@@ -1,31 +1,36 @@
 # LightMDReader
 
-LightMDReader is a small browser-based Markdown reader for opening local Markdown files, browsing Markdown folders, previewing the rendered document, and exporting the result through the browser print dialog.
+LightMDReader is a lightweight browser app for reading, browsing, editing, and exporting Markdown files. It runs as a static web app, so there is no build step, server framework, account, or upload flow. Markdown files stay local in the browser.
 
-It is built as a static web app with no build step. Open `index.html` directly for simple file previews, or serve the folder locally for the most reliable browser and PWA behavior.
+The app is useful for quickly previewing a single Markdown file, opening a folder of linked Markdown notes, checking local images, making quick edits, and exporting the rendered result to PDF through the browser print dialog.
 
-## Features
+## Main Features
 
 - Open local `.md`, `.markdown`, and `.txt` files.
 - Drag and drop a Markdown file into the reader.
-- Open a whole folder of Markdown files in Chromium-based browsers.
-- Navigate between Markdown files in an opened folder.
-- Refresh the current file or folder after editing it elsewhere.
-- Render Markdown with `markdown-it` plus footnotes, definition lists, subscript, superscript, mark/highlight, attributes, and task lists.
-- Sanitize rendered HTML with DOMPurify before displaying it.
-- Build a table of contents from document headings.
-- Resolve local images and local Markdown links when using folder mode.
+- Open a folder of Markdown files in browsers that support the File System Access API.
+- Navigate between Markdown files in the opened folder.
+- Refresh the current file or folder after editing files elsewhere.
+- Create a new Markdown document in the built-in editor.
+- Edit the currently loaded document with a live rendered preview.
+- Download the current Markdown text with a timestamped filename.
+- Render Markdown with headings, tables, code blocks, task lists, footnotes, definition lists, highlights, subscript, superscript, typographic replacements, and Markdown attributes.
+- Sanitize rendered HTML with DOMPurify before inserting it into the page.
+- Build a table of contents from the rendered document headings.
+- Resolve relative local images and links when using folder mode.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
 - Switch between dark, light, and brown themes.
 - Toggle custom list marker styling.
 - Lock the top menu while scrolling.
 - Return to the top of the page with the floating button.
-- Export to PDF through the browser print dialog.
+- Export the rendered Markdown to PDF with browser print.
+- Choose the PDF paper size: browser default, A4, or Letter.
+- Start every `h1` and `h2` on a new PDF page for cleaner exported documents.
 - Install as a PWA when the browser supports it.
 
 ## Quick Start
 
-### Option 1: serve the folder locally
+### Serve Locally
 
 ```bash
 python -m http.server 5173
@@ -37,31 +42,40 @@ Then open:
 http://localhost:5173/
 ```
 
-Any static file server will work. Serving from `localhost` is the best option when testing PWA behavior, service worker caching, and browser file APIs.
+Any static file server works. Serving from `localhost` is recommended when testing PWA behavior, service worker caching, and browser file APIs.
 
-### Option 2: open the app directly
+### Open Directly
 
 Open `index.html` in a browser.
 
-Direct file opening is useful for quick previews, but some browser features work best when the app is served from `localhost`.
-
-## Browser Support
-
-LightMDReader is designed for modern browsers.
-
-- Single-file opening works through the standard file input fallback.
-- Folder opening uses the File System Access API and is mainly supported in Chromium-based browsers such as Chrome and Edge.
-- PWA installation and service worker caching depend on browser support and the app being served from a supported origin such as `localhost`.
-- The renderer and sanitizer are loaded from jsDelivr, so the first load needs network access unless those scripts are already cached by the browser.
+Direct file opening is useful for quick previews, but folder browsing, service worker behavior, and installable PWA behavior are more reliable from `localhost`.
 
 ## Using The App
 
 1. Choose **Open .md** to open one Markdown file, or drag a Markdown file onto the page.
 2. Choose **Open folder** to browse all Markdown files in a folder.
-3. Use the sidebar to jump through headings or switch files in folder mode.
-4. Use **Refresh file** or **Refresh folder** after changing files outside the reader.
-5. Choose a theme from the theme menu.
-6. Choose **Export PDF** to open the browser print dialog and save the rendered document as a PDF.
+3. Use the sidebar table of contents to jump between headings.
+4. Use the folder list to switch documents when a folder is open.
+5. Choose **Refresh file** or **Refresh folder** after changing files outside the app.
+6. Choose **Edit** to edit the loaded Markdown with a live preview.
+7. Choose **Download** to save the current Markdown text.
+8. Choose a theme from the theme menu.
+9. Choose a PDF paper size.
+10. Choose **Export PDF** to open the browser print dialog and save the rendered document as a PDF.
+
+## PDF Export
+
+PDF export uses the browser print dialog. The app prepares a print-friendly view by hiding the app chrome, sidebar, editor input, floating buttons, and preview overlay. The rendered Markdown is printed with simple white-page styling.
+
+The paper size selector supports:
+
+- **Browser paper**: leave paper size to the browser or operating system print settings.
+- **A4**: request A4 paper through print CSS.
+- **Letter**: request Letter paper through print CSS.
+
+Every `h1` and `h2` starts on a new page during PDF export. The first heading in the document is exempt so exports do not start with an empty page.
+
+Browser print dialogs can still override paper size, margins, headers, footers, and scaling. For the cleanest PDF, check those settings before saving.
 
 ## Local Links And Images
 
@@ -73,20 +87,38 @@ Folder mode can resolve local relative assets:
 
 For local assets to resolve correctly, open the folder that contains the Markdown document and its related files.
 
+## Editor And Download Behavior
+
+The editor is meant for quick local drafting and cleanup. It shows Markdown input beside a live rendered preview on wider screens. The preview follows the cursor by using source-line metadata generated by the Markdown renderer.
+
+The **Return to read** button discards the current editor changes and restores the previous reading view. The **Download** button saves the current Markdown text, including editor changes, as a new timestamped file.
+
+## Browser Support
+
+LightMDReader is designed for modern browsers.
+
+- Single-file opening works through the standard file input fallback.
+- Folder opening uses the File System Access API and is mainly supported in Chromium-based browsers such as Chrome and Edge.
+- PWA installation and service worker caching depend on browser support and the app being served from a supported origin such as `localhost`.
+- The renderer, renderer plugins, and sanitizer are loaded from jsDelivr, so the first load needs network access unless those scripts are already cached by the browser.
+- PDF output depends on the browser print engine, so exact pagination can vary slightly between browsers.
+
 ## Project Structure
 
 ```text
 .
-|-- index.html                  # App shell
-|-- app.js                      # File/folder handling, rendering workflow, UI behavior
-|-- MDrender.js                 # Markdown renderer setup and markdown-it plugin loading
-|-- styles.css                  # App layout, controls, themes, print behavior
+|-- index.html                  # App shell and toolbar/sidebar markup
+|-- app.js                      # File handling, folder browsing, rendering workflow, editor, UI behavior
+|-- MDrender.js                 # markdown-it setup and plugin loading
+|-- styles.css                  # App layout, controls, themes, responsive behavior, print behavior
 |-- customMarkdown.css          # Main rendered Markdown styling
 |-- customMarkdown.light.css    # Light theme Markdown overrides
 |-- customMarkdown.brown.css    # Brown theme Markdown overrides
 |-- sw.js                       # Service worker and app-shell cache
 |-- manifest.webmanifest        # PWA manifest
-`-- icons/                      # PWA icons
+|-- icons/                      # PWA icons
+|-- serve.py                    # Optional helper server
+`-- chatGPTinstructions.md      # Local project notes placeholder
 ```
 
 ## Development
@@ -94,6 +126,8 @@ For local assets to resolve correctly, open the folder that contains the Markdow
 There is no package install or build step. Edit the static files and reload the browser.
 
 When changing cached app assets, update the cache name in `sw.js` so installed or cached copies pick up the new files.
+
+The app loads Markdown dependencies from CDNs in `MDrender.js`. If offline-first rendering is required, those scripts should be vendored locally and added to the service worker asset list.
 
 ## Security Notes
 
