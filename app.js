@@ -3,18 +3,26 @@
 const fileInput = document.getElementById("fileInput");
 const openFileBtn = document.getElementById("openFileBtn");
 const folderBtn = document.getElementById("folderBtn");
+const createBtn = document.getElementById("createBtn");
+const editBtn = document.getElementById("editBtn");
+const downloadBtn = document.getElementById("downloadBtn");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const topbarLockBtn = document.getElementById("topbarLockBtn");
 const listMarkerBtn = document.getElementById("listMarkerBtn");
 const returnTopBtn = document.getElementById("returnTopBtn");
+const returnToReadBtn = document.getElementById("returnToReadBtn");
+const topbar = document.querySelector(".topbar");
 const dropZone = document.getElementById("dropZone");
 
 const emptyState = document.getElementById("emptyState");
 const errorState = document.getElementById("errorState");
 const errorMessage = document.getElementById("errorMessage");
 const reader = document.getElementById("reader");
+const editorShell = document.getElementById("editorShell");
+const markdownInput = document.getElementById("markdownInput");
+const editorPreview = document.getElementById("editorPreview");
 
 const fileNameEl = document.getElementById("fileName");
 const fileSizeEl = document.getElementById("fileSize");
@@ -41,6 +49,12 @@ let currentFileHandle = null;
 let currentDirectoryHandle = null;
 let currentFolderPath = "";
 let currentMode = "empty";
+let currentMarkdownText = "";
+let currentDownloadName = "document.md";
+let currentRenderContext = null;
+let editorPreviewTimer = null;
+let editorScrollTimer = null;
+let readingSnapshot = null;
 let previewScale = 1;
 let previewX = 0;
 let previewY = 0;
@@ -68,7 +82,12 @@ function applyTheme(theme) {
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
 applyTheme(savedTheme);
 
+function updateTopbarOffset() {
+  document.documentElement.style.setProperty("--topbar-height", `${topbar.offsetHeight}px`);
+}
+
 function setTopbarLocked(isLocked) {
+  updateTopbarOffset();
   document.body.classList.toggle("topbar-locked", isLocked);
   localStorage.setItem("lightmdreader-topbar-locked", isLocked ? "true" : "false");
   topbarLockBtn.innerHTML = isLocked ? "&#x1F512;&#xFE0E;" : "&#x1F513;&#xFE0E;";
@@ -78,6 +97,9 @@ function setTopbarLocked(isLocked) {
 }
 
 setTopbarLocked(localStorage.getItem("lightmdreader-topbar-locked") === "true");
+
+window.addEventListener("resize", updateTopbarOffset);
+window.addEventListener("load", updateTopbarOffset);
 
 function setListMarkersEnabled(isEnabled) {
   document.body.classList.toggle("list-markers-enabled", isEnabled);
@@ -180,32 +202,65 @@ function waitForMarkdownRenderer() {
 function showEmpty() {
   clearObjectUrls();
   clearTableOfContents();
+  document.body.classList.remove("editor-active");
+  readingSnapshot = null;
+  currentMarkdownText = "";
+  currentDownloadName = "document.md";
+  currentRenderContext = null;
   emptyState.hidden = false;
   errorState.hidden = true;
   reader.hidden = true;
+  editorShell.hidden = true;
   exportBtn.disabled = true;
+  downloadBtn.disabled = true;
+  editBtn.disabled = true;
+  returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = true;
 }
 
 function showError(message) {
   clearObjectUrls();
   clearTableOfContents();
+  document.body.classList.remove("editor-active");
   errorMessage.textContent = message;
   emptyState.hidden = true;
   errorState.hidden = false;
   reader.hidden = true;
+  editorShell.hidden = true;
   exportBtn.disabled = true;
+  returnToReadBtn.hidden = true;
 }
 
 function showReader(html) {
   clearObjectUrls();
+  document.body.classList.remove("editor-active");
   reader.innerHTML = html;
   buildTableOfContents();
   reader.hidden = false;
+  editorShell.hidden = true;
   emptyState.hidden = true;
   errorState.hidden = true;
   exportBtn.disabled = false;
+  downloadBtn.disabled = false;
+  editBtn.disabled = false;
+  returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = currentMode === "empty";
+}
+
+function showEditor(markdownText) {
+  clearObjectUrls();
+  clearTableOfContents();
+  document.body.classList.add("editor-active");
+  markdownInput.value = markdownText;
+  reader.hidden = true;
+  editorShell.hidden = false;
+  emptyState.hidden = true;
+  errorState.hidden = true;
+  exportBtn.disabled = false;
+  downloadBtn.disabled = false;
+  editBtn.disabled = true;
+  returnToReadBtn.hidden = false;
+  updateFileSize(markdownText);
 }
 
 function clearTableOfContents() {
@@ -324,8 +379,8 @@ function getPointerDistance() {
   return Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY);
 }
 
-function wireImagePreview() {
-  [...reader.querySelectorAll("img[src]")].forEach((image) => {
+function wireImagePreview(root = reader) {
+  [...root.querySelectorAll("img[src]")].forEach((image) => {
     image.tabIndex = 0;
     image.addEventListener("click", (event) => {
       event.preventDefault();
@@ -349,7 +404,7 @@ function sanitizeHtml(html) {
 
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ["target", "rel"],
+    ADD_ATTR: ["target", "rel", "data-source-line"],
   });
 }
 
@@ -381,10 +436,38 @@ async function hydrateLocalImages(context) {
   );
 }
 
-function wireLocalMarkdownLinks(context) {
+async function hydratePreviewLocalImages(root, context) {
+  if (!context?.path || !folderFiles.size) return;
+
+  const images = [...root.querySelectorAll("img[src]")];
+
+  await Promise.all(
+    images.map(async (image) => {
+      const src = image.getAttribute("src");
+
+      if (!src || externalUrlPattern.test(src)) return;
+
+      const imagePath = resolveRelativePath(context.path, src);
+      const handle = folderFiles.get(imagePath);
+
+      if (!handle || !imageFilePattern.test(imagePath)) return;
+
+      try {
+        const file = await handle.getFile();
+        const objectUrl = URL.createObjectURL(file);
+        objectUrls.push(objectUrl);
+        image.src = objectUrl;
+      } catch (error) {
+        console.warn(`Could not load local image: ${imagePath}`, error);
+      }
+    }),
+  );
+}
+
+function wireLocalMarkdownLinks(context, root = reader) {
   if (!context?.path || !markdownFiles.length) return;
 
-  [...reader.querySelectorAll("a[href]")].forEach((link) => {
+  [...root.querySelectorAll("a[href]")].forEach((link) => {
     const href = link.getAttribute("href");
 
     if (!href || externalUrlPattern.test(href)) return;
@@ -402,6 +485,8 @@ function wireLocalMarkdownLinks(context) {
 }
 
 async function renderDocument(markdownText, context = null) {
+  currentMarkdownText = markdownText;
+  currentRenderContext = context;
   setStatus("Loading renderer...");
   await waitForMarkdownRenderer();
 
@@ -413,6 +498,278 @@ async function renderDocument(markdownText, context = null) {
   wireLocalMarkdownLinks(context);
   wireImagePreview();
   setStatus("Rendered");
+}
+
+async function renderEditorPreview() {
+  const markdownText = markdownInput.value;
+  currentMarkdownText = markdownText;
+  updateFileSize(markdownText);
+  setStatus("Rendering preview...");
+  await waitForMarkdownRenderer();
+
+  const rawHtml = window.renderMarkdown(markdownText);
+  const safeHtml = sanitizeHtml(rawHtml);
+  clearObjectUrls();
+  editorPreview.innerHTML = safeHtml || "<p></p>";
+  await hydratePreviewLocalImages(editorPreview, currentRenderContext);
+  wireLocalMarkdownLinks(currentRenderContext, editorPreview);
+  wireImagePreview(editorPreview);
+  syncPreviewToCursor();
+  setStatus("Editing");
+}
+
+function scheduleEditorPreview() {
+  window.clearTimeout(editorPreviewTimer);
+  editorPreviewTimer = window.setTimeout(() => {
+    renderEditorPreview().catch((error) => {
+      console.error(error);
+      showError(error.message || "Could not render the preview.");
+      setStatus("Error");
+    });
+  }, 120);
+}
+
+function getCursorLine() {
+  return markdownInput.value.slice(0, markdownInput.selectionStart).split("\n").length;
+}
+
+function getLineStartIndex(lineNumber) {
+  if (lineNumber <= 1) return 0;
+
+  let currentLine = 1;
+
+  for (let index = 0; index < markdownInput.value.length; index += 1) {
+    if (markdownInput.value[index] !== "\n") continue;
+
+    currentLine += 1;
+
+    if (currentLine === lineNumber) {
+      return index + 1;
+    }
+  }
+
+  return markdownInput.value.length;
+}
+
+function findPreviewElementForLine(lineNumber) {
+  const mappedElements = [...editorPreview.querySelectorAll("[data-source-line]")];
+
+  if (!mappedElements.length) return editorPreview.firstElementChild;
+
+  let bestElement = mappedElements[0];
+  let bestLine = Number(bestElement.dataset.sourceLine) || 1;
+
+  for (const element of mappedElements) {
+    const elementLine = Number(element.dataset.sourceLine) || 1;
+
+    if (elementLine > lineNumber) break;
+
+    bestElement = element;
+    bestLine = elementLine;
+  }
+
+  const nextElement = mappedElements.find((element) => {
+    const elementLine = Number(element.dataset.sourceLine) || 1;
+    return elementLine >= lineNumber;
+  });
+
+  if (nextElement && lineNumber - bestLine > Number(nextElement.dataset.sourceLine) - lineNumber) {
+    return nextElement;
+  }
+
+  return bestElement;
+}
+
+function syncPreviewToCursor() {
+  if (editorShell.hidden) return;
+
+  const target = findPreviewElementForLine(getCursorLine());
+  if (!target) return;
+
+  const previewRect = editorPreview.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const nextTop = editorPreview.scrollTop + targetRect.top - previewRect.top - editorPreview.clientHeight * 0.15;
+
+  editorPreview.scrollTo({
+    top: Math.max(0, nextTop),
+    behavior: "auto",
+  });
+}
+
+function schedulePreviewCursorSync() {
+  window.clearTimeout(editorScrollTimer);
+  editorScrollTimer = window.setTimeout(syncPreviewToCursor, 0);
+}
+
+function moveEditorCursorToLine(lineNumber) {
+  const cursorIndex = getLineStartIndex(lineNumber);
+
+  markdownInput.focus({ preventScroll: true });
+  markdownInput.setSelectionRange(cursorIndex, cursorIndex);
+  scrollEditorToLine(lineNumber);
+  schedulePreviewCursorSync();
+}
+
+function getEditorLineHeight() {
+  const computedStyle = window.getComputedStyle(markdownInput);
+  const lineHeight = Number.parseFloat(computedStyle.lineHeight);
+
+  if (Number.isFinite(lineHeight)) {
+    return lineHeight;
+  }
+
+  const fontSize = Number.parseFloat(computedStyle.fontSize) || 15;
+  return fontSize * 1.55;
+}
+
+function scrollEditorToLine(lineNumber) {
+  const computedStyle = window.getComputedStyle(markdownInput);
+  const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+  const lineTop = paddingTop + (Math.max(1, lineNumber) - 1) * getEditorLineHeight();
+  const nextTop = lineTop - markdownInput.clientHeight * 0.15;
+
+  markdownInput.scrollTop = Math.max(0, nextTop);
+}
+
+function moveEditorCursorToPreviewTarget(target) {
+  const sourceElement = target.closest("[data-source-line]");
+  const sourceLine = Number(sourceElement?.dataset.sourceLine);
+
+  if (!sourceLine) return;
+
+  moveEditorCursorToLine(sourceLine);
+}
+
+function placeEditorCursorAtStart() {
+  markdownInput.focus();
+  markdownInput.setSelectionRange(0, 0);
+  markdownInput.scrollTop = 0;
+  editorPreview.scrollTop = 0;
+  schedulePreviewCursorSync();
+}
+
+function updateFileSize(markdownText) {
+  fileSizeEl.textContent = formatBytes(new Blob([markdownText]).size);
+}
+
+function captureReadingSnapshot() {
+  if (!reader.hidden && currentMode !== "empty") {
+    readingSnapshot = {
+      markdownText: currentMarkdownText,
+      renderContext: currentRenderContext,
+      mode: currentMode,
+      downloadName: currentDownloadName,
+      fileName: fileNameEl.textContent,
+      fileSize: fileSizeEl.textContent,
+      file: currentFile,
+      fileHandle: currentFileHandle,
+      directoryHandle: currentDirectoryHandle,
+      folderPath: currentFolderPath,
+      scrollY: window.scrollY,
+    };
+    return;
+  }
+
+  if (!readingSnapshot) {
+    readingSnapshot = {
+      mode: "empty",
+      scrollY: 0,
+    };
+  }
+}
+
+async function returnToRead() {
+  const snapshot = readingSnapshot;
+
+  if (!snapshot || snapshot.mode === "empty") {
+    showEmpty();
+    setStatus("Ready");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    return;
+  }
+
+  currentMode = snapshot.mode;
+  currentDownloadName = snapshot.downloadName;
+  currentFile = snapshot.file || null;
+  currentFileHandle = snapshot.fileHandle || null;
+  currentDirectoryHandle = snapshot.directoryHandle || currentDirectoryHandle;
+  currentFolderPath = snapshot.folderPath || "";
+  fileNameEl.textContent = snapshot.fileName;
+  fileSizeEl.textContent = snapshot.fileSize;
+  setActiveFolderItem(currentFolderPath);
+
+  await renderDocument(snapshot.markdownText, snapshot.renderContext);
+  window.scrollTo({ top: snapshot.scrollY, behavior: "auto" });
+}
+
+async function createDocument() {
+  captureReadingSnapshot();
+  currentFile = null;
+  currentFileHandle = null;
+  currentMode = "create";
+  currentRenderContext = null;
+  currentDownloadName = "untitled.md";
+  currentMarkdownText = "# Untitled\n\n";
+  fileNameEl.textContent = "Untitled";
+  refreshFileBtn.disabled = true;
+  showEditor(currentMarkdownText);
+  await renderEditorPreview();
+  placeEditorCursorAtStart();
+}
+
+async function editCurrentDocument() {
+  if (currentMode === "empty") return;
+
+  captureReadingSnapshot();
+  showEditor(currentMarkdownText);
+  await renderEditorPreview();
+  placeEditorCursorAtStart();
+}
+
+function formatDownloadTimestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    "-",
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join("");
+}
+
+function getDownloadFileName() {
+  const fallback = "document.md";
+  const name = currentDownloadName || fileNameEl.textContent || fallback;
+  const timestamp = formatDownloadTimestamp();
+  const extensionMatch = name.match(/(\.(?:md|markdown|txt))$/i);
+
+  if (extensionMatch) {
+    const extension = extensionMatch[1];
+    const baseName = name.slice(0, -extension.length);
+    return `${baseName}-${timestamp}${extension}`;
+  }
+
+  return `${name}-${timestamp}.md`;
+}
+
+function downloadCurrentMarkdown() {
+  const markdownText = editorShell.hidden ? currentMarkdownText : markdownInput.value;
+  if (!markdownText && currentMode === "empty") return;
+
+  const blob = new Blob([markdownText], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = getDownloadFileName();
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setStatus("Downloaded");
 }
 
 function clearFolderMode() {
@@ -430,6 +787,7 @@ function setSingleFileMode(file, fileHandle = null) {
   currentFile = file;
   currentFileHandle = fileHandle;
   currentMode = "file";
+  currentDownloadName = file.name;
 }
 
 async function openMarkdownFile(file, fileHandle = null) {
@@ -544,6 +902,7 @@ async function openFolderMarkdown(path) {
   currentFileHandle = null;
   currentFolderPath = path;
   currentMode = "folder";
+  currentDownloadName = entry.name;
   setActiveFolderItem(path);
   setStatus("Reading...");
 
@@ -669,6 +1028,60 @@ async function refreshCurrentFolder() {
 
 openFileBtn.addEventListener("click", () => {
   openFile();
+});
+
+createBtn.addEventListener("click", () => {
+  createDocument().catch((error) => {
+    console.error(error);
+    showError(error.message || "Could not create a new document.");
+    setStatus("Error");
+  });
+});
+
+editBtn.addEventListener("click", () => {
+  editCurrentDocument().catch((error) => {
+    console.error(error);
+    showError(error.message || "Could not edit this document.");
+    setStatus("Error");
+  });
+});
+
+downloadBtn.addEventListener("click", () => {
+  downloadCurrentMarkdown();
+});
+
+returnToReadBtn.addEventListener("click", () => {
+  returnToRead().catch((error) => {
+    console.error(error);
+    showError(error.message || "Could not return to reading.");
+    setStatus("Error");
+  });
+});
+
+["mouseenter", "focus"].forEach((eventName) => {
+  returnToReadBtn.addEventListener(eventName, () => {
+    returnToReadBtn.textContent = "Discard changes";
+  });
+});
+
+["mouseleave", "blur"].forEach((eventName) => {
+  returnToReadBtn.addEventListener(eventName, () => {
+    returnToReadBtn.textContent = "Return to read";
+  });
+});
+
+markdownInput.addEventListener("input", () => {
+  scheduleEditorPreview();
+});
+
+["click", "keyup", "select", "focus"].forEach((eventName) => {
+  markdownInput.addEventListener(eventName, schedulePreviewCursorSync);
+});
+
+editorPreview.addEventListener("click", (event) => {
+  if (event.target.closest("a, img")) return;
+
+  moveEditorCursorToPreviewTarget(event.target);
 });
 
 topbarLockBtn.addEventListener("click", () => {

@@ -55,6 +55,28 @@
           Open folder
         </button>
 
+        <button id="createBtn" class="btn" type="button">
+          Create
+        </button>
+
+        <button id="editBtn" class="btn secondary" type="button" disabled>
+          Edit
+        </button>
+
+        <button id="downloadBtn" class="btn secondary" type="button" disabled>
+          Download
+        </button>
+
+        <button
+          id="returnToReadBtn"
+          class="btn secondary return-read-btn"
+          type="button"
+          title="Discard changes"
+          hidden
+        >
+          Return to read
+        </button>
+
         <button id="refreshFileBtn" class="btn secondary" type="button" disabled>
           Refresh file
         </button>
@@ -116,6 +138,23 @@
           </div>
 
           <article id="reader" class="reader markdown-body" hidden></article>
+
+          <div id="editorShell" class="editor-shell" hidden>
+            <label class="editor-pane editor-input-pane" for="markdownInput">
+              <span class="editor-label">Markdown</span>
+              <textarea
+                id="markdownInput"
+                class="markdown-input"
+                spellcheck="true"
+                placeholder="Start writing markdown..."
+              ></textarea>
+            </label>
+
+            <section class="editor-pane editor-preview-pane" aria-label="Rendered preview">
+              <span class="editor-label">Preview</span>
+              <article id="editorPreview" class="reader editor-preview markdown-body"></article>
+            </section>
+          </div>
         </div>
       </section>
     </main>

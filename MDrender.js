@@ -75,6 +75,14 @@
         labelAfter: true,
       });
 
+    md.core.ruler.push("source_line_attrs", (state) => {
+      state.tokens.forEach((token) => {
+        if (token.nesting === -1 || !token.map) return;
+
+        token.attrSet("data-source-line", String(token.map[0] + 1));
+      });
+    });
+
     md.renderer.rules.link_open = openLinksOutsidePreview;
 
     window.renderMarkdown = function renderMarkdown(markdownText) {

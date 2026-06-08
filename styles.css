@@ -131,7 +131,7 @@ body.topbar-locked .topbar {
 }
 
 body.topbar-locked .layout {
-  padding-top: 57px;
+  padding-top: var(--topbar-height, 57px);
 }
 
 .brand {
@@ -197,6 +197,15 @@ body.topbar-locked .layout {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: calc(100vh - 57px);
+}
+
+body.editor-active .layout {
+  grid-template-columns: 1fr;
+}
+
+body.editor-active .sidebar,
+body.editor-active .return-top-btn {
+  display: none;
 }
 
 .sidebar {
@@ -351,6 +360,68 @@ body.topbar-locked .layout {
   border: 1px solid var(--reader-border);
   border-radius: 8px;
   padding: 24px;
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  height: calc(100vh - var(--topbar-height, 57px) - 44px);
+  min-height: 420px;
+}
+
+.editor-shell[hidden] {
+  display: none;
+}
+
+.editor-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.editor-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.markdown-input {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--reader-bg);
+  color: var(--text);
+  font:
+    15px/1.55 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+}
+
+.markdown-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.editor-preview {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
 }
 
 /* Reader typography */
@@ -550,6 +621,19 @@ body.topbar-locked .layout {
     background: #fff;
     padding: 0;
   }
+  .editor-shell {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+  .editor-input-pane,
+  .editor-label {
+    display: none !important;
+  }
+  .editor-preview {
+    min-height: 0;
+    overflow: visible;
+  }
   .reader a {
     color: #000;
     text-decoration: underline;
@@ -566,6 +650,12 @@ body.topbar-locked .layout {
   }
   .reader table {
     page-break-inside: avoid;
+  }
+}
+
+@media (min-width: 761px) {
+  body.editor-active {
+    overflow: hidden;
   }
 }
 
@@ -590,10 +680,6 @@ body.topbar-locked .layout {
     display: block;
   }
 
-  body.topbar-locked .layout {
-    padding-top: 109px;
-  }
-
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -609,5 +695,22 @@ body.topbar-locked .layout {
 
   .reader {
     padding: 16px;
+  }
+
+  .editor-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+  }
+
+  .editor-pane {
+    min-height: 0;
+  }
+
+  .markdown-input,
+  .editor-preview {
+    flex: none;
+    height: 42vh;
+    min-height: 260px;
   }
 }

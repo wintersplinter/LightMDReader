@@ -1,18 +1,18 @@
 import http.server
-import argparse
 import socketserver
 import webbrowser
 import threading
-from functools import partial
-from pathlib import Path
+import os
+import sys
 import time
 import subprocess
 import platform
+import re
 
 PORT = 5173
 
-def open_browser(port: int):
-    webbrowser.open(f"http://localhost:{port}/")
+def open_browser():
+    webbrowser.open(f"http://localhost:{PORT}/")
 
 def find_pids_on_port(port: int) -> list[int]:
     system = platform.system().lower()
@@ -63,36 +63,15 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Pragma", "no-cache")
         super().end_headers()
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Serve a folder over HTTP without caching.")
-    parser.add_argument("-p", "--port", type=int, default=PORT, help=f"Port to serve on. Default: {PORT}.")
-    parser.add_argument(
-        "--no-open",
-        action="store_true",
-        help="Start the server without opening a browser window.",
-    )
-    parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Folder to serve. Default: the folder you run this command from.",
-    )
-    return parser.parse_args()
-
 if __name__ == "__main__":
-    args = parse_args()
-    root = Path(args.directory).resolve()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    ensure_port_free(args.port)
+    ensure_port_free(PORT)
 
-    handler = partial(NoCacheHandler, directory=str(root))
+    with socketserver.TCPServer(("", PORT), NoCacheHandler) as httpd:
+        print(f"Serving at http://localhost:{PORT}")
 
-    with socketserver.TCPServer(("", args.port), handler) as httpd:
-        print(f"Serving {root}")
-        print(f"Open http://localhost:{args.port}/")
-
-        if not args.no_open:
-            threading.Timer(1.0, open_browser, args=(args.port,)).start()
+        threading.Timer(1.0, open_browser).start()
 
         try:
             httpd.serve_forever()
