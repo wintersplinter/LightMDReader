@@ -305,11 +305,18 @@ function slugifyHeading(text) {
     .replace(/^-|-$/g, "");
 }
 
+function getVisibleHeadingText(heading) {
+  const clone = heading.cloneNode(true);
+  clone.querySelectorAll(".md-comment").forEach((comment) => comment.remove());
+
+  return clone.textContent.trim();
+}
+
 function buildTableOfContents() {
   clearTableOfContents();
 
   const headings = [...reader.querySelectorAll("h1, h2, h3, h4, h5, h6")].filter(
-    (heading) => heading.textContent.trim(),
+    (heading) => getVisibleHeadingText(heading),
   );
 
   if (!headings.length) return;
@@ -318,7 +325,7 @@ function buildTableOfContents() {
 
   headings.forEach((heading, index) => {
     const level = Number(heading.tagName.slice(1));
-    const text = heading.textContent.trim();
+    const text = getVisibleHeadingText(heading);
     const baseId = heading.id || slugifyHeading(text) || `heading-${index + 1}`;
     const currentCount = usedIds.get(baseId) || 0;
     const nextCount = currentCount + 1;
@@ -431,7 +438,7 @@ function sanitizeHtml(html) {
 
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ["target", "rel", "data-source-line"],
+    ADD_ATTR: ["target", "rel", "data-source-line", "tabindex", "aria-label", "aria-hidden"],
   });
 }
 

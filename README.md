@@ -15,6 +15,7 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Edit the currently loaded document with a live rendered preview.
 - Download the current Markdown text with a timestamped filename.
 - Render Markdown with headings, tables, code blocks, task lists, footnotes, definition lists, highlights, subscript, superscript, typographic replacements, and Markdown attributes.
+- Add private Markdown comments with custom `((:comment:))` and `((::hidden comment::))` syntax.
 - Sanitize rendered HTML with DOMPurify before inserting it into the page.
 - Build a table of contents from the rendered document headings.
 - Resolve relative local images and links when using folder mode.
@@ -42,13 +43,13 @@ Then open:
 http://localhost:5173/
 ```
 
-Any static file server works. Serving from `localhost` is recommended when testing PWA behavior, service worker caching, and browser file APIs.
+Any static file server works for development. For the hosted app, use an HTTPS static host such as Netlify, GitHub Pages, Cloudflare Pages, or similar.
 
 ### Open Directly
 
 Open `index.html` in a browser.
 
-Direct file opening is useful for quick previews, but folder browsing, service worker behavior, and installable PWA behavior are more reliable from `localhost`.
+Direct file opening is useful for quick previews, but service worker behavior and installable PWA behavior require a secure context such as HTTPS. `localhost` also counts as secure for local development.
 
 ## Using The App
 
@@ -99,9 +100,38 @@ LightMDReader is designed for modern browsers.
 
 - Single-file opening works through the standard file input fallback.
 - Folder opening uses the File System Access API and is mainly supported in Chromium-based browsers such as Chrome and Edge.
-- PWA installation and service worker caching depend on browser support and the app being served from a supported origin such as `localhost`.
+- PWA installation and service worker caching depend on browser support and a secure context such as HTTPS. `localhost` also works for local development.
 - The renderer, renderer plugins, and sanitizer are loaded from jsDelivr, so the first load needs network access unless those scripts are already cached by the browser.
 - PDF output depends on the browser print engine, so exact pagination can vary slightly between browsers.
+
+## Private Markdown Comments
+
+LightMDReader supports two custom comment syntaxes for local notes and review comments:
+
+```markdown
+((:This comment becomes a red dot with a tooltip:))
+```
+
+This creates a small red dot in the rendered document. The comment text is hidden until the user hovers over the dot or focuses it with the keyboard.
+
+```markdown
+((::This comment is fully hidden::))
+```
+
+This removes the comment entirely from the rendered document. It remains visible only in the Markdown source.
+
+Both comment types can span multiple lines:
+
+```markdown
+((:
+This is a longer review note.
+It can use multiple lines.
+:))
+```
+
+Visible comment dots are hidden during PDF export, so private notes do not appear in exported PDFs.
+
+Comment delimiters are intentionally simple. Visible comments cannot contain `:))`, and fully hidden comments cannot contain `::))`, because those sequences mark the end of the comment.
 
 ## Project Structure
 

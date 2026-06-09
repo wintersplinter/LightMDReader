@@ -51,6 +51,30 @@
     return self.renderToken(tokens, index, options);
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderCustomComments(markdownText) {
+    return String(markdownText || "")
+      .replace(/\(\(::([\s\S]*?)::\)\)/g, "")
+      .replace(/\(\(:([\s\S]*?):\)\)/g, (_, comment) => {
+        const cleanComment = comment.trim();
+
+        if (!cleanComment) return "";
+
+        const tooltip = escapeHtml(cleanComment);
+        const label = escapeHtml(cleanComment.replace(/\s+/g, " "));
+
+        return `<span class="md-comment" tabindex="0" aria-label="${label}"><span class="md-comment-dot" aria-hidden="true"></span><span class="md-comment-tooltip" aria-hidden="true">${tooltip}</span></span>`;
+      });
+  }
+
   function configureRenderer() {
     if (!window.markdownit) {
       throw new Error("markdown-it is unavailable.");
@@ -86,7 +110,7 @@
     md.renderer.rules.link_open = openLinksOutsidePreview;
 
     window.renderMarkdown = function renderMarkdown(markdownText) {
-      return md.render(markdownText || "");
+      return md.render(renderCustomComments(markdownText));
     };
 
     window.markdownReady = true;
