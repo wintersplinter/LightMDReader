@@ -431,6 +431,53 @@ function wireImagePreview(root = reader) {
   });
 }
 
+function positionMarkdownComment(comment) {
+  const tooltip = comment.querySelector(".md-comment-tooltip");
+  if (!tooltip) return;
+
+  comment.classList.add("is-visible");
+  comment.classList.remove("is-below");
+
+  const margin = 12;
+  const gap = 10;
+  const commentRect = comment.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const halfTooltipWidth = tooltipRect.width / 2;
+  const minX = margin + halfTooltipWidth;
+  const maxX = window.innerWidth - margin - halfTooltipWidth;
+  const unclampedX = commentRect.left + commentRect.width / 2;
+  const nextX = clamp(unclampedX, minX, Math.max(minX, maxX));
+  let nextY = commentRect.top - gap;
+
+  if (nextY - tooltipRect.height < margin) {
+    comment.classList.add("is-below");
+    nextY = commentRect.bottom + gap;
+  }
+
+  comment.style.setProperty("--md-comment-tooltip-x", `${nextX}px`);
+  comment.style.setProperty("--md-comment-tooltip-y", `${nextY}px`);
+}
+
+function hideMarkdownComment(comment) {
+  comment.classList.remove("is-visible", "is-below");
+}
+
+function hideMarkdownComments(root = document) {
+  root.querySelectorAll(".md-comment.is-visible").forEach((comment) => {
+    hideMarkdownComment(comment);
+  });
+}
+
+function wireMarkdownComments(root = reader) {
+  [...root.querySelectorAll(".md-comment")].forEach((comment) => {
+    comment.addEventListener("mouseenter", () => positionMarkdownComment(comment));
+    comment.addEventListener("focusin", () => positionMarkdownComment(comment));
+    comment.addEventListener("touchstart", () => positionMarkdownComment(comment), { passive: true });
+    comment.addEventListener("mouseleave", () => hideMarkdownComment(comment));
+    comment.addEventListener("focusout", () => hideMarkdownComment(comment));
+  });
+}
+
 function sanitizeHtml(html) {
   if (!window.DOMPurify) {
     throw new Error("The sanitizer did not load.");
@@ -531,6 +578,7 @@ async function renderDocument(markdownText, context = null) {
   await hydrateLocalImages(context);
   wireLocalMarkdownLinks(context);
   wireImagePreview();
+  wireMarkdownComments();
   setStatus("Rendered");
 }
 
@@ -548,6 +596,7 @@ async function renderEditorPreview() {
   await hydratePreviewLocalImages(editorPreview, currentRenderContext);
   wireLocalMarkdownLinks(currentRenderContext, editorPreview);
   wireImagePreview(editorPreview);
+  wireMarkdownComments(editorPreview);
   syncPreviewToCursor();
   setStatus("Editing");
 }
@@ -1232,7 +1281,14 @@ imagePreviewStage.addEventListener("pointermove", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeImagePreview();
+    hideMarkdownComments();
   }
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (event.target.closest(".md-comment")) return;
+
+  hideMarkdownComments();
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {

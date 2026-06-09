@@ -484,13 +484,13 @@ body.editor-active .return-top-btn {
 }
 
 .reader .md-comment-tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
+  position: fixed;
+  left: var(--md-comment-tooltip-x, 50vw);
+  top: var(--md-comment-tooltip-y, 0);
   z-index: 30;
   display: none;
-  min-width: 180px;
-  max-width: min(360px, 80vw);
+  width: max-content;
+  max-width: min(480px, calc(100vw - 24px));
   padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -501,7 +501,7 @@ body.editor-active .return-top-btn {
   font-weight: 500;
   line-height: 1.4;
   text-align: left;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   white-space: pre-wrap;
 }
 
@@ -518,9 +518,21 @@ body.editor-active .return-top-btn {
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
+.reader .md-comment.is-below .md-comment-tooltip {
+  transform: translate(-50%, 0);
+}
+
+.reader .md-comment.is-below .md-comment-tooltip::after {
+  top: 0;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
 .reader .md-comment:hover .md-comment-tooltip,
 .reader .md-comment:focus .md-comment-tooltip,
-.reader .md-comment:focus-within .md-comment-tooltip {
+.reader .md-comment:focus-within .md-comment-tooltip,
+.reader .md-comment.is-visible .md-comment-tooltip {
   display: block;
 }
 
