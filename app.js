@@ -6,6 +6,8 @@ const folderBtn = document.getElementById("folderBtn");
 const createBtn = document.getElementById("createBtn");
 const editBtn = document.getElementById("editBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const saveBtn = document.getElementById("saveBtn");
+const saveAsBtn = document.getElementById("saveAsBtn");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
@@ -57,6 +59,7 @@ let currentRenderContext = null;
 let editorPreviewTimer = null;
 let editorScrollTimer = null;
 let readingSnapshot = null;
+let saveConfirmPending = false;
 let previewScale = 1;
 let previewX = 0;
 let previewY = 0;
@@ -72,6 +75,35 @@ const previewPointers = new Map();
 
 function setStatus(message) {
   statusText.textContent = message;
+}
+
+function getCurrentWritableHandle() {
+  if (currentMode === "folder" && currentFolderPath) {
+    const entry = markdownFiles.find((file) => file.path === currentFolderPath);
+    return entry?.handle || null;
+  }
+
+  return currentFileHandle;
+}
+
+function resetSaveConfirmation() {
+  saveConfirmPending = false;
+  saveBtn.textContent = "Save";
+  saveBtn.classList.remove("is-confirming");
+  saveBtn.setAttribute("aria-label", "Save to original file");
+  saveBtn.title = "Save to original file";
+}
+
+function canSaveOriginal() {
+  return Boolean(getCurrentWritableHandle()?.createWritable);
+}
+
+function updateSaveControls() {
+  resetSaveConfirmation();
+  const hasDocument = currentMode !== "empty";
+
+  saveBtn.disabled = !canSaveOriginal();
+  saveAsBtn.disabled = !hasDocument || !window.showSaveFilePicker;
 }
 
 function applyTheme(theme) {
@@ -231,6 +263,9 @@ function showEmpty() {
   clearTableOfContents();
   document.body.classList.remove("editor-active");
   readingSnapshot = null;
+  currentFile = null;
+  currentFileHandle = null;
+  currentMode = "empty";
   currentMarkdownText = "";
   currentDownloadName = "document.md";
   currentRenderContext = null;
@@ -243,6 +278,7 @@ function showEmpty() {
   editBtn.disabled = true;
   returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = true;
+  updateSaveControls();
 }
 
 function showError(message) {
@@ -256,6 +292,12 @@ function showError(message) {
   editorShell.hidden = true;
   exportBtn.disabled = true;
   returnToReadBtn.hidden = true;
+  downloadBtn.disabled = true;
+  editBtn.disabled = true;
+  refreshFileBtn.disabled = true;
+  updateSaveControls();
+  saveBtn.disabled = true;
+  saveAsBtn.disabled = true;
 }
 
 function showReader(html) {
@@ -272,6 +314,7 @@ function showReader(html) {
   editBtn.disabled = false;
   returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = currentMode === "empty";
+  updateSaveControls();
 }
 
 function showEditor(markdownText) {
@@ -288,6 +331,7 @@ function showEditor(markdownText) {
   editBtn.disabled = true;
   returnToReadBtn.hidden = false;
   updateFileSize(markdownText);
+  updateSaveControls();
 }
 
 function clearTableOfContents() {
@@ -855,6 +899,125 @@ function downloadCurrentMarkdown() {
   setStatus("Downloaded");
 }
 
+function getCurrentMarkdownForWrite() {
+  return editorShell.hidden ? currentMarkdownText : markdownInput.value;
+}
+
+async function ensureWritablePermission(fileHandle) {
+  if (!fileHandle) return false;
+
+  const options = { mode: "readwrite" };
+
+  if (fileHandle.queryPermission && (await fileHandle.queryPermission(options)) === "granted") {
+    return true;
+  }
+
+  if (!fileHandle.requestPermission) {
+    return true;
+  }
+
+  return (await fileHandle.requestPermission(options)) === "granted";
+}
+
+async function writeMarkdownToHandle(fileHandle, markdownText) {
+  if (!(await ensureWritablePermission(fileHandle))) {
+    throw new Error("Write permission was not granted.");
+  }
+
+  const writable = await fileHandle.createWritable();
+  await writable.write(markdownText);
+  await writable.close();
+}
+
+function syncSavedDocumentState(markdownText, file = null, fileHandle = null) {
+  currentMarkdownText = markdownText;
+  updateFileSize(markdownText);
+
+  if (file) {
+    currentFile = file;
+    currentDownloadName = file.name;
+    fileSizeEl.textContent = formatBytes(file.size);
+
+    if (currentMode !== "folder") {
+      fileNameEl.textContent = file.name;
+    }
+  }
+
+  if (fileHandle && currentMode !== "folder") {
+    currentFileHandle = fileHandle;
+    currentMode = "file";
+  }
+
+  if (readingSnapshot && readingSnapshot.mode !== "empty") {
+    readingSnapshot.mode = currentMode;
+    readingSnapshot.markdownText = markdownText;
+    readingSnapshot.renderContext = currentRenderContext;
+    readingSnapshot.fileName = fileNameEl.textContent;
+    readingSnapshot.fileSize = fileSizeEl.textContent;
+    readingSnapshot.file = currentFile;
+    readingSnapshot.fileHandle = currentFileHandle;
+    readingSnapshot.directoryHandle = currentDirectoryHandle;
+    readingSnapshot.folderPath = currentFolderPath;
+    readingSnapshot.downloadName = currentDownloadName;
+  }
+}
+
+async function saveCurrentMarkdownToOriginal() {
+  const fileHandle = getCurrentWritableHandle();
+  const markdownText = getCurrentMarkdownForWrite();
+
+  if (!fileHandle?.createWritable || currentMode === "empty") {
+    setStatus("Original save unavailable");
+    return;
+  }
+
+  setStatus("Saving...");
+  await writeMarkdownToHandle(fileHandle, markdownText);
+
+  const file = fileHandle.getFile ? await fileHandle.getFile() : null;
+  syncSavedDocumentState(markdownText, file);
+  resetSaveConfirmation();
+  updateSaveControls();
+  setStatus("Saved to original file");
+}
+
+async function saveCurrentMarkdownAs() {
+  if (!window.showSaveFilePicker || currentMode === "empty") {
+    setStatus("Save as unavailable");
+    return;
+  }
+
+  const markdownText = getCurrentMarkdownForWrite();
+  const suggestedName = currentDownloadName || fileNameEl.textContent || "document.md";
+
+  setStatus("Choosing save location...");
+
+  const fileHandle = await window.showSaveFilePicker({
+    suggestedName,
+    types: [
+      {
+        description: "Markdown and text files",
+        accept: {
+          "text/markdown": [".md", ".markdown"],
+          "text/plain": [".txt"],
+        },
+      },
+    ],
+  });
+
+  setStatus("Saving...");
+  await writeMarkdownToHandle(fileHandle, markdownText);
+
+  const file = fileHandle.getFile ? await fileHandle.getFile() : null;
+  clearFolderMode();
+  currentMode = "file";
+  currentRenderContext = null;
+  syncSavedDocumentState(markdownText, file, fileHandle);
+  refreshFileBtn.disabled = false;
+  updateSaveControls();
+  setStatus("Saved as new file");
+}
+
 function clearFolderMode() {
   currentDirectoryHandle = null;
   currentFolderPath = "";
@@ -1130,7 +1293,47 @@ editBtn.addEventListener("click", () => {
 });
 
 downloadBtn.addEventListener("click", () => {
+  resetSaveConfirmation();
   downloadCurrentMarkdown();
+});
+
+saveBtn.addEventListener("click", () => {
+  if (saveBtn.disabled) return;
+
+  if (!saveConfirmPending) {
+    saveConfirmPending = true;
+    saveBtn.textContent = "Overwrite original";
+    saveBtn.classList.add("is-confirming");
+    saveBtn.setAttribute("aria-label", "Overwrite the original file");
+    saveBtn.title = "Click again to overwrite the original file";
+    setStatus("Click Overwrite original to save");
+    return;
+  }
+
+  saveCurrentMarkdownToOriginal().catch((error) => {
+    resetSaveConfirmation();
+
+    if (error.name === "AbortError") {
+      setStatus("Save cancelled");
+      return;
+    }
+
+    console.error(error);
+    setStatus(error.message || "Could not save this file");
+  });
+});
+
+saveAsBtn.addEventListener("click", () => {
+  resetSaveConfirmation();
+  saveCurrentMarkdownAs().catch((error) => {
+    if (error.name === "AbortError") {
+      setStatus("Save as cancelled");
+      return;
+    }
+
+    console.error(error);
+    setStatus(error.message || "Could not save this file");
+  });
 });
 
 returnToReadBtn.addEventListener("click", () => {
@@ -1154,6 +1357,7 @@ returnToReadBtn.addEventListener("click", () => {
 });
 
 markdownInput.addEventListener("input", () => {
+  resetSaveConfirmation();
   scheduleEditorPreview();
 });
 

@@ -8,6 +8,7 @@
   --btn: #302b28;
   --btn2: #26221f;
   --accent: #9ad3ff;
+  --danger: #d86a63;
   --topbar-bg: rgba(23, 21, 20, 0.92);
 
   /* reader surface */
@@ -41,6 +42,7 @@ html[data-theme="light"] {
   --btn: #fbfbfb;
   --btn2: #e9eaec;
   --accent: #0b66ff;
+  --danger: #9d2019;
   --topbar-bg: rgba(242, 243, 243, 0.92);
 
   --reader-bg: rgba(255, 255, 255, 0.42);
@@ -69,6 +71,7 @@ html[data-theme="brown"] {
   --btn: #e0d2b8;
   --btn2: #ccb995;
   --accent: #3f7359;
+  --danger: #8f2119;
   --topbar-bg: rgba(201, 183, 149, 0.9);
 
   --reader-bg: rgba(255, 248, 235, 0.2);
@@ -173,6 +176,10 @@ body.topbar-locked .layout {
 }
 .btn.secondary {
   background: var(--btn2);
+}
+.btn.is-confirming {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .icon-btn {
   width: 38px;
