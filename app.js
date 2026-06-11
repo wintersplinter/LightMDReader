@@ -733,7 +733,7 @@ function moveEditorCursorToLine(lineNumber) {
 
   markdownInput.focus({ preventScroll: true });
   markdownInput.setSelectionRange(cursorIndex, cursorIndex);
-  scrollEditorToLine(lineNumber);
+  scrollEditorToLine(lineNumber, cursorIndex);
   schedulePreviewCursorSync();
 }
 
@@ -749,10 +749,64 @@ function getEditorLineHeight() {
   return fontSize * 1.55;
 }
 
-function scrollEditorToLine(lineNumber) {
+function getEditorCursorTop(cursorIndex) {
+  const computedStyle = window.getComputedStyle(markdownInput);
+  const mirror = document.createElement("div");
+  const caretMarker = document.createElement("span");
+  const mirroredProperties = [
+    "borderBottomWidth",
+    "borderLeftWidth",
+    "borderRightWidth",
+    "borderTopWidth",
+    "boxSizing",
+    "fontFamily",
+    "fontSize",
+    "fontStyle",
+    "fontVariant",
+    "fontWeight",
+    "letterSpacing",
+    "lineHeight",
+    "paddingBottom",
+    "paddingLeft",
+    "paddingRight",
+    "paddingTop",
+    "tabSize",
+    "textIndent",
+    "textTransform",
+    "whiteSpace",
+    "wordBreak",
+    "wordSpacing",
+  ];
+
+  mirroredProperties.forEach((property) => {
+    mirror.style[property] = computedStyle[property];
+  });
+
+  mirror.style.position = "absolute";
+  mirror.style.visibility = "hidden";
+  mirror.style.overflow = "hidden";
+  mirror.style.overflowWrap = "break-word";
+  mirror.style.whiteSpace = "pre-wrap";
+  mirror.style.width = `${markdownInput.offsetWidth}px`;
+
+  mirror.textContent = markdownInput.value.slice(0, cursorIndex);
+  caretMarker.textContent = "\u200b";
+  mirror.append(caretMarker);
+  document.body.append(mirror);
+
+  const cursorTop = caretMarker.offsetTop;
+  mirror.remove();
+
+  return cursorTop;
+}
+
+function scrollEditorToLine(lineNumber, cursorIndex = getLineStartIndex(lineNumber)) {
   const computedStyle = window.getComputedStyle(markdownInput);
   const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
-  const lineTop = paddingTop + (Math.max(1, lineNumber) - 1) * getEditorLineHeight();
+  const measuredTop = getEditorCursorTop(cursorIndex);
+  const lineTop = Number.isFinite(measuredTop)
+    ? measuredTop
+    : paddingTop + (Math.max(1, lineNumber) - 1) * getEditorLineHeight();
   const nextTop = lineTop - markdownInput.clientHeight * 0.15;
 
   markdownInput.scrollTop = Math.max(0, nextTop);
