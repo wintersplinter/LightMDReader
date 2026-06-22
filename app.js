@@ -58,6 +58,7 @@ let currentDownloadName = "document.md";
 let currentRenderContext = null;
 let editorPreviewTimer = null;
 let editorScrollTimer = null;
+let suppressPreviewCursorSyncUntil = 0;
 let readingSnapshot = null;
 let saveConfirmPending = false;
 let previewScale = 1;
@@ -155,6 +156,10 @@ setTopbarLocked(localStorage.getItem("lightmdreader-topbar-locked") === "true");
 
 window.addEventListener("resize", updateTopbarOffset);
 window.addEventListener("load", updateTopbarOffset);
+window.addEventListener("beforeunload", (event) => {
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 function setListMarkersEnabled(isEnabled) {
   document.body.classList.toggle("list-markers-enabled", isEnabled);
@@ -724,17 +729,24 @@ function syncPreviewToCursor() {
 }
 
 function schedulePreviewCursorSync() {
+  if (performance.now() < suppressPreviewCursorSyncUntil) return;
+
   window.clearTimeout(editorScrollTimer);
   editorScrollTimer = window.setTimeout(syncPreviewToCursor, 0);
 }
 
-function moveEditorCursorToLine(lineNumber) {
+function moveEditorCursorToLine(lineNumber, { syncPreview = true } = {}) {
   const cursorIndex = getLineStartIndex(lineNumber);
 
   markdownInput.focus({ preventScroll: true });
   markdownInput.setSelectionRange(cursorIndex, cursorIndex);
   scrollEditorToLine(lineNumber, cursorIndex);
-  schedulePreviewCursorSync();
+
+  if (syncPreview) {
+    schedulePreviewCursorSync();
+  } else {
+    window.clearTimeout(editorScrollTimer);
+  }
 }
 
 function getEditorLineHeight() {
@@ -812,13 +824,20 @@ function scrollEditorToLine(lineNumber, cursorIndex = getLineStartIndex(lineNumb
   markdownInput.scrollTop = Math.max(0, nextTop);
 }
 
-function moveEditorCursorToPreviewTarget(target) {
+function getPreviewSourceLineFromClick(target) {
   const sourceElement = target.closest("[data-source-line]");
   const sourceLine = Number(sourceElement?.dataset.sourceLine);
 
+  return sourceLine || null;
+}
+
+function moveEditorCursorToPreviewTarget(target) {
+  const sourceLine = getPreviewSourceLineFromClick(target);
+
   if (!sourceLine) return;
 
-  moveEditorCursorToLine(sourceLine);
+  suppressPreviewCursorSyncUntil = performance.now() + 150;
+  moveEditorCursorToLine(sourceLine, { syncPreview: false });
 }
 
 function placeEditorCursorAtStart() {
