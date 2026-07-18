@@ -50,6 +50,12 @@
           accept=".md,.markdown,text/markdown,text/plain"
           hidden
         />
+        <input
+          id="recoveryKeyInput"
+          type="file"
+          accept=".json,application/json"
+          hidden
+        />
 
         <button id="folderBtn" class="btn" type="button">
           Open folder
@@ -57,6 +63,10 @@
 
         <button id="createBtn" class="btn" type="button">
           Create
+        </button>
+
+        <button id="cheatsheetBtn" class="btn secondary" type="button">
+          Cheatsheet
         </button>
 
         <button id="editBtn" class="btn secondary" type="button" disabled>
@@ -73,6 +83,21 @@
 
         <button id="downloadBtn" class="btn secondary" type="button" disabled>
           Download
+        </button>
+
+        <button
+          id="encryptionBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-label="Sign in to use encryption"
+          title="Sign in to use encryption"
+          disabled
+        >
+          &#x1F5DD;&#xFE0E;
+        </button>
+
+        <button id="googleSignInBtn" class="btn secondary profile-btn" type="button">
+          Sign in
         </button>
 
         <button
@@ -186,7 +211,32 @@
       </div>
     </div>
 
+    <div
+      id="cheatsheetDialog"
+      class="cheatsheet-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cheatsheetTitle"
+      hidden
+    >
+      <div id="cheatsheetBackdrop" class="cheatsheet-backdrop"></div>
+      <section class="cheatsheet-panel" aria-describedby="cheatsheetDescription">
+        <header class="cheatsheet-header">
+          <div>
+            <h2 id="cheatsheetTitle">Markdown cheatsheet</h2>
+            <p id="cheatsheetDescription">Rendered with the app's markdown rules.</p>
+          </div>
+          <button id="cheatsheetClose" class="btn secondary" type="button">
+            Close
+          </button>
+        </header>
+        <article id="cheatsheetContent" class="reader markdown-body cheatsheet-content"></article>
+      </section>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="./config.js"></script>
     <script src="./MDrender.js"></script>
     <script src="./app.js"></script>
   </body>

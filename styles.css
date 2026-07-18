@@ -114,6 +114,10 @@ body.preview-open {
   overflow: hidden;
 }
 
+body.cheatsheet-open {
+  overflow: hidden;
+}
+
 .topbar {
   position: relative;
   display: flex;
@@ -181,10 +185,20 @@ body.topbar-locked .layout {
   border-color: var(--danger);
   color: var(--danger);
 }
+.btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .icon-btn {
   width: 38px;
   padding: 8px 0;
   line-height: 1;
+}
+.profile-btn {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .btn[aria-pressed="true"] {
   border-color: var(--accent);
@@ -653,6 +667,67 @@ body.editor-active .return-top-btn {
   outline: none;
 }
 
+.cheatsheet-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.cheatsheet-dialog[hidden] {
+  display: none;
+}
+
+.cheatsheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.cheatsheet-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(980px, 100%);
+  max-height: min(86vh, 860px);
+  min-height: 0;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.cheatsheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cheatsheet-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.cheatsheet-header p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.cheatsheet-content {
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+  overflow: auto;
+}
+
 .return-top-btn {
   position: fixed;
   right: 18px;
@@ -800,6 +875,20 @@ body.editor-active .return-top-btn {
 
   .reader {
     padding: 16px;
+  }
+
+  .cheatsheet-dialog {
+    padding: 10px;
+  }
+
+  .cheatsheet-panel {
+    max-height: calc(100vh - 20px);
+  }
+
+  .cheatsheet-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .editor-shell {

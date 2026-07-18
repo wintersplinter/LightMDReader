@@ -1,13 +1,17 @@
 /* global DOMPurify */
 
 const fileInput = document.getElementById("fileInput");
+const recoveryKeyInput = document.getElementById("recoveryKeyInput");
 const openFileBtn = document.getElementById("openFileBtn");
 const folderBtn = document.getElementById("folderBtn");
 const createBtn = document.getElementById("createBtn");
+const cheatsheetBtn = document.getElementById("cheatsheetBtn");
 const editBtn = document.getElementById("editBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const saveBtn = document.getElementById("saveBtn");
 const saveAsBtn = document.getElementById("saveAsBtn");
+const encryptionBtn = document.getElementById("encryptionBtn");
+const googleSignInBtn = document.getElementById("googleSignInBtn");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
@@ -39,11 +43,21 @@ const imagePreview = document.getElementById("imagePreview");
 const imagePreviewStage = document.getElementById("imagePreviewStage");
 const imagePreviewImg = document.getElementById("imagePreviewImg");
 const imagePreviewClose = document.getElementById("imagePreviewClose");
+const cheatsheetDialog = document.getElementById("cheatsheetDialog");
+const cheatsheetBackdrop = document.getElementById("cheatsheetBackdrop");
+const cheatsheetClose = document.getElementById("cheatsheetClose");
+const cheatsheetContent = document.getElementById("cheatsheetContent");
 const availableThemes = new Set(["dark", "light", "brown"]);
 const availablePdfPaperSizes = new Set(["browser", "a4", "letter"]);
 const markdownFilePattern = /\.(md|markdown|txt)$/i;
 const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 const externalUrlPattern = /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i;
+const encryptedDocumentFormat = "lightmdreader-encrypted-v1";
+const encryptionKeyFileName = "lightmdreader-key-v1.json";
+const googleDriveAppDataScope = "https://www.googleapis.com/auth/drive.appdata";
+const googleIdentityScope = "openid profile email";
+const googleScopes = `${googleIdentityScope} ${googleDriveAppDataScope}`;
+const googleClientId = window.LightMDReaderConfig?.googleClientId || "";
 
 let folderFiles = new Map();
 let markdownFiles = [];
@@ -61,6 +75,19 @@ let editorScrollTimer = null;
 let suppressPreviewCursorSyncUntil = 0;
 let readingSnapshot = null;
 let saveConfirmPending = false;
+let googleTokenClient = null;
+let googleAccessToken = "";
+let googleAccessTokenExpiresAt = 0;
+let googleProfile = null;
+let masterKeyBytes = null;
+let masterCryptoKey = null;
+let masterKeyId = "";
+let driveKeyFileId = "";
+let encryptedDocumentState = {
+  encrypted: false,
+  unlocked: false,
+  keyId: "",
+};
 let previewScale = 1;
 let previewX = 0;
 let previewY = 0;
@@ -72,10 +99,476 @@ let previewStartDistance = 0;
 let previewStartScale = 1;
 let previewIsDragging = false;
 let previewWasDragged = false;
+let cheatsheetMarkdownText = "";
+let cheatsheetTrigger = null;
 const previewPointers = new Map();
 
 function setStatus(message) {
   statusText.textContent = message;
+}
+
+function setEncryptedDocumentState(nextState = {}) {
+  encryptedDocumentState = {
+    encrypted: false,
+    unlocked: false,
+    keyId: "",
+    ...nextState,
+  };
+  updateEncryptionControls();
+}
+
+function updateEncryptionControls() {
+  const hasDocument = currentMode !== "empty";
+  const signedIn = Boolean(masterCryptoKey && googleProfile);
+  const googleReady = Boolean(googleClientId);
+
+  googleSignInBtn.textContent = googleProfile?.name || googleProfile?.email || "Sign in";
+  googleSignInBtn.title = googleReady
+    ? signedIn
+      ? `Signed in as ${googleProfile.email || googleProfile.name}`
+      : "Sign in with Google"
+    : "Add a Google OAuth Client ID in config.js";
+  googleSignInBtn.disabled = !googleReady;
+
+  encryptionBtn.disabled = !hasDocument && signedIn;
+  encryptionBtn.classList.toggle("is-active", encryptedDocumentState.encrypted);
+
+  if (!googleReady) {
+    encryptionBtn.disabled = true;
+    encryptionBtn.setAttribute("aria-label", "Configure Google sign-in to use encryption");
+    encryptionBtn.title = "Configure Google sign-in to use encryption";
+    return;
+  }
+
+  if (!signedIn) {
+    encryptionBtn.disabled = false;
+    encryptionBtn.setAttribute("aria-label", "Sign in to use encryption");
+    encryptionBtn.title = "Sign in to use encryption";
+    return;
+  }
+
+  if (!hasDocument) {
+    encryptionBtn.disabled = true;
+    encryptionBtn.setAttribute("aria-label", "Open a document before using encryption");
+    encryptionBtn.title = "Open a document before using encryption";
+    return;
+  }
+
+  if (encryptedDocumentState.encrypted) {
+    encryptionBtn.setAttribute("aria-label", "Save decrypted copy");
+    encryptionBtn.title = "Encrypted document. Saves stay encrypted. Click to download a decrypted copy.";
+    return;
+  }
+
+  encryptionBtn.setAttribute("aria-label", "Encrypt document");
+  encryptionBtn.title = "Encrypt this document";
+}
+
+function getGoogleSignInUnavailableMessage() {
+  if (!googleClientId) {
+    return "Add your Google OAuth Client ID in config.js to use encryption.";
+  }
+
+  if (!window.google?.accounts?.oauth2) {
+    return "Google sign-in did not load. Check your connection and reload.";
+  }
+
+  return "";
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+function createKeyId(bytes) {
+  return bytesToBase64(bytes.slice(0, 12)).replace(/[+/=]/g, "");
+}
+
+async function importMasterKey(bytes) {
+  return crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+function parseEncryptedDocument(text) {
+  const trimmed = text.trim();
+
+  if (!trimmed.startsWith("{")) return null;
+
+  try {
+    const payload = JSON.parse(trimmed);
+
+    if (payload?.format !== encryptedDocumentFormat) return null;
+    if (payload.cipher !== "AES-GCM" || !payload.iv || !payload.data) {
+      throw new Error("This encrypted document has an unsupported format.");
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+async function encryptMarkdownDocument(markdownText) {
+  await ensureEncryptionReady();
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encodedText = new TextEncoder().encode(markdownText);
+  const encryptedBytes = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, masterCryptoKey, encodedText));
+
+  return `${JSON.stringify(
+    {
+      format: encryptedDocumentFormat,
+      version: 1,
+      cipher: "AES-GCM",
+      keyId: masterKeyId,
+      iv: bytesToBase64(iv),
+      data: bytesToBase64(encryptedBytes),
+    },
+    null,
+    2,
+  )}\n`;
+}
+
+async function decryptMarkdownDocument(payload) {
+  await ensureEncryptionReady();
+
+  if (payload.keyId && masterKeyId && payload.keyId !== masterKeyId) {
+    const shouldImportRecoveryKey = window.confirm(
+      "This document was encrypted with another LightMDReader key. Choose OK to import a recovery key, or Cancel to stop.",
+    );
+
+    if (!shouldImportRecoveryKey) {
+      throw new Error("This document was encrypted with another LightMDReader key.");
+    }
+
+    await importRecoveryKey();
+  }
+
+  const iv = base64ToBytes(payload.iv);
+  const data = base64ToBytes(payload.data);
+
+  try {
+    const decryptedBytes = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, masterCryptoKey, data);
+    return new TextDecoder().decode(decryptedBytes);
+  } catch (error) {
+    throw new Error("Could not unlock this document with your current key.");
+  }
+}
+
+function downloadTextFile(fileName, text, type = "application/json;charset=utf-8") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadRecoveryKey() {
+  if (!masterKeyBytes || !googleProfile) return;
+
+  const recoveryKey = {
+    format: "lightmdreader-recovery-key-v1",
+    keyId: masterKeyId,
+    email: googleProfile.email || "",
+    createdAt: new Date().toISOString(),
+    key: bytesToBase64(masterKeyBytes),
+  };
+
+  downloadTextFile("LightMDReader-recovery-key.json", `${JSON.stringify(recoveryKey, null, 2)}\n`);
+}
+
+function getGoogleTokenClient() {
+  if (googleTokenClient) return googleTokenClient;
+
+  const unavailableMessage = getGoogleSignInUnavailableMessage();
+  if (unavailableMessage) {
+    throw new Error(unavailableMessage);
+  }
+
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: googleClientId,
+    scope: googleScopes,
+    callback: () => {},
+  });
+
+  return googleTokenClient;
+}
+
+function requestGoogleAccessToken(prompt = "") {
+  return new Promise((resolve, reject) => {
+    const tokenClient = getGoogleTokenClient();
+
+    tokenClient.callback = (response) => {
+      if (response.error) {
+        reject(new Error(response.error_description || response.error));
+        return;
+      }
+
+      googleAccessToken = response.access_token;
+      googleAccessTokenExpiresAt = Date.now() + Math.max(0, Number(response.expires_in || 0) - 60) * 1000;
+      resolve(googleAccessToken);
+    };
+
+    tokenClient.requestAccessToken({ prompt });
+  });
+}
+
+async function getGoogleAccessToken() {
+  if (googleAccessToken && Date.now() < googleAccessTokenExpiresAt) {
+    return googleAccessToken;
+  }
+
+  return requestGoogleAccessToken(googleAccessToken ? "" : "consent");
+}
+
+async function googleFetch(url, options = {}) {
+  const token = await getGoogleAccessToken();
+  const headers = new Headers(options.headers || {});
+  headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    googleAccessToken = "";
+  }
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Google request failed (${response.status}).`);
+  }
+
+  return response;
+}
+
+async function loadGoogleProfile() {
+  const response = await googleFetch("https://www.googleapis.com/oauth2/v3/userinfo");
+  googleProfile = await response.json();
+}
+
+async function findDriveKeyFile() {
+  const query = encodeURIComponent(`name='${encryptionKeyFileName}' and trashed=false`);
+  const response = await googleFetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime)`,
+  );
+  const result = await response.json();
+
+  return result.files?.[0] || null;
+}
+
+async function readDriveKeyFile(fileId) {
+  const response = await googleFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  return response.json();
+}
+
+async function createDriveKeyFile(keyRecord) {
+  const metadata = {
+    name: encryptionKeyFileName,
+    parents: ["appDataFolder"],
+    mimeType: "application/json",
+  };
+  const boundary = `lightmdreader-${crypto.randomUUID()}`;
+  const body = [
+    `--${boundary}`,
+    "Content-Type: application/json; charset=UTF-8",
+    "",
+    JSON.stringify(metadata),
+    `--${boundary}`,
+    "Content-Type: application/json; charset=UTF-8",
+    "",
+    JSON.stringify(keyRecord, null, 2),
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  const response = await googleFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+    method: "POST",
+    headers: {
+      "Content-Type": `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+  const createdFile = await response.json();
+  driveKeyFileId = createdFile.id || "";
+}
+
+async function updateDriveKeyFile(keyRecord) {
+  if (!driveKeyFileId) {
+    await createDriveKeyFile(keyRecord);
+    return;
+  }
+
+  await googleFetch(`https://www.googleapis.com/upload/drive/v3/files/${driveKeyFileId}?uploadType=media`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify(keyRecord, null, 2),
+  });
+}
+
+async function chooseRecoveryKeyText() {
+  if (window.showOpenFilePicker) {
+    const [fileHandle] = await window.showOpenFilePicker({
+      multiple: false,
+      types: [
+        {
+          description: "LightMDReader recovery key",
+          accept: {
+            "application/json": [".json"],
+          },
+        },
+      ],
+    });
+    const file = await fileHandle.getFile();
+    return file.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    recoveryKeyInput.onchange = () => {
+      const file = recoveryKeyInput.files?.[0];
+      recoveryKeyInput.value = "";
+
+      if (!file) {
+        reject(new Error("No recovery key selected."));
+        return;
+      }
+
+      file.text().then(resolve, reject);
+    };
+    recoveryKeyInput.click();
+  });
+}
+
+async function importRecoveryKey() {
+  const text = await chooseRecoveryKeyText();
+  const recoveryKey = JSON.parse(text);
+
+  if (recoveryKey.format !== "lightmdreader-recovery-key-v1" || !recoveryKey.key) {
+    throw new Error("This is not a supported LightMDReader recovery key.");
+  }
+
+  masterKeyBytes = base64ToBytes(recoveryKey.key);
+  masterKeyId = recoveryKey.keyId || createKeyId(masterKeyBytes);
+  masterCryptoKey = await importMasterKey(masterKeyBytes);
+
+  await updateDriveKeyFile({
+    format: "lightmdreader-key-v1",
+    keyId: masterKeyId,
+    restoredAt: new Date().toISOString(),
+    key: bytesToBase64(masterKeyBytes),
+  });
+
+  updateEncryptionControls();
+}
+
+async function loadOrCreateMasterKey() {
+  const keyFile = await findDriveKeyFile();
+
+  if (keyFile) {
+    driveKeyFileId = keyFile.id;
+    const keyRecord = await readDriveKeyFile(keyFile.id);
+
+    if (keyRecord.format !== "lightmdreader-key-v1" || !keyRecord.key) {
+      throw new Error("The LightMDReader key in Google Drive App Data is not supported.");
+    }
+
+    masterKeyBytes = base64ToBytes(keyRecord.key);
+    masterKeyId = keyRecord.keyId || createKeyId(masterKeyBytes);
+    masterCryptoKey = await importMasterKey(masterKeyBytes);
+    return;
+  }
+
+  const shouldCreateKey = window.confirm(
+    "No LightMDReader encryption key was found in Google Drive App Data. Choose OK to create a new key, or Cancel to import a recovery key.",
+  );
+
+  if (!shouldCreateKey) {
+    await importRecoveryKey();
+    setStatus("Recovery key imported.");
+    return;
+  }
+
+  masterKeyBytes = crypto.getRandomValues(new Uint8Array(32));
+  masterKeyId = createKeyId(masterKeyBytes);
+  masterCryptoKey = await importMasterKey(masterKeyBytes);
+
+  await createDriveKeyFile({
+    format: "lightmdreader-key-v1",
+    keyId: masterKeyId,
+    createdAt: new Date().toISOString(),
+    key: bytesToBase64(masterKeyBytes),
+  });
+
+  downloadRecoveryKey();
+  setStatus("Encryption key created. Recovery key downloaded.");
+}
+
+async function signInForEncryption() {
+  setStatus("Signing in...");
+  await requestGoogleAccessToken(googleAccessToken ? "" : "consent");
+  await loadGoogleProfile();
+  await loadOrCreateMasterKey();
+  updateEncryptionControls();
+  setStatus(`Signed in as ${googleProfile.email || googleProfile.name}`);
+}
+
+async function ensureEncryptionReady() {
+  if (masterCryptoKey && googleProfile) return;
+  await signInForEncryption();
+}
+
+async function readMarkdownDocumentText(text) {
+  const encryptedPayload = parseEncryptedDocument(text);
+
+  if (!encryptedPayload) {
+    setEncryptedDocumentState();
+    return text;
+  }
+
+  setStatus("Unlocking encrypted document...");
+  const markdownText = await decryptMarkdownDocument(encryptedPayload);
+
+  setEncryptedDocumentState({
+    encrypted: true,
+    unlocked: true,
+    keyId: encryptedPayload.keyId || "",
+  });
+
+  return markdownText;
+}
+
+async function getCurrentStorageTextForWrite() {
+  const markdownText = getCurrentMarkdownForWrite();
+
+  if (!encryptedDocumentState.encrypted) {
+    return markdownText;
+  }
+
+  return encryptMarkdownDocument(markdownText);
 }
 
 function getCurrentWritableHandle() {
@@ -105,6 +598,7 @@ function updateSaveControls() {
 
   saveBtn.disabled = !canSaveOriginal();
   saveAsBtn.disabled = !hasDocument || !window.showSaveFilePicker;
+  updateEncryptionControls();
 }
 
 function applyTheme(theme) {
@@ -170,6 +664,7 @@ function setListMarkersEnabled(isEnabled) {
 }
 
 setListMarkersEnabled(localStorage.getItem("lightmdreader-list-markers") === "true");
+updateEncryptionControls();
 
 themeSelect.addEventListener("change", (e) => {
   applyTheme(e.target.value);
@@ -274,6 +769,7 @@ function showEmpty() {
   currentMarkdownText = "";
   currentDownloadName = "document.md";
   currentRenderContext = null;
+  setEncryptedDocumentState();
   emptyState.hidden = false;
   errorState.hidden = true;
   reader.hidden = true;
@@ -303,6 +799,7 @@ function showError(message) {
   updateSaveControls();
   saveBtn.disabled = true;
   saveAsBtn.disabled = true;
+  updateEncryptionControls();
 }
 
 function showReader(html) {
@@ -437,6 +934,55 @@ function closeImagePreview() {
   document.body.classList.remove("preview-open");
   imagePreviewImg.removeAttribute("src");
   resetImagePreview();
+}
+
+function closeCheatsheet() {
+  if (cheatsheetDialog.hidden) return;
+
+  cheatsheetDialog.hidden = true;
+  document.body.classList.remove("cheatsheet-open");
+  hideMarkdownComments(cheatsheetContent);
+
+  if (cheatsheetTrigger && document.contains(cheatsheetTrigger)) {
+    cheatsheetTrigger.focus();
+  }
+}
+
+async function loadCheatsheetMarkdown() {
+  if (cheatsheetMarkdownText) return cheatsheetMarkdownText;
+
+  const response = await fetch("./cheatsheet.md");
+
+  if (!response.ok) {
+    throw new Error("Could not load the markdown cheatsheet.");
+  }
+
+  cheatsheetMarkdownText = await response.text();
+  return cheatsheetMarkdownText;
+}
+
+async function openCheatsheet() {
+  cheatsheetTrigger = document.activeElement;
+  cheatsheetDialog.hidden = false;
+  document.body.classList.add("cheatsheet-open");
+  cheatsheetContent.innerHTML = "<p>Loading cheatsheet...</p>";
+  cheatsheetClose.focus();
+
+  try {
+    await waitForMarkdownRenderer();
+    const markdownText = await loadCheatsheetMarkdown();
+    const rawHtml = window.renderMarkdown(markdownText);
+    const safeHtml = sanitizeHtml(rawHtml);
+
+    cheatsheetContent.innerHTML = safeHtml || "<p>No cheatsheet content found.</p>";
+    wireImagePreview(cheatsheetContent);
+    wireMarkdownComments(cheatsheetContent);
+  } catch (error) {
+    console.error(error);
+    const message = document.createElement("p");
+    message.textContent = error.message || "Could not load the cheatsheet.";
+    cheatsheetContent.replaceChildren(message);
+  }
 }
 
 function zoomImagePreview(nextScale) {
@@ -865,6 +1411,7 @@ function captureReadingSnapshot() {
       fileHandle: currentFileHandle,
       directoryHandle: currentDirectoryHandle,
       folderPath: currentFolderPath,
+      encryptedDocumentState: { ...encryptedDocumentState },
       scrollY: window.scrollY,
     };
     return;
@@ -894,6 +1441,7 @@ async function returnToRead() {
   currentFileHandle = snapshot.fileHandle || null;
   currentDirectoryHandle = snapshot.directoryHandle || currentDirectoryHandle;
   currentFolderPath = snapshot.folderPath || "";
+  setEncryptedDocumentState(snapshot.encryptedDocumentState || {});
   fileNameEl.textContent = snapshot.fileName;
   fileSizeEl.textContent = snapshot.fileSize;
   setActiveFolderItem(currentFolderPath);
@@ -910,6 +1458,7 @@ async function createDocument() {
   currentRenderContext = null;
   currentDownloadName = "untitled.md";
   currentMarkdownText = "# Untitled\n\n";
+  setEncryptedDocumentState();
   fileNameEl.textContent = "Untitled";
   refreshFileBtn.disabled = true;
   showEditor(currentMarkdownText);
@@ -924,6 +1473,31 @@ async function editCurrentDocument() {
   showEditor(currentMarkdownText);
   await renderEditorPreview();
   placeEditorCursorAtStart();
+}
+
+async function handleEncryptionAction() {
+  if (currentMode === "empty") {
+    await ensureEncryptionReady();
+    return;
+  }
+
+  if (!encryptedDocumentState.encrypted) {
+    await ensureEncryptionReady();
+    setEncryptedDocumentState({
+      encrypted: true,
+      unlocked: true,
+      keyId: masterKeyId,
+    });
+    resetSaveConfirmation();
+    setStatus("Encryption on. Save or download to write encrypted content.");
+    return;
+  }
+
+  const markdownText = getCurrentMarkdownForWrite();
+  const name = getDownloadFileName().replace(/(-\d{8}-\d{6})?(\.(?:md|markdown|txt))$/i, "-decrypted$2");
+
+  downloadTextFile(name, markdownText, "text/markdown;charset=utf-8");
+  setStatus("Downloaded decrypted copy");
 }
 
 function formatDownloadTimestamp(date = new Date()) {
@@ -956,20 +1530,17 @@ function getDownloadFileName() {
 }
 
 function downloadCurrentMarkdown() {
-  const markdownText = editorShell.hidden ? currentMarkdownText : markdownInput.value;
-  if (!markdownText && currentMode === "empty") return;
+  getCurrentStorageTextForWrite()
+    .then((documentText) => {
+      if (!documentText && currentMode === "empty") return;
 
-  const blob = new Blob([markdownText], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = getDownloadFileName();
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  setStatus("Downloaded");
+      downloadTextFile(getDownloadFileName(), documentText, "text/markdown;charset=utf-8");
+      setStatus(encryptedDocumentState.encrypted ? "Downloaded encrypted copy" : "Downloaded");
+    })
+    .catch((error) => {
+      console.error(error);
+      setStatus(error.message || "Could not download this file");
+    });
 }
 
 function getCurrentMarkdownForWrite() {
@@ -1045,7 +1616,8 @@ async function saveCurrentMarkdownToOriginal() {
   }
 
   setStatus("Saving...");
-  await writeMarkdownToHandle(fileHandle, markdownText);
+  const storageText = await getCurrentStorageTextForWrite();
+  await writeMarkdownToHandle(fileHandle, storageText);
 
   const file = fileHandle.getFile ? await fileHandle.getFile() : null;
   syncSavedDocumentState(markdownText, file);
@@ -1061,6 +1633,7 @@ async function saveCurrentMarkdownAs() {
   }
 
   const markdownText = getCurrentMarkdownForWrite();
+  const storageText = await getCurrentStorageTextForWrite();
   const suggestedName = currentDownloadName || fileNameEl.textContent || "document.md";
 
   setStatus("Choosing save location...");
@@ -1079,7 +1652,7 @@ async function saveCurrentMarkdownAs() {
   });
 
   setStatus("Saving...");
-  await writeMarkdownToHandle(fileHandle, markdownText);
+  await writeMarkdownToHandle(fileHandle, storageText);
 
   const file = fileHandle.getFile ? await fileHandle.getFile() : null;
   clearFolderMode();
@@ -1107,6 +1680,7 @@ function setSingleFileMode(file, fileHandle = null) {
   currentFileHandle = fileHandle;
   currentMode = "file";
   currentDownloadName = file.name;
+  setEncryptedDocumentState();
 }
 
 async function openMarkdownFile(file, fileHandle = null) {
@@ -1125,7 +1699,8 @@ async function openMarkdownFile(file, fileHandle = null) {
 
   try {
     const text = await file.text();
-    await renderDocument(text);
+    const markdownText = await readMarkdownDocumentText(text);
+    await renderDocument(markdownText);
   } catch (error) {
     console.error(error);
     showError(error.message || "Something went wrong while reading the file.");
@@ -1222,15 +1797,17 @@ async function openFolderMarkdown(path) {
   currentFolderPath = path;
   currentMode = "folder";
   currentDownloadName = entry.name;
+  setEncryptedDocumentState();
   setActiveFolderItem(path);
   setStatus("Reading...");
 
   try {
     const file = await entry.handle.getFile();
     const text = await file.text();
+    const markdownText = await readMarkdownDocumentText(text);
     fileNameEl.textContent = entry.path;
     fileSizeEl.textContent = formatBytes(file.size);
-    await renderDocument(text, { path: entry.path });
+    await renderDocument(markdownText, { path: entry.path });
   } catch (error) {
     console.error(error);
     showError(error.message || "Something went wrong while reading the file.");
@@ -1357,6 +1934,10 @@ createBtn.addEventListener("click", () => {
   });
 });
 
+cheatsheetBtn.addEventListener("click", () => {
+  openCheatsheet();
+});
+
 editBtn.addEventListener("click", () => {
   editCurrentDocument().catch((error) => {
     console.error(error);
@@ -1368,6 +1949,22 @@ editBtn.addEventListener("click", () => {
 downloadBtn.addEventListener("click", () => {
   resetSaveConfirmation();
   downloadCurrentMarkdown();
+});
+
+encryptionBtn.addEventListener("click", () => {
+  resetSaveConfirmation();
+  handleEncryptionAction().catch((error) => {
+    console.error(error);
+    setStatus(error.message || "Could not use encryption");
+  });
+});
+
+googleSignInBtn.addEventListener("click", () => {
+  signInForEncryption().catch((error) => {
+    console.error(error);
+    setStatus(error.message || "Could not sign in");
+    updateEncryptionControls();
+  });
 });
 
 saveBtn.addEventListener("click", () => {
@@ -1472,6 +2069,14 @@ imagePreviewClose.addEventListener("click", () => {
   closeImagePreview();
 });
 
+cheatsheetClose.addEventListener("click", () => {
+  closeCheatsheet();
+});
+
+cheatsheetBackdrop.addEventListener("click", () => {
+  closeCheatsheet();
+});
+
 imagePreviewStage.addEventListener("click", (event) => {
   if (event.target === imagePreviewStage && !previewWasDragged) {
     closeImagePreview();
@@ -1557,7 +2162,12 @@ imagePreviewStage.addEventListener("pointermove", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeImagePreview();
+    if (!imagePreview.hidden) {
+      closeImagePreview();
+      return;
+    }
+
+    closeCheatsheet();
     hideMarkdownComments();
   }
 });
@@ -1585,6 +2195,23 @@ document.addEventListener("pointerdown", (event) => {
 dropZone.addEventListener("drop", (event) => {
   openMarkdownFile(event.dataTransfer?.files?.[0]);
 });
+
+if ("launchQueue" in window && "LaunchParams" in window) {
+  window.launchQueue.setConsumer((launchParams) => {
+    const [fileHandle] = launchParams.files || [];
+
+    if (!fileHandle) return;
+
+    fileHandle
+      .getFile()
+      .then((file) => openMarkdownFile(file, fileHandle))
+      .catch((error) => {
+        console.error(error);
+        showError(error.message || "Could not open the launched file.");
+        setStatus("Error");
+      });
+  });
+}
 
 exportBtn.addEventListener("click", async () => {
   if (reader.hidden && editorShell.hidden) return;
