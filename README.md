@@ -24,6 +24,7 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Resolve relative local images and links when using folder mode.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
 - Switch between dark, light, and brown themes.
+- Switch between the distinctive Signature document style and a compact Standard style.
 - Toggle custom list marker styling.
 - Lock the top menu while scrolling.
 - Return to the top of the page with the floating button.
@@ -67,8 +68,9 @@ Direct file opening is useful for quick previews, but service worker behavior an
 9. Choose **Download** to save a timestamped copy without overwriting the original file.
 10. Choose the key button to sign in and encrypt the current document.
 11. Choose a theme from the theme menu.
-12. Choose a PDF paper size.
-13. Choose **Export PDF** to open the browser print dialog and save the rendered document as a PDF.
+12. Choose a document style from the style menu.
+13. Choose a PDF paper size.
+14. Choose **Export PDF** to open the browser print dialog and save the rendered document as a PDF.
 
 ## PDF Export
 
@@ -188,6 +190,7 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 |-- customMarkdown.css          # Main rendered Markdown styling
 |-- customMarkdown.light.css    # Light theme Markdown overrides
 |-- customMarkdown.brown.css    # Brown theme Markdown overrides
+|-- customMarkdown.standard.css # Compact Standard document style overrides
 |-- sw.js                       # Service worker and app-shell cache
 |-- manifest.webmanifest        # PWA manifest
 |-- icons/                      # PWA icons
@@ -199,7 +202,7 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 
 There is no package install or build step. Edit the static files and reload the browser.
 
-When changing cached app assets, update the cache name in `sw.js` so installed or cached copies pick up the new files. The cache name currently follows the GitHub release version and is set to `lightmdreader-v3-0-0`.
+When changing cached app assets, update the cache name in `sw.js` so installed or cached copies pick up the new files. The cache name currently follows the GitHub release version and is set to `lightmdreader-v3-3-0`.
 
 The app loads Markdown dependencies from CDNs in `MDrender.js`. If offline-first rendering is required, those scripts should be vendored locally and added to the service worker asset list.
 

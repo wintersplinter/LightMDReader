@@ -38,6 +38,7 @@ const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
+const documentStyleSelect = document.getElementById("documentStyleSelect");
 const pdfPaperSelect = document.getElementById("pdfPaperSelect");
 const imagePreview = document.getElementById("imagePreview");
 const imagePreviewStage = document.getElementById("imagePreviewStage");
@@ -48,6 +49,7 @@ const cheatsheetBackdrop = document.getElementById("cheatsheetBackdrop");
 const cheatsheetClose = document.getElementById("cheatsheetClose");
 const cheatsheetContent = document.getElementById("cheatsheetContent");
 const availableThemes = new Set(["dark", "light", "brown"]);
+const availableDocumentStyles = new Set(["signature", "standard"]);
 const availablePdfPaperSizes = new Set(["browser", "a4", "letter"]);
 const markdownFilePattern = /\.(md|markdown|txt)$/i;
 const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
@@ -611,6 +613,17 @@ function applyTheme(theme) {
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
 applyTheme(savedTheme);
 
+function applyDocumentStyle(style) {
+  const safeStyle = availableDocumentStyles.has(style) ? style : "signature";
+  document.documentElement.setAttribute("data-document-style", safeStyle);
+  localStorage.setItem("lightmdreader-document-style", safeStyle);
+  documentStyleSelect.value = safeStyle;
+}
+
+const savedDocumentStyle =
+  localStorage.getItem("lightmdreader-document-style") || "signature";
+applyDocumentStyle(savedDocumentStyle);
+
 function setPdfPaperSize(size) {
   const safeSize = availablePdfPaperSizes.has(size) ? size : "browser";
   let printPageStyle = document.getElementById("printPageSizeStyle");
@@ -668,6 +681,10 @@ updateEncryptionControls();
 
 themeSelect.addEventListener("change", (e) => {
   applyTheme(e.target.value);
+});
+
+documentStyleSelect.addEventListener("change", (e) => {
+  applyDocumentStyle(e.target.value);
 });
 
 pdfPaperSelect.addEventListener("change", (e) => {
