@@ -22,8 +22,7 @@ html[data-document-style="studio"] .markdown-body {
      humanist or geometric sans with noticeably more character than the UI
      font, so headings read as chosen rather than defaulted. */
   --md-studio-display:
-    Corbel, Candara, "Segoe UI Variable Display", "Avenir Next", Avenir,
-    "Trebuchet MS", var(--md-font-main);
+    Corbel, Candara, "Segoe UI Variable Display", "Avenir Next", Avenir, "Trebuchet MS", var(--md-font-main);
 
   font-size: 15.5px;
   line-height: 1.66;
@@ -408,6 +407,7 @@ html[data-document-style="studio"] .reader {
 
   html[data-document-style="studio"] .markdown-body h3 {
     font-size: 1.12em;
+    color: var(--md-studio-accent);
   }
 
   html[data-document-style="studio"] .reader {

@@ -22,8 +22,7 @@ html[data-document-style="editorial"] .markdown-body {
      Old Style with macOS. All are text serifs designed for reading rather
      than display, so they stay legible at heading and body sizes alike. */
   --md-editorial-display:
-    Constantia, "Palatino Linotype", Palatino, "Iowan Old Style", Georgia,
-    "Times New Roman", serif;
+    Constantia, "Palatino Linotype", Palatino, "Iowan Old Style", Georgia, "Times New Roman", serif;
 
   font-size: 16.5px;
   line-height: 1.72;
@@ -394,6 +393,7 @@ html[data-document-style="editorial"] .reader {
 
   html[data-document-style="editorial"] .markdown-body h3 {
     font-size: 1.18em;
+    color: var(--md-editorial-accent);
   }
 
   html[data-document-style="editorial"] .reader {
