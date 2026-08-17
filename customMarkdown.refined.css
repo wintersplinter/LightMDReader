@@ -1,0 +1,414 @@
+/* ==========================================================
+   customMarkdown.refined.css
+
+   Refined document style: the Signature identity, dialled back.
+   Keeps what makes Signature recognisable — centred titles, the warm brown
+   heading ramp, a light display weight — but at readable sizes, without the
+   decorative dots, the underlined subheadings, or the 5em title.
+
+   Use this when a document should still look like it came from this app but
+   needs to be handed to someone else.
+
+   Loaded after customMarkdown.css so it can override the Signature values it
+   inherits, and selected independently from the dark, light, and brown colour
+   themes. Print colours live in customMarkdown.print.css.
+   ========================================================== */
+
+html[data-document-style="refined"] .markdown-body {
+  --md-refined-accent: var(--md-brown-medium);
+  /* --md-brown-medium alone is only 4.4:1 on the brown theme's own tan
+     background, just under the 4.5:1 that normal-size text needs. Each theme
+     already defines --md-brown-light one step further from its background, so
+     the smaller headings borrow that instead. Do not reach for color-mix here:
+     a nested var(--md-text) inside color-mix resolves to an invalid colour in
+     this context and silently falls back to black, which is 1.1:1 on dark. */
+  --md-refined-heading: var(--md-brown-light);
+  --md-refined-rule: color-mix(in srgb, var(--md-brown-dark) 55%, transparent);
+  --md-refined-surface: color-mix(in srgb, var(--md-brown-dark) 12%, transparent);
+
+  --md-refined-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* ----------------------------------------------------------
+   Rhythm
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body p,
+html[data-document-style="refined"] .markdown-body ul,
+html[data-document-style="refined"] .markdown-body ol,
+html[data-document-style="refined"] .markdown-body blockquote,
+html[data-document-style="refined"] .markdown-body pre,
+html[data-document-style="refined"] .markdown-body table,
+html[data-document-style="refined"] .markdown-body details,
+html[data-document-style="refined"] .markdown-body figure {
+  margin-bottom: 1em;
+}
+
+/* ----------------------------------------------------------
+   Headings
+   Signature pads every heading by 1.2em, sets h1 to 5em with flex-centred
+   decorative dots, and underlines h3 through h6. Reset all of that, then
+   rebuild the parts worth keeping.
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body h1,
+html[data-document-style="refined"] .markdown-body h2,
+html[data-document-style="refined"] .markdown-body h3,
+html[data-document-style="refined"] .markdown-body h4,
+html[data-document-style="refined"] .markdown-body h5,
+html[data-document-style="refined"] .markdown-body h6 {
+  display: block;
+  padding: 0;
+  line-height: 1.22;
+  text-decoration: none;
+}
+
+/* h1 and h2 stay centred, which is the Signature signature. */
+html[data-document-style="refined"] .markdown-body h1 {
+  margin: 0.2em 0 0.3em;
+  color: var(--md-brown-white);
+  font-family: var(--md-refined-display);
+  font-size: 2.7em;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  text-align: center;
+}
+
+/* A centred hairline replaces the decorative dot clusters. */
+html[data-document-style="refined"] .markdown-body h1::after {
+  content: "";
+  display: block;
+  width: 88px;
+  height: 1px;
+  margin: 0.55em auto 0;
+  background: var(--md-refined-accent);
+}
+
+html[data-document-style="refined"] .markdown-body h1::before {
+  content: none;
+  display: none;
+}
+
+html[data-document-style="refined"] .markdown-body h2 {
+  margin: 2.1em 0 0.7em;
+  padding-bottom: 0.32em;
+  border-bottom: 1px solid var(--md-refined-accent);
+  color: var(--md-brown-light);
+  font-family: var(--md-refined-display);
+  font-size: 1.72em;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  text-align: center;
+}
+
+/* From h3 down the headings go left-aligned and switch to the body face, so
+   long documents stay scannable. */
+html[data-document-style="refined"] .markdown-body h3 {
+  margin: 1.75em 0 0.42em;
+  color: var(--md-refined-heading);
+  font-family: var(--md-font-main);
+  font-size: 1.22em;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+html[data-document-style="refined"] .markdown-body h4 {
+  margin: 1.45em 0 0.38em;
+  color: var(--md-refined-heading);
+  font-family: var(--md-font-main);
+  font-size: 0.84em;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+html[data-document-style="refined"] .markdown-body h5 {
+  margin: 1.35em 0 0.35em;
+  color: var(--md-refined-heading);
+  font-family: var(--md-font-main);
+  font-size: 0.95em;
+  font-weight: 600;
+  text-align: left;
+}
+
+html[data-document-style="refined"] .markdown-body h6 {
+  margin: 1.3em 0 0.32em;
+  color: var(--md-text-muted);
+  font-family: var(--md-font-main);
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+html[data-document-style="refined"] .markdown-body h1 + p,
+html[data-document-style="refined"] .markdown-body h2 + p,
+html[data-document-style="refined"] .markdown-body h3 + p,
+html[data-document-style="refined"] .markdown-body h4 + p,
+html[data-document-style="refined"] .markdown-body h5 + p,
+html[data-document-style="refined"] .markdown-body h6 + p {
+  margin-top: 0;
+}
+
+/* The standfirst stays centred under the centred title, then the document
+   settles into ordinary left-aligned reading. */
+html[data-document-style="refined"] .markdown-body h1 + p {
+  max-width: 46em;
+  margin-right: auto;
+  margin-left: auto;
+  color: var(--md-text-muted);
+  font-size: 1.1em;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------
+   Inline
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body strong,
+html[data-document-style="refined"] .markdown-body b {
+  color: var(--md-text);
+  font-weight: 600;
+}
+
+html[data-document-style="refined"] .markdown-body a {
+  border-bottom: 0;
+  color: var(--md-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--md-link) 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.17em;
+}
+
+html[data-document-style="refined"] .markdown-body a:hover,
+html[data-document-style="refined"] .markdown-body a:focus {
+  border-bottom: 0;
+  color: var(--md-link-hover);
+  text-decoration-color: currentColor;
+}
+
+html[data-document-style="refined"] .markdown-body mark {
+  padding: 0.05em 0.2em;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--md-brown-medium) 34%, transparent);
+  color: var(--md-text);
+}
+
+html[data-document-style="refined"] .markdown-body kbd {
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+  background: var(--md-refined-surface);
+  box-shadow: 0 1px 0 var(--md-border);
+}
+
+/* ----------------------------------------------------------
+   Lists
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body ul,
+html[data-document-style="refined"] .markdown-body ol {
+  margin-top: 0.4em;
+  padding-left: 1.5em;
+}
+
+html[data-document-style="refined"] .markdown-body ul {
+  list-style-type: disc;
+}
+
+html[data-document-style="refined"] .markdown-body ul ul {
+  border-left: 0;
+  list-style-type: circle;
+}
+
+html[data-document-style="refined"] .markdown-body ul ul ul {
+  border-left: 0;
+  list-style-type: square;
+}
+
+html[data-document-style="refined"] .markdown-body li,
+html[data-document-style="refined"] .markdown-body li > p {
+  margin: 0.26em 0;
+}
+
+html[data-document-style="refined"] .markdown-body li > ul,
+html[data-document-style="refined"] .markdown-body li > ol {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  border-left: 0;
+}
+
+html[data-document-style="refined"] .markdown-body ul > li::marker {
+  content: normal;
+  color: var(--md-brown-medium);
+}
+
+html[data-document-style="refined"] .markdown-body ol > li::marker {
+  color: var(--md-brown-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signature's marker toggle draws a horizontal rule to the left of each
+   item. Refined keeps the idea but shortens it so it reads as a tick. */
+html[data-document-style="refined"] body.list-markers-enabled .markdown-body ul {
+  list-style: none;
+}
+
+html[data-document-style="refined"] body.list-markers-enabled .markdown-body ul > li::before {
+  top: 0.85em;
+  left: -1.05em;
+  width: 0.6em;
+  height: 0;
+  border-top: 1px solid var(--md-refined-accent);
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-document-style="refined"] .markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--md-text-dim);
+}
+
+/* ----------------------------------------------------------
+   Blocks
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body blockquote {
+  margin: 1.5em 0;
+  padding: 0.15em 0 0.15em 1.25em;
+  border: 0;
+  border-left: 2px solid var(--md-refined-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--md-text-muted);
+}
+
+html[data-document-style="refined"] .markdown-body :not(pre) > code {
+  padding: 0.1em 0.34em;
+  border: 0;
+  border-radius: 4px;
+  background: var(--md-code-bg);
+  color: var(--md-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-border) 70%, transparent);
+  font-size: 0.89em;
+}
+
+html[data-document-style="refined"] .markdown-body pre {
+  padding: 0.95em 1.1em;
+  border: 1px solid var(--md-border);
+  border-radius: 6px;
+  background: var(--md-code-bg);
+  line-height: 1.5;
+}
+
+html[data-document-style="refined"] .markdown-body pre code {
+  color: var(--md-text);
+  font-size: 0.89em;
+}
+
+/* Signature's rule is a golden-ratio-width double line with 5em of margin
+   above and below. One centred hairline says the same thing more quietly. */
+html[data-document-style="refined"] .markdown-body hr {
+  width: 38.2%;
+  height: 0;
+  margin: 2.6em auto;
+  border: 0;
+  border-top: 1px solid var(--md-refined-rule);
+}
+
+html[data-document-style="refined"] .markdown-body hr::before {
+  content: none;
+}
+
+/* ----------------------------------------------------------
+   Tables, media, disclosure
+   ---------------------------------------------------------- */
+
+html[data-document-style="refined"] .markdown-body table {
+  font-size: 0.92em;
+}
+
+html[data-document-style="refined"] .markdown-body th,
+html[data-document-style="refined"] .markdown-body td {
+  padding: 0.52em 0.7em;
+}
+
+html[data-document-style="refined"] .markdown-body th {
+  background: var(--md-table-header-bg);
+  color: var(--md-brown-light);
+  font-family: var(--md-refined-display);
+  font-weight: 500;
+}
+
+html[data-document-style="refined"] .markdown-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--md-table-row-alt-bg) 70%, transparent);
+}
+
+html[data-document-style="refined"] .markdown-body img {
+  margin: 1.3em auto;
+  border: 1px solid var(--md-border);
+  border-radius: 5px;
+}
+
+html[data-document-style="refined"] .markdown-body figure {
+  margin: 1.4em auto;
+}
+
+html[data-document-style="refined"] .markdown-body figcaption {
+  color: var(--md-text-muted);
+  font-size: 0.87em;
+  text-align: center;
+}
+
+html[data-document-style="refined"] .markdown-body details {
+  padding: 0.62em 0.85em;
+  border: 1px solid var(--md-border);
+  border-radius: 5px;
+  background: var(--md-refined-surface);
+}
+
+html[data-document-style="refined"] .markdown-body summary,
+html[data-document-style="refined"] .markdown-body dt {
+  color: var(--md-brown-light);
+  font-family: var(--md-refined-display);
+  font-weight: 500;
+}
+
+html[data-document-style="refined"] .markdown-body .footnotes {
+  margin-top: 1.8em;
+  padding-top: 0.9em;
+  border-top: 1px solid var(--md-refined-rule);
+  font-size: 0.9em;
+}
+
+html[data-document-style="refined"] .reader {
+  max-width: 880px;
+  padding: 28px 32px;
+}
+
+@media (max-width: 700px) {
+  html[data-document-style="refined"] .markdown-body {
+    font-size: 14px;
+  }
+
+  html[data-document-style="refined"] .markdown-body h1 {
+    font-size: 2em;
+  }
+
+  html[data-document-style="refined"] .markdown-body h2 {
+    font-size: 1.42em;
+  }
+
+  html[data-document-style="refined"] .markdown-body h3 {
+    font-size: 1.15em;
+  }
+
+  html[data-document-style="refined"] .reader {
+    padding: 18px;
+  }
+}

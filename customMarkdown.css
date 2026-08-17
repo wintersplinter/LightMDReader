@@ -788,19 +788,8 @@ body.list-markers-enabled .markdown-body ul > li::before {
    Mostly placeholder. Useful if you later print/export markdown.
    ========================================================== */
 
-@media print {
-  .markdown-body {
-    color: inherit;
-    /* color: #000; */
-    /* background: #fff; */
-  }
-
-  .markdown-body a {
-    color: inherit;
-    /* color: #000; */
-    /* text-decoration: underline; */
-  }
-}
+/* Print colours for every style and theme live in customMarkdown.print.css,
+   which is loaded last so it is not overridden by a theme stylesheet. */
 
 /* ==========================================================
    18. SMALL SCREENS

@@ -1,0 +1,30 @@
+{
+  "name": "lightmdreader",
+  "version": "3.5.0",
+  "private": true,
+  "description": "Lightweight static browser app for reading, editing, and exporting Markdown files.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "test": "vitest run"
+  },
+  "//": "Nothing here is needed to run the app: it ships as plain static files and installs nothing. These packages exist so vendor/ has a pinned version to be copied from, and so npm audit and Dependabot can see the libraries that actually ship.",
+  "dependencies": {
+    "dompurify": "3.4.12",
+    "markdown-it": "14.3.0",
+    "markdown-it-attrs": "4.3.1",
+    "markdown-it-deflist": "3.0.0",
+    "markdown-it-footnote": "4.0.0",
+    "markdown-it-mark": "4.0.0",
+    "markdown-it-sub": "2.0.0",
+    "markdown-it-sup": "2.0.0",
+    "markdown-it-task-lists": "2.1.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

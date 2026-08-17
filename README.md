@@ -1,6 +1,8 @@
 # LightMDReader
 
-LightMDReader is a lightweight browser app for reading, browsing, editing, and exporting Markdown files. It runs as a static web app, so there is no build step, server framework, account, or upload flow. Markdown files stay local in the browser.
+LightMDReader is a lightweight browser app for reading, browsing, editing, and exporting Markdown files. It runs as a static web app, so there is no build step, server framework, account, or upload flow. Markdown files stay local in the browser and are never uploaded.
+
+The app itself makes no network requests. Every rendering library is vendored in `vendor/`, so LightMDReader starts and renders with no connection at all. Images a document links from other servers are blocked until you allow the host. See [Remote Images](#remote-images) and [Security Notes](#security-notes).
 
 The app is useful for quickly previewing a single Markdown file, opening a folder of linked Markdown notes, checking local images, making quick edits, and exporting the rendered result to PDF through the browser print dialog.
 
@@ -22,9 +24,10 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Sanitize rendered HTML with DOMPurify before inserting it into the page.
 - Build a table of contents from the rendered document headings.
 - Resolve relative local images and links when using folder mode.
+- Block remote images until the host is allowed, so opening a document does not announce it.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
 - Switch between dark, light, and brown themes.
-- Switch between the distinctive Signature document style and a compact Standard style.
+- Switch between five document styles: Signature, Refined, Editorial, Studio, and Standard.
 - Toggle custom list marker styling.
 - Lock the top menu while scrolling.
 - Return to the top of the page with the floating button.
@@ -47,13 +50,11 @@ Then open:
 http://localhost:5173/
 ```
 
-Any static file server works for development. For the hosted app, use an HTTPS static host such as Netlify, GitHub Pages, Cloudflare Pages, or similar.
+Any static file server works. For the hosted app, use an HTTPS static host such as Netlify, GitHub Pages, Cloudflare Pages, or similar.
 
 ### Open Directly
 
-Open `index.html` in a browser.
-
-Direct file opening is useful for quick previews, but service worker behavior and installable PWA behavior require a secure context such as HTTPS. `localhost` also counts as secure for local development.
+Opening `index.html` straight off disk no longer works. `app.js` is an ES module and the Content Security Policy is origin-based, and browsers refuse both over `file://`. Serve the folder instead, as above. Service worker and installable PWA behavior also require a secure context; `localhost` counts as secure.
 
 ## Using The App
 
@@ -71,6 +72,22 @@ Direct file opening is useful for quick previews, but service worker behavior an
 12. Choose a document style from the style menu.
 13. Choose a PDF paper size.
 14. Choose **Export PDF** to open the browser print dialog and save the rendered document as a PDF.
+
+## Document Styles
+
+The style menu changes how a document is rendered. It is independent of the dark, light, and brown colour themes: any style works with any theme, and the choice is remembered in `localStorage`.
+
+| Style | Headings | Character | Good for |
+| ----- | -------- | --------- | -------- |
+| **Signature** | 5em centred, decorative dots, brown ramp | Maximal, unmistakably this app | Personal notes, title pages |
+| **Refined** | Centred, brown ramp, light weight, hairline rule | Signature dialled back to readable sizes | Documents that should look like yours but go to someone else |
+| **Editorial** | Serif (Constantia, Palatino), short accent rule, italic h4 | A considered written document | Long-form writing, reports, anything to be read start to finish |
+| **Studio** | Tight geometric sans (Corbel, Candara), accent bar beside each h2, mono labels | Modern and sleek | Specs, notes with structure, documentation |
+| **Standard** | Familiar sans with rules under h1 and h2 | Deliberately plain | Anything that should look like ordinary Markdown |
+
+All heading faces are system fonts. Nothing is downloaded, so a style looks the same offline as online, and the app makes no font request. On Windows that means Constantia and Corbel; on macOS, Palatino and Avenir Next; elsewhere the stacks fall back to whatever serif or sans is available.
+
+Every style resolves its colours from theme tokens rather than fixed values, so adding a theme does not require touching the styles. Print colours for all five live in `customMarkdown.print.css`.
 
 ## PDF Export
 
@@ -100,13 +117,45 @@ For local assets to resolve correctly, open the folder that contains the Markdow
 
 The editor is meant for quick local drafting and cleanup. It shows Markdown input beside a live rendered preview on wider screens. The preview follows the cursor by using source-line metadata generated by the Markdown renderer.
 
-The **Save** button overwrites the original file only when the app has a writable file handle. To reduce accidental overwrites, the first click changes the button text to **Overwrite original**. The second click performs the save and the browser may ask for permission.
+The **Save** button overwrites the original file when the app has a writable file handle. It writes immediately; the protection that matters is that nothing else can discard the edit before you make it. See [Unsaved Changes](#unsaved-changes).
 
 The **Save as** button writes the current Markdown to a new file when the browser supports `showSaveFilePicker`.
 
 The **Download** button stays non-destructive. It saves the current Markdown text, including editor changes, as a new timestamped file. In encrypted document mode, it saves an encrypted copy by default.
 
-The **Return to read** button discards unsaved editor changes and restores the previous reading view.
+The **Return to read** button discards unsaved editor changes and restores the previous reading view, after asking for confirmation.
+
+### Unsaved Changes
+
+The **Save** button shows a bullet (`Save •`) whenever the document differs from what is on disk. Any action that would replace the open document (Create, Open, drag and drop, choosing another folder document, Refresh, Return to read) asks first and offers **Save and continue**, **Discard changes**, or **Cancel**. The browser leave-page warning appears only when there really are unsaved changes.
+
+A service worker update never reloads the page while the editor has unsaved work. The update is applied after the next successful save.
+
+### Limits
+
+Inputs beyond these limits are refused with a message, leaving the open document untouched:
+
+| Limit | Value |
+| ----- | ----- |
+| Markdown file size | 8 MB |
+| Files scanned per folder | 5000 |
+| Folder nesting depth | 12 |
+| Local images loaded per document | 300 |
+
+## Remote Images
+
+A Markdown document can point an image at another server. Fetching it tells that server your IP address, the time, and that you opened that particular document, which is how tracking pixels in email work.
+
+LightMDReader blocks remote images on first sight, the way Gmail and Outlook do. Each one becomes a placeholder naming the host, and a bar above the document offers two choices:
+
+- **Load once** shows them for the document currently open. Opening anything else starts blocked again.
+- **Always allow `host`** remembers that host and never asks again, so your own documents load without a click.
+
+Allowed hosts are kept in `localStorage` under `lightmdreader-trusted-hosts`. Clear that key to start asking again.
+
+Only images can be allowed. Other remote references, such as `audio`, `video`, and `poster` attributes, always lose their source, and the sanitizer removes remote `style` and `link` elements outright.
+
+Local relative images in folder mode are never affected. They are read from disk and resolved before anything is attached to the page.
 
 ## Optional Encryption
 
@@ -121,7 +170,14 @@ The encryption model is:
 - That key is stored in Google Drive App Data as `lightmdreader-key-v1.json`.
 - Markdown content is encrypted and decrypted locally in the browser.
 - The encrypted file contains only encrypted content and metadata, not the secret key.
-- When the key is created, LightMDReader downloads `LightMDReader-recovery-key.json`. Keep this file somewhere safe.
+- When the key is created, LightMDReader downloads `LightMDReader-recovery-key.json` and asks you to confirm that the file actually arrived, because a browser can silently block a download. You can download it again at any time from the account button.
+- Encrypted files record a key identifier derived by hashing the key, so no part of the key itself appears in an encrypted document.
+
+Once signed in, the account button opens a menu with **Download recovery key** and **Lock and sign out**. Locking clears the access token, the key material, and any decrypted content from the page.
+
+Importing a recovery key parses it, validates its length, and, when unlocking a specific document, checks that it actually decrypts that document, all before anything is stored. Only then does it ask whether to replace the key held in Google Drive, and the previous key is restored if that upload fails. Importing the wrong file cannot destroy a working key.
+
+If Google Drive App Data ever contains more than one key file, LightMDReader refuses to guess which one is correct and reports the duplicates instead, so that no document is made unreadable.
 
 If Google Drive App Data is deleted, encrypted files can only be recovered with the recovery key. If both the Google-stored key and the recovery key are lost, encrypted files cannot be restored.
 
@@ -185,29 +241,58 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 |-- index.html                  # App shell and toolbar/sidebar markup
 |-- config.js                   # Optional Google OAuth Client ID configuration
 |-- app.js                      # File handling, folder browsing, rendering workflow, editor, UI behavior
-|-- MDrender.js                 # markdown-it setup and plugin loading
+|-- lib/paths.js                # Pure path, fragment, and slug helpers
+|-- lib/crypto.js               # Encryption envelope, key identifiers, recovery key validation
+|-- MDrender.js                 # markdown-it configuration
 |-- styles.css                  # App layout, controls, themes, responsive behavior, print behavior
 |-- customMarkdown.css          # Main rendered Markdown styling
 |-- customMarkdown.light.css    # Light theme Markdown overrides
 |-- customMarkdown.brown.css    # Brown theme Markdown overrides
 |-- customMarkdown.standard.css # Compact Standard document style overrides
+|-- customMarkdown.studio.css   # Studio document style overrides
+|-- customMarkdown.editorial.css # Editorial document style overrides
+|-- customMarkdown.refined.css  # Refined document style overrides
+|-- customMarkdown.print.css    # Print colours for every style and theme (loaded last)
+|-- vendor/                     # Vendored runtime libraries plus VERSIONS.json
+|-- scripts/vendor.mjs          # Refreshes vendor/ from node_modules (run by hand)
+|-- vitest.config.js            # Unit test configuration
+|-- tests/unit/                 # Unit tests for the pure helpers in lib/
+|-- cheatsheet.md               # Markdown syntax cheatsheet shown in the dialog
 |-- sw.js                       # Service worker and app-shell cache
 |-- manifest.webmanifest        # PWA manifest
-|-- icons/                      # PWA icons
-|-- serve.py                    # Optional helper server
-`-- chatGPTinstructions.md      # Local project notes placeholder
+`-- icons/                      # PWA icons
 ```
 
 ## Development
 
-There is no package install or build step. Edit the static files and reload the browser.
+The app is plain static files with no build step. Edit, reload, done. There is no CI, no watcher, and nothing to install before you can work on it.
 
-When changing cached app assets, update the cache name in `sw.js` so installed or cached copies pick up the new files. The cache name currently follows the GitHub release version and is set to `lightmdreader-v3-3-0`.
+Node is optional and used for exactly two things.
 
-The app loads Markdown dependencies from CDNs in `MDrender.js`. If offline-first rendering is required, those scripts should be vendored locally and added to the service worker asset list.
+**Updating a rendering library.** The copies in `vendor/` are what actually ship. `package.json` pins the same versions so that `npm audit` and Dependabot can see them. To take a new version, bump it in `package.json` and then:
+
+```bash
+npm install
+npm run vendor
+```
+
+That rewrites `vendor/` and `vendor/VERSIONS.json` from `node_modules`. `node scripts/vendor.mjs --check` reports drift without writing anything. Commit the result and delete `node_modules` again if you like; the app never reads it.
+
+**Running the unit tests.** `npm test` covers the pure helpers in `lib/` — path resolution and the encryption envelope. Those are the two places where a silent bug costs real data, so they are worth the seconds. Everything else is verified by opening the app.
+
+When changing cached app assets, update `VERSION` in `sw.js` so installed copies pick up the new files.
 
 ## Security Notes
 
-LightMDReader renders Markdown locally in the browser. User-provided Markdown is passed through DOMPurify before it is inserted into the page.
+LightMDReader renders Markdown locally in the browser. The rendering pipeline treats documents as untrusted, which costs nothing and means a file someone sent you cannot impersonate the app.
 
-The renderer is configured with Markdown HTML support, so keeping DOMPurify enabled is important.
+- **Sanitization.** Rendered HTML passes through DOMPurify with an allowlist that additionally forbids `style`, `form`, `button`, `input`, `textarea`, `select`, `object`, `embed`, `meta`, `base`, and `link` elements, and the `style` attribute. Task-list checkboxes are the one exception and are forced inert. A document therefore cannot restyle the app, cover it with an overlay, or show a convincing fake sign-in form.
+- **Content Security Policy.** `index.html` sets a policy limiting scripts to same-origin plus Google Identity Services, with `object-src 'none'` and `form-action 'none'`. `frame-ancestors` cannot be set from a meta tag; send it as a response header from your host if you need clickjacking protection.
+- **No CDN trust.** Every rendering library is vendored, so a compromised CDN cannot reach document text, file handles, access tokens, or the encryption key. The app also starts and renders with no network at all.
+- **Inert-first rendering.** Sanitized HTML is built inside an inert template, so local images are resolved and remote ones neutralized before anything is attached to the live page.
+
+- **Remote images.** Blocked until you allow the host, so opening a document does not disclose your IP address and the time to a server you did not choose. See [Remote Images](#remote-images). The blocking happens on the inert fragment before it is attached to the page, so a blocked reference never gets the chance to fire. Note that the policy only permits `https:` images in the first place, so an `http://` image will not load even once allowed.
+
+Google Identity Services is fetched on first use of encryption, not on page load.
+
+The renderer is configured with Markdown HTML support, so keeping DOMPurify enabled is essential.

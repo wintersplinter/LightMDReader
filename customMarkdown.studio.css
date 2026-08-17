@@ -1,0 +1,416 @@
+/* ==========================================================
+   customMarkdown.studio.css
+
+   Studio document style: modern and sleek without being loud.
+   Sits between Standard (deliberately plain) and Signature (deliberately
+   distinctive). Tight geometric headings, a hard accent bar beside each
+   section, and monospaced small-caps labels for the deepest headings.
+
+   Loaded after customMarkdown.css so it can reset the Signature decorations,
+   and selected independently from the dark, light, and brown colour themes.
+   Every colour comes from a theme token, so it follows the theme rather than
+   hard-coding anything. Print colours live in customMarkdown.print.css.
+   ========================================================== */
+
+html[data-document-style="studio"] .markdown-body {
+  --md-studio-accent: var(--md-green);
+  --md-studio-accent-soft: var(--md-green-soft);
+  --md-studio-surface: color-mix(in srgb, var(--md-text) 4%, transparent);
+  --md-studio-rule: color-mix(in srgb, var(--md-border) 85%, transparent);
+
+  /* Corbel and Candara ship with Windows, Avenir Next with macOS. Each is a
+     humanist or geometric sans with noticeably more character than the UI
+     font, so headings read as chosen rather than defaulted. */
+  --md-studio-display:
+    Corbel, Candara, "Segoe UI Variable Display", "Avenir Next", Avenir,
+    "Trebuchet MS", var(--md-font-main);
+
+  font-size: 15.5px;
+  line-height: 1.66;
+}
+
+/* ----------------------------------------------------------
+   Rhythm
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body p,
+html[data-document-style="studio"] .markdown-body ul,
+html[data-document-style="studio"] .markdown-body ol,
+html[data-document-style="studio"] .markdown-body blockquote,
+html[data-document-style="studio"] .markdown-body pre,
+html[data-document-style="studio"] .markdown-body table,
+html[data-document-style="studio"] .markdown-body details,
+html[data-document-style="studio"] .markdown-body figure {
+  margin-bottom: 0.9em;
+}
+
+/* ----------------------------------------------------------
+   Headings
+   The Signature style centres headings, pads them heavily, and hangs
+   decorative dots off h1, so all of that is reset first.
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body h1,
+html[data-document-style="studio"] .markdown-body h2,
+html[data-document-style="studio"] .markdown-body h3,
+html[data-document-style="studio"] .markdown-body h4,
+html[data-document-style="studio"] .markdown-body h5,
+html[data-document-style="studio"] .markdown-body h6 {
+  display: block;
+  padding: 0;
+  color: var(--md-text);
+  font-family: var(--md-studio-display);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.16;
+  text-align: left;
+  text-decoration: none;
+}
+
+html[data-document-style="studio"] .markdown-body h1 {
+  margin: 0 0 0.55em;
+  font-size: 2.45em;
+}
+
+/* A hairline under the title, stopped short so it reads as a mark rather
+   than a full-width divider. */
+html[data-document-style="studio"] .markdown-body h1::after {
+  content: "";
+  display: block;
+  width: 3.2em;
+  height: 3px;
+  margin-top: 0.42em;
+  border-radius: 2px;
+  background: var(--md-studio-accent);
+}
+
+html[data-document-style="studio"] .markdown-body h1::before {
+  content: none;
+  display: none;
+}
+
+/* The accent bar carries the section break, so h2 needs no bottom rule.
+   Signature puts a brown one there, so it has to be switched off explicitly
+   or the section gets both. */
+html[data-document-style="studio"] .markdown-body h2 {
+  position: relative;
+  margin: 2em 0 0.55em;
+  padding-left: 0.62em;
+  border-bottom: 0;
+  font-size: 1.5em;
+}
+
+html[data-document-style="studio"] .markdown-body h2::before {
+  content: "";
+  position: absolute;
+  top: 0.14em;
+  bottom: 0.14em;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--md-studio-accent);
+}
+
+html[data-document-style="studio"] .markdown-body h3 {
+  margin: 1.65em 0 0.42em;
+  font-size: 1.17em;
+  letter-spacing: -0.018em;
+}
+
+/* h4 and below become labels rather than titles: uppercase, tracked out,
+   and small. This keeps the hierarchy obvious without another size step. */
+html[data-document-style="studio"] .markdown-body h4 {
+  margin: 1.4em 0 0.4em;
+  color: var(--md-text-muted);
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+html[data-document-style="studio"] .markdown-body h5 {
+  margin: 1.3em 0 0.38em;
+  color: var(--md-text-muted);
+  font-family: var(--md-font-code);
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+html[data-document-style="studio"] .markdown-body h6 {
+  margin: 1.25em 0 0.35em;
+  color: var(--md-text-muted);
+  font-family: var(--md-font-code);
+  font-size: 0.76em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+html[data-document-style="studio"] .markdown-body h1 + p,
+html[data-document-style="studio"] .markdown-body h2 + p,
+html[data-document-style="studio"] .markdown-body h3 + p,
+html[data-document-style="studio"] .markdown-body h4 + p,
+html[data-document-style="studio"] .markdown-body h5 + p,
+html[data-document-style="studio"] .markdown-body h6 + p {
+  margin-top: 0;
+}
+
+/* The paragraph straight after the title acts as a standfirst. */
+html[data-document-style="studio"] .markdown-body h1 + p {
+  color: var(--md-text-muted);
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+/* ----------------------------------------------------------
+   Inline
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body strong,
+html[data-document-style="studio"] .markdown-body b {
+  color: var(--md-text);
+  font-weight: 700;
+}
+
+html[data-document-style="studio"] .markdown-body a {
+  border-bottom: 0;
+  color: var(--md-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--md-link) 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.17em;
+}
+
+html[data-document-style="studio"] .markdown-body a:hover,
+html[data-document-style="studio"] .markdown-body a:focus {
+  border-bottom: 0;
+  color: var(--md-link-hover);
+  text-decoration-color: currentColor;
+}
+
+html[data-document-style="studio"] .markdown-body mark {
+  padding: 0.05em 0.2em;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--md-studio-accent) 26%, transparent);
+  color: var(--md-text);
+}
+
+html[data-document-style="studio"] .markdown-body kbd {
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+  background: var(--md-studio-surface);
+  box-shadow: 0 1px 0 var(--md-border);
+}
+
+/* ----------------------------------------------------------
+   Lists
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body ul,
+html[data-document-style="studio"] .markdown-body ol {
+  margin-top: 0.35em;
+  padding-left: 1.4em;
+}
+
+html[data-document-style="studio"] .markdown-body ul {
+  list-style-type: disc;
+}
+
+html[data-document-style="studio"] .markdown-body ul ul {
+  border-left: 0;
+  list-style-type: circle;
+}
+
+html[data-document-style="studio"] .markdown-body ul ul ul {
+  list-style-type: square;
+}
+
+html[data-document-style="studio"] .markdown-body li,
+html[data-document-style="studio"] .markdown-body li > p {
+  margin: 0.22em 0;
+}
+
+html[data-document-style="studio"] .markdown-body li > ul,
+html[data-document-style="studio"] .markdown-body li > ol {
+  margin-top: 0.18em;
+  margin-bottom: 0.18em;
+  border-left: 0;
+}
+
+html[data-document-style="studio"] .markdown-body ul > li::marker {
+  content: normal;
+  color: var(--md-studio-accent);
+}
+
+html[data-document-style="studio"] .markdown-body ol > li::marker {
+  color: var(--md-text-muted);
+  font-family: var(--md-font-code);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The optional marker toggle draws a small square instead of the
+   Signature style's horizontal rule. */
+html[data-document-style="studio"] body.list-markers-enabled .markdown-body ul {
+  list-style: none;
+}
+
+html[data-document-style="studio"] body.list-markers-enabled .markdown-body ul > li::before {
+  top: 0.68em;
+  left: -0.86em;
+  width: 0.3em;
+  height: 0.3em;
+  border: 0;
+  border-radius: 1px;
+  background: var(--md-studio-accent);
+  opacity: 0.85;
+}
+
+html[data-document-style="studio"] .markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--md-text-dim);
+}
+
+/* ----------------------------------------------------------
+   Blocks
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body blockquote {
+  margin: 1.3em 0;
+  padding: 0.8em 1.05em;
+  border: 1px solid var(--md-studio-rule);
+  border-left: 3px solid var(--md-studio-accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--md-studio-accent-soft);
+  color: var(--md-text-muted);
+  font-style: normal;
+}
+
+html[data-document-style="studio"] .markdown-body :not(pre) > code {
+  padding: 0.1em 0.34em;
+  border: 0;
+  border-radius: 4px;
+  background: var(--md-code-bg);
+  color: var(--md-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-border) 70%, transparent);
+  font-size: 0.9em;
+}
+
+html[data-document-style="studio"] .markdown-body pre {
+  padding: 0.95em 1.1em;
+  border: 1px solid var(--md-studio-rule);
+  border-radius: 8px;
+  background: var(--md-code-bg);
+  line-height: 1.5;
+}
+
+html[data-document-style="studio"] .markdown-body pre code {
+  color: var(--md-text);
+  font-size: 0.89em;
+}
+
+/* Signature draws a golden-ratio double rule with huge margins. */
+html[data-document-style="studio"] .markdown-body hr {
+  width: 100%;
+  height: 0;
+  margin: 2.2em 0;
+  border-top: 1px solid var(--md-studio-rule);
+}
+
+html[data-document-style="studio"] .markdown-body hr::before {
+  content: none;
+}
+
+/* ----------------------------------------------------------
+   Tables, media, disclosure
+   ---------------------------------------------------------- */
+
+html[data-document-style="studio"] .markdown-body table {
+  font-size: 0.9em;
+}
+
+html[data-document-style="studio"] .markdown-body th,
+html[data-document-style="studio"] .markdown-body td {
+  padding: 0.5em 0.68em;
+}
+
+html[data-document-style="studio"] .markdown-body th {
+  background: var(--md-table-header-bg);
+  color: var(--md-text-muted);
+  font-family: var(--md-studio-display);
+  font-size: 0.86em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+html[data-document-style="studio"] .markdown-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--md-table-row-alt-bg) 70%, transparent);
+}
+
+html[data-document-style="studio"] .markdown-body img {
+  margin: 1.1em auto;
+  border: 1px solid var(--md-studio-rule);
+  border-radius: 6px;
+}
+
+html[data-document-style="studio"] .markdown-body figure {
+  margin: 1.25em auto;
+}
+
+html[data-document-style="studio"] .markdown-body figcaption {
+  color: var(--md-text-muted);
+  font-size: 0.85em;
+  text-align: center;
+}
+
+html[data-document-style="studio"] .markdown-body details {
+  padding: 0.6em 0.82em;
+  border: 1px solid var(--md-studio-rule);
+  border-radius: 6px;
+  background: var(--md-studio-surface);
+}
+
+html[data-document-style="studio"] .markdown-body summary,
+html[data-document-style="studio"] .markdown-body dt {
+  color: var(--md-text);
+  font-family: var(--md-studio-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+html[data-document-style="studio"] .markdown-body .footnotes {
+  margin-top: 1.6em;
+  padding-top: 0.8em;
+  border-top: 1px solid var(--md-studio-rule);
+  font-size: 0.92em;
+}
+
+/* A slightly wider measure than Signature, still short enough to read. */
+html[data-document-style="studio"] .reader {
+  max-width: 920px;
+  padding: 24px 30px;
+}
+
+@media (max-width: 700px) {
+  html[data-document-style="studio"] .markdown-body {
+    font-size: 13.5px;
+  }
+
+  html[data-document-style="studio"] .markdown-body h1 {
+    font-size: 1.9em;
+  }
+
+  html[data-document-style="studio"] .markdown-body h2 {
+    font-size: 1.35em;
+  }
+
+  html[data-document-style="studio"] .markdown-body h3 {
+    font-size: 1.12em;
+  }
+
+  html[data-document-style="studio"] .reader {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "generatedBy": "scripts/vendor.mjs",
+  "libraries": {
+    "markdown-it.min.js": {
+      "package": "markdown-it",
+      "version": "14.3.0",
+      "integrity": "sha256-cP4XvQbH+oGfA6HtEJV5BDGBA2JBmIRdyJOzCb9JXig="
+    },
+    "markdown-it-footnote.min.js": {
+      "package": "markdown-it-footnote",
+      "version": "4.0.0",
+      "integrity": "sha256-1v7lijtWxXQvoY8+AfHTF8yZl1aD69OckZXLKv8MLkI="
+    },
+    "markdown-it-deflist.min.js": {
+      "package": "markdown-it-deflist",
+      "version": "3.0.0",
+      "integrity": "sha256-qzkwmacl5TLWO/h3tMalycV7h7+NjUZ+XDqNjO0zaS4="
+    },
+    "markdown-it-sub.min.js": {
+      "package": "markdown-it-sub",
+      "version": "2.0.0",
+      "integrity": "sha256-//pXdCBD8wEu5XpNWzN/BCIqRZ56jQiSqXVbXGsWvKg="
+    },
+    "markdown-it-sup.min.js": {
+      "package": "markdown-it-sup",
+      "version": "2.0.0",
+      "integrity": "sha256-bIHehNVEhPGjfFgnfbnMCpJiMlMVnjYK6ZJG/wggMjY="
+    },
+    "markdown-it-mark.min.js": {
+      "package": "markdown-it-mark",
+      "version": "4.0.0",
+      "integrity": "sha256-aKUKDkJwLkgvQD6qfzZEY0ExPfprTFArxPS2iaLKogM="
+    },
+    "markdown-it-attrs.browser.js": {
+      "package": "markdown-it-attrs",
+      "version": "4.3.1",
+      "integrity": "sha256-vRZgFsQFrMDWFhLOsI1AYB85aI39WNddda+s9ZEmTtk="
+    },
+    "markdown-it-task-lists.min.js": {
+      "package": "markdown-it-task-lists",
+      "version": "2.1.1",
+      "integrity": "sha256-Tzsj9BuzeHlX2iYC+8zE3w0BeSjB/OYlgxWeCWuDKoE="
+    },
+    "purify.min.js": {
+      "package": "dompurify",
+      "version": "3.4.12",
+      "integrity": "sha256-xFupOXZVdPlsvzXum22J9zdWoXkhgUQl50uC98VGA84="
+    }
+  }
+}

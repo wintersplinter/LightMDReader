@@ -1,6 +1,8 @@
 {
   "name": "LightMDReader",
   "short_name": "LightMDReader",
+  "lang": "en",
+  "description": "Read, browse, edit, and export Markdown files locally in the browser. No build step, no account, no upload.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

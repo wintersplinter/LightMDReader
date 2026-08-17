@@ -4,5 +4,24 @@
 # Python cache files
 __pycache__/
 
-# Documentation, internal notes, and other non-code files
+# Documentation, internal notes, and other non-code files.
+# Both cases are listed because gitignore matching is case-sensitive on Linux
+# and macOS even though it is not on Windows.
 /overview.md
+/Overview.md
+/interaction-profile-*.md
+
+# Editor and assistant local state. launch.json in here still points at the
+# old scripts/serve.mjs, and none of it is needed to run or develop the app.
+/.claude/
+
+# Staging folder for files pending deletion. Never publish this.
+/_to_delete/
+
+# Node tooling (development only, the shipped app is plain static files)
+/node_modules/
+/test-results/
+/playwright-report/
+/coverage/
+# Vitest temporary config artefacts
+vitest.config.js.timestamp-*

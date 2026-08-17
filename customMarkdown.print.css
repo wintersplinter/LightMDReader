@@ -1,0 +1,173 @@
+/* ==========================================================
+   customMarkdown.print.css
+
+   Paper and PDF output is white no matter which application theme is
+   selected, so printing must not inherit theme colours. Every token that
+   carries meaning is redefined here for each document style.
+
+   This file is loaded last on purpose, but source order only decides between
+   selectors of EQUAL specificity. The theme stylesheets target
+   html[data-theme="..."] .markdown-body, so the shared block below has to
+   match that weight or the theme keeps winning. It is written as
+   html[data-theme] .markdown-body for exactly that reason.
+
+   When the shared block was a bare .markdown-body it was outranked by the
+   light and brown themes, and printing in brown put a tan fill behind code
+   blocks and table headers. Only the dark theme printed correctly, because
+   its tokens live on a bare .markdown-body too.
+
+   Before this file existed, the default dark Signature style printed
+   near-white body text (--md-text: #f0f0f0) onto white paper.
+   ========================================================== */
+
+@media print {
+  /* ----- Shared: applies to every document style -----
+     html[data-theme] matches whichever theme is active, and app.js always
+     sets that attribute, so this reliably outranks the theme stylesheets. */
+  html[data-theme] .markdown-body {
+    --md-bg: transparent;
+    --md-text: #14171a;
+    --md-text-muted: #454c54;
+    --md-text-dim: #5b636c;
+
+    --md-green: #1c6b3a;
+    --md-green-soft: #eaf3ed;
+    --md-color-code: #2f3438;
+
+    --md-blue: #234a78;
+    --md-blue-soft: #eef2f7;
+
+    --md-border: #c8ccd0;
+    --md-border-soft: #dfe2e5;
+    --md-code-bg: #f4f5f6;
+    --md-table-bg: transparent;
+    --md-table-header-bg: #eef0f2;
+    --md-table-row-alt-bg: #f8f8f8;
+
+    --md-link: #14171a;
+    --md-link-hover: #14171a;
+
+    --md-quote-bg: #f4f5f6;
+    --md-quote-border: #9aa1a8;
+    --md-quote-block-bg: #f4f5f6;
+    --md-quote-block-text: #14171a;
+
+    color: var(--md-text);
+    background: transparent;
+  }
+
+  /* ----- Brown heading ramp: Signature and Refined -----
+     h1 uses --md-brown-white, h2 --md-brown-light, h3 --md-brown-medium and
+     h4..h6 --md-brown-dark. Dark to mid grey keeps that hierarchy readable
+     once the colours are gone.
+
+     These are listed by name on purpose. This rule used to read
+     html:not([data-document-style="standard"]), which meant every style added
+     afterwards silently inherited the brown ramp. Name the styles that want
+     it, so a new style has to opt in rather than opt out. */
+  html[data-document-style="signature"] .markdown-body,
+  html[data-document-style="refined"] .markdown-body {
+    --md-brown-white: #14171a;
+    --md-brown-light: #23282d;
+    --md-brown-medium: #3a4046;
+    --md-brown-dark: #4e555c;
+    --md-brown-dark-backdrop: #f1f2f3;
+
+    --md-hard-accent-color: #14171a;
+    --md-soft-accent-color: #4e555c;
+
+    --md-title-bg: transparent;
+    --md-title-text: #14171a;
+  }
+
+  /* ----- Standard style ----- */
+  html[data-document-style="standard"] .markdown-body {
+    --md-standard-accent: #5b6572;
+    --md-standard-accent-soft: #f2f3f5;
+    --md-standard-surface: #f5f6f7;
+
+    font-size: 10.5pt;
+    line-height: 1.48;
+  }
+
+  /* ----- Studio style -----
+     The green accent becomes a neutral dark grey: the accent bars and rules
+     still separate sections, without needing colour to be printed. */
+  html[data-document-style="studio"] .markdown-body {
+    --md-studio-accent: #3a4046;
+    --md-studio-accent-soft: #f4f5f6;
+    --md-studio-surface: #f5f6f7;
+    --md-studio-rule: #c8ccd0;
+
+    font-size: 10.5pt;
+    line-height: 1.52;
+  }
+
+  /* ----- Editorial style -----
+     Serif headings print well as solid black. The accent rule under the title
+     is the only coloured element, so it goes dark rather than disappearing. */
+  html[data-document-style="editorial"] .markdown-body {
+    --md-editorial-accent: #23282d;
+    --md-editorial-accent-soft: #f2f3f5;
+    --md-editorial-surface: #f5f6f7;
+    --md-editorial-rule: #c8ccd0;
+
+    font-size: 11pt;
+    line-height: 1.55;
+  }
+
+  /* ----- Refined style -----
+     Inherits the brown ramp remapped above; these are the extra tokens the
+     style defines on top of it. */
+  html[data-document-style="refined"] .markdown-body {
+    --md-refined-accent: #4e555c;
+    --md-refined-rule: #a9b0b6;
+    --md-refined-surface: #f5f6f7;
+
+    font-size: 11pt;
+    line-height: 1.55;
+  }
+
+  /* Accent bars and title rules are backgrounds, and browsers drop those
+     unless the reader opts in. Give them a border so the mark survives. */
+  html[data-document-style="studio"] .markdown-body h1::after,
+  html[data-document-style="studio"] .markdown-body h2::before,
+  html[data-document-style="editorial"] .markdown-body h1::after,
+  html[data-document-style="refined"] .markdown-body h1::after {
+    background: transparent;
+    border-top: 2px solid var(--md-text);
+    height: 0;
+  }
+
+  html[data-document-style="studio"] .markdown-body h2::before {
+    border-top: 0;
+    border-left: 3px solid var(--md-text);
+    width: 0;
+  }
+
+  /* Links must remain identifiable without colour. */
+  html[data-theme] .markdown-body a {
+    color: var(--md-link);
+    text-decoration: underline;
+  }
+
+  /* Browsers omit backgrounds unless the user opts in, so anything that
+     relies on a fill to be distinguishable also gets a border. */
+  html[data-theme] .markdown-body pre,
+  html[data-theme] .markdown-body blockquote,
+  html[data-theme] .markdown-body table,
+  html[data-theme] .markdown-body th,
+  html[data-theme] .markdown-body td {
+    border: 1px solid var(--md-border);
+  }
+
+  html[data-theme] .markdown-body code {
+    border: 1px solid var(--md-border-soft);
+  }
+
+  /* Blocked remote placeholders carry no information worth printing. */
+  html[data-theme] .markdown-body .remote-blocked {
+    border: 1px dashed var(--md-border);
+    color: var(--md-text-dim);
+  }
+}

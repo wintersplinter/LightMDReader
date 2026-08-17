@@ -181,7 +181,7 @@ body.topbar-locked .layout {
 .btn.secondary {
   background: var(--btn2);
 }
-.btn.is-confirming {
+.btn.danger {
   border-color: var(--danger);
   color: var(--danger);
 }
@@ -763,8 +763,134 @@ body.editor-active .return-top-btn {
   scroll-margin-top: 76px;
 }
 
+/* CONFIRMATION DIALOG */
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.confirm-dialog[hidden] {
+  display: none;
+}
+
+.confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.confirm-panel {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 100%);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.confirm-panel h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.confirm-panel p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Unsaved work is visible at a glance rather than only in the status line. */
+body.has-unsaved-changes #saveBtn:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* REMOTE CONTENT */
+/* A class-level display value outranks the user agent rule for [hidden], so
+   the hidden state has to be restated. */
+.remote-notice[hidden],
+.remote-notice button[hidden] {
+  display: none;
+}
+
+.remote-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.remote-notice-text {
+  flex: 1 1 320px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.remote-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remote-blocked {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.remote-blocked-icon {
+  opacity: 0.7;
+}
+
+.remote-blocked-label {
+  overflow-wrap: anywhere;
+}
+
+.preview-error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
+  font-size: 14px;
+}
+
 /* PRINT (PDF EXPORT) */
 @media print {
+  .remote-notice {
+    display: none !important;
+  }
+
   body {
     background: #fff;
     color: #000;

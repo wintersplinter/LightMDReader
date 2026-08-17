@@ -1,0 +1,402 @@
+/* ==========================================================
+   customMarkdown.editorial.css
+
+   Editorial document style: a considered written document.
+   Serif headings against the sans body give the strongest contrast of any
+   style here without adding colour or ornament. Roomier than Studio, calmer
+   than Signature, and still plainly professional.
+
+   Loaded after customMarkdown.css so it can reset the Signature decorations,
+   and selected independently from the dark, light, and brown colour themes.
+   Every colour comes from a theme token. Print colours live in
+   customMarkdown.print.css.
+   ========================================================== */
+
+html[data-document-style="editorial"] .markdown-body {
+  --md-editorial-accent: var(--md-blue);
+  --md-editorial-accent-soft: var(--md-blue-soft);
+  --md-editorial-surface: color-mix(in srgb, var(--md-text) 3.5%, transparent);
+  --md-editorial-rule: color-mix(in srgb, var(--md-border) 90%, transparent);
+
+  /* Constantia and Palatino Linotype ship with Windows, Palatino and Iowan
+     Old Style with macOS. All are text serifs designed for reading rather
+     than display, so they stay legible at heading and body sizes alike. */
+  --md-editorial-display:
+    Constantia, "Palatino Linotype", Palatino, "Iowan Old Style", Georgia,
+    "Times New Roman", serif;
+
+  font-size: 16.5px;
+  line-height: 1.72;
+}
+
+/* ----------------------------------------------------------
+   Rhythm
+   ---------------------------------------------------------- */
+
+html[data-document-style="editorial"] .markdown-body p,
+html[data-document-style="editorial"] .markdown-body ul,
+html[data-document-style="editorial"] .markdown-body ol,
+html[data-document-style="editorial"] .markdown-body blockquote,
+html[data-document-style="editorial"] .markdown-body pre,
+html[data-document-style="editorial"] .markdown-body table,
+html[data-document-style="editorial"] .markdown-body details,
+html[data-document-style="editorial"] .markdown-body figure {
+  margin-bottom: 1em;
+}
+
+/* ----------------------------------------------------------
+   Headings
+   The Signature style centres headings, pads them heavily, underlines h3
+   and h4, and hangs decorative dots off h1, so all of that is reset first.
+   ---------------------------------------------------------- */
+
+html[data-document-style="editorial"] .markdown-body h1,
+html[data-document-style="editorial"] .markdown-body h2,
+html[data-document-style="editorial"] .markdown-body h3,
+html[data-document-style="editorial"] .markdown-body h4,
+html[data-document-style="editorial"] .markdown-body h5,
+html[data-document-style="editorial"] .markdown-body h6 {
+  display: block;
+  padding: 0;
+  color: var(--md-text);
+  font-family: var(--md-editorial-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+}
+
+html[data-document-style="editorial"] .markdown-body h1 {
+  margin: 0 0 0.25em;
+  font-size: 2.55em;
+  line-height: 1.15;
+}
+
+/* A short accent rule under the title. Deliberately not full width: it marks
+   the start of the document rather than dividing it. */
+html[data-document-style="editorial"] .markdown-body h1::after {
+  content: "";
+  display: block;
+  width: 4em;
+  height: 2px;
+  margin-top: 0.5em;
+  background: var(--md-editorial-accent);
+}
+
+html[data-document-style="editorial"] .markdown-body h1::before {
+  content: none;
+  display: none;
+}
+
+html[data-document-style="editorial"] .markdown-body h2 {
+  margin: 2.05em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--md-editorial-rule);
+  font-size: 1.62em;
+}
+
+html[data-document-style="editorial"] .markdown-body h3 {
+  margin: 1.75em 0 0.45em;
+  font-size: 1.25em;
+}
+
+/* Italic rather than another size step down, which is the traditional
+   editorial move and keeps the ramp readable in black and white. */
+html[data-document-style="editorial"] .markdown-body h4 {
+  margin: 1.45em 0 0.4em;
+  color: var(--md-text-muted);
+  font-size: 1.04em;
+  font-style: italic;
+  font-weight: 600;
+}
+
+html[data-document-style="editorial"] .markdown-body h5 {
+  margin: 1.35em 0 0.38em;
+  color: var(--md-text-muted);
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+html[data-document-style="editorial"] .markdown-body h6 {
+  margin: 1.3em 0 0.35em;
+  color: var(--md-text-muted);
+  font-family: var(--md-font-main);
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html[data-document-style="editorial"] .markdown-body h1 + p,
+html[data-document-style="editorial"] .markdown-body h2 + p,
+html[data-document-style="editorial"] .markdown-body h3 + p,
+html[data-document-style="editorial"] .markdown-body h4 + p,
+html[data-document-style="editorial"] .markdown-body h5 + p,
+html[data-document-style="editorial"] .markdown-body h6 + p {
+  margin-top: 0;
+}
+
+/* The paragraph straight after the title acts as a standfirst. */
+html[data-document-style="editorial"] .markdown-body h1 + p {
+  color: var(--md-text-muted);
+  font-size: 1.14em;
+  line-height: 1.62;
+}
+
+/* ----------------------------------------------------------
+   Inline
+   ---------------------------------------------------------- */
+
+html[data-document-style="editorial"] .markdown-body strong,
+html[data-document-style="editorial"] .markdown-body b {
+  color: var(--md-text);
+  font-weight: 650;
+}
+
+html[data-document-style="editorial"] .markdown-body a {
+  border-bottom: 0;
+  color: var(--md-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--md-link) 38%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+html[data-document-style="editorial"] .markdown-body a:hover,
+html[data-document-style="editorial"] .markdown-body a:focus {
+  border-bottom: 0;
+  color: var(--md-link-hover);
+  text-decoration-color: currentColor;
+}
+
+html[data-document-style="editorial"] .markdown-body mark {
+  padding: 0.05em 0.2em;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, #e6b94a 32%, transparent);
+  color: var(--md-text);
+}
+
+html[data-document-style="editorial"] .markdown-body kbd {
+  padding: 0.1em 0.36em;
+  border-radius: 3px;
+  background: var(--md-editorial-surface);
+  box-shadow: 0 1px 0 var(--md-border);
+}
+
+/* ----------------------------------------------------------
+   Lists
+   ---------------------------------------------------------- */
+
+html[data-document-style="editorial"] .markdown-body ul,
+html[data-document-style="editorial"] .markdown-body ol {
+  margin-top: 0.4em;
+  padding-left: 1.5em;
+}
+
+html[data-document-style="editorial"] .markdown-body ul {
+  list-style-type: disc;
+}
+
+html[data-document-style="editorial"] .markdown-body ul ul {
+  border-left: 0;
+  list-style-type: circle;
+}
+
+html[data-document-style="editorial"] .markdown-body ul ul ul {
+  list-style-type: square;
+}
+
+html[data-document-style="editorial"] .markdown-body li,
+html[data-document-style="editorial"] .markdown-body li > p {
+  margin: 0.28em 0;
+}
+
+html[data-document-style="editorial"] .markdown-body li > ul,
+html[data-document-style="editorial"] .markdown-body li > ol {
+  margin-top: 0.22em;
+  margin-bottom: 0.22em;
+  border-left: 0;
+}
+
+html[data-document-style="editorial"] .markdown-body ul > li::marker {
+  content: normal;
+  color: var(--md-text-dim);
+}
+
+html[data-document-style="editorial"] .markdown-body ol > li::marker {
+  color: var(--md-text-muted);
+  font-family: var(--md-editorial-display);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-document-style="editorial"] body.list-markers-enabled .markdown-body ul {
+  list-style: none;
+}
+
+html[data-document-style="editorial"] body.list-markers-enabled .markdown-body ul > li::before {
+  top: 0.7em;
+  left: -0.88em;
+  width: 0.3em;
+  height: 0.3em;
+  border: 0;
+  border-radius: 50%;
+  background: var(--md-editorial-accent);
+  opacity: 0.75;
+}
+
+html[data-document-style="editorial"] .markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--md-text-dim);
+}
+
+/* ----------------------------------------------------------
+   Blocks
+   ---------------------------------------------------------- */
+
+/* A pull quote: no fill, just a rule and italics, which is what makes it
+   read as editorial rather than as a UI callout. */
+html[data-document-style="editorial"] .markdown-body blockquote {
+  margin: 1.5em 0;
+  padding: 0.15em 0 0.15em 1.35em;
+  border: 0;
+  border-left: 2px solid var(--md-editorial-accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--md-text-muted);
+  font-size: 1.02em;
+  font-style: italic;
+}
+
+html[data-document-style="editorial"] .markdown-body blockquote em {
+  font-style: normal;
+}
+
+html[data-document-style="editorial"] .markdown-body :not(pre) > code {
+  padding: 0.1em 0.34em;
+  border: 0;
+  border-radius: 3px;
+  background: var(--md-code-bg);
+  color: var(--md-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-border) 65%, transparent);
+  font-size: 0.87em;
+}
+
+html[data-document-style="editorial"] .markdown-body pre {
+  padding: 0.95em 1.1em;
+  border: 1px solid var(--md-editorial-rule);
+  border-radius: 4px;
+  background: var(--md-code-bg);
+  line-height: 1.5;
+}
+
+html[data-document-style="editorial"] .markdown-body pre code {
+  color: var(--md-text);
+  font-size: 0.87em;
+}
+
+/* A centred typographic break instead of Signature's double rule. */
+html[data-document-style="editorial"] .markdown-body hr {
+  width: 100%;
+  height: 0;
+  margin: 2.4em 0;
+  border: 0;
+  border-top: 1px solid var(--md-editorial-rule);
+  position: relative;
+}
+
+html[data-document-style="editorial"] .markdown-body hr::before {
+  content: none;
+}
+
+/* ----------------------------------------------------------
+   Tables, media, disclosure
+   ---------------------------------------------------------- */
+
+html[data-document-style="editorial"] .markdown-body table {
+  font-size: 0.92em;
+}
+
+html[data-document-style="editorial"] .markdown-body th,
+html[data-document-style="editorial"] .markdown-body td {
+  padding: 0.52em 0.7em;
+}
+
+html[data-document-style="editorial"] .markdown-body th {
+  background: var(--md-table-header-bg);
+  color: var(--md-text);
+  font-family: var(--md-editorial-display);
+  font-weight: 600;
+}
+
+html[data-document-style="editorial"] .markdown-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--md-table-row-alt-bg) 68%, transparent);
+}
+
+html[data-document-style="editorial"] .markdown-body img {
+  margin: 1.3em auto;
+  border: 1px solid var(--md-editorial-rule);
+  border-radius: 3px;
+}
+
+html[data-document-style="editorial"] .markdown-body figure {
+  margin: 1.5em auto;
+}
+
+html[data-document-style="editorial"] .markdown-body figcaption {
+  color: var(--md-text-muted);
+  font-family: var(--md-editorial-display);
+  font-size: 0.88em;
+  font-style: italic;
+  text-align: center;
+}
+
+html[data-document-style="editorial"] .markdown-body details {
+  padding: 0.62em 0.85em;
+  border: 1px solid var(--md-editorial-rule);
+  border-radius: 3px;
+  background: var(--md-editorial-surface);
+}
+
+html[data-document-style="editorial"] .markdown-body summary,
+html[data-document-style="editorial"] .markdown-body dt {
+  color: var(--md-text);
+  font-family: var(--md-editorial-display);
+  font-weight: 600;
+}
+
+html[data-document-style="editorial"] .markdown-body .footnotes {
+  margin-top: 1.8em;
+  padding-top: 0.9em;
+  border-top: 1px solid var(--md-editorial-rule);
+  font-size: 0.9em;
+}
+
+/* A narrower measure than the other styles. Serif text at this size reads
+   best at roughly 70 characters per line. */
+html[data-document-style="editorial"] .reader {
+  max-width: 820px;
+  padding: 30px 36px;
+}
+
+@media (max-width: 700px) {
+  html[data-document-style="editorial"] .markdown-body {
+    font-size: 14.5px;
+  }
+
+  html[data-document-style="editorial"] .markdown-body h1 {
+    font-size: 1.95em;
+  }
+
+  html[data-document-style="editorial"] .markdown-body h2 {
+    font-size: 1.42em;
+  }
+
+  html[data-document-style="editorial"] .markdown-body h3 {
+    font-size: 1.18em;
+  }
+
+  html[data-document-style="editorial"] .reader {
+    padding: 18px;
+  }
+}

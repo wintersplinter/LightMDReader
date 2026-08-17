@@ -294,25 +294,8 @@ html[data-document-style="standard"] .reader {
   padding: 22px 26px;
 }
 
-@media print {
-  html[data-document-style="standard"] .markdown-body {
-    --md-text: #171717;
-    --md-text-muted: #4d4d4d;
-    --md-border: #d2d5d9;
-    --md-code-bg: #f4f5f6;
-    --md-table-header-bg: #eef0f2;
-    --md-table-row-alt-bg: #f8f8f8;
-    --md-link: #171717;
-    --md-link-hover: #171717;
-    --md-standard-accent: #5b6572;
-    --md-standard-accent-soft: #f2f3f5;
-    --md-standard-surface: #f5f6f7;
-
-    color: var(--md-text);
-    font-size: 10.5pt;
-    line-height: 1.48;
-  }
-}
+/* Print colours moved to customMarkdown.print.css so that one file covers
+   every style and theme combination. */
 
 @media (max-width: 700px) {
   html[data-document-style="standard"] .markdown-body {
