@@ -56,7 +56,9 @@ ordered list:
 - [ ] - [ ] Incomplete task
 
 
-![Placeholder image](https://picsum.photos/800/400 "Random placeholder")
+![Placeholder image](  
+![Placeholder image](https://picsum.photos/800/400 "Random placeholder")  
+ "Random placeholder")
 
 term
 : \: definition
