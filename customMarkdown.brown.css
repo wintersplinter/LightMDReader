@@ -7,12 +7,16 @@ html[data-theme="brown"] .markdown-body {
   --md-text-muted: #554634;
   --md-text-dim: #725f47;
 
-  --md-green: #2f6f4e;
-  --md-green-soft: #2f6f4e1c;
+  /* Deepened from #2f6f4e and #416f7b. Those sat at 3.0:1 and 2.8:1 on the
+     brown surface, which fails WCAG AA. They carry text, not just
+     decoration: Studio's h3 and Editorial's h3 are the accent colour, and
+     every style's table header uses --md-green. */
+  --md-green: #194f31;
+  --md-green-soft: #194f311c;
   --md-color-code: #4f4537;
 
-  --md-blue: #416f7b;
-  --md-blue-soft: #416f7b1c;
+  --md-blue: #274a54;
+  --md-blue-soft: #274a541c;
 
   --md-brown-white: #211a13;
   --md-brown-light: #332718;

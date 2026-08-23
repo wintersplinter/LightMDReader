@@ -112,6 +112,7 @@ html[data-document-style="studio"] .markdown-body h2::before {
 
 html[data-document-style="studio"] .markdown-body h3 {
   margin: 1.65em 0 0.42em;
+  color: var(--md-studio-accent);
   font-size: 1.17em;
   letter-spacing: -0.018em;
 }
@@ -213,17 +214,8 @@ html[data-document-style="studio"] .markdown-body ol {
   padding-left: 1.4em;
 }
 
-html[data-document-style="studio"] .markdown-body ul {
-  list-style-type: disc;
-}
-
 html[data-document-style="studio"] .markdown-body ul ul {
   border-left: 0;
-  list-style-type: circle;
-}
-
-html[data-document-style="studio"] .markdown-body ul ul ul {
-  list-style-type: square;
 }
 
 html[data-document-style="studio"] .markdown-body li,
@@ -238,11 +230,6 @@ html[data-document-style="studio"] .markdown-body li > ol {
   border-left: 0;
 }
 
-html[data-document-style="studio"] .markdown-body ul > li::marker {
-  content: normal;
-  color: var(--md-studio-accent);
-}
-
 html[data-document-style="studio"] .markdown-body ol > li::marker {
   color: var(--md-text-muted);
   font-family: var(--md-font-code);
@@ -250,13 +237,13 @@ html[data-document-style="studio"] .markdown-body ol > li::marker {
   font-variant-numeric: tabular-nums;
 }
 
-/* The optional marker toggle draws a small square instead of the
-   Signature style's horizontal rule. */
-html[data-document-style="studio"] body.list-markers-enabled .markdown-body ul {
+/* Studio's marker is a small square rather than the Signature style's
+   horizontal rule. */
+html[data-document-style="studio"] .markdown-body ul {
   list-style: none;
 }
 
-html[data-document-style="studio"] body.list-markers-enabled .markdown-body ul > li::before {
+html[data-document-style="studio"] .markdown-body ul > li::before {
   top: 0.68em;
   left: -0.86em;
   width: 0.3em;
@@ -407,7 +394,6 @@ html[data-document-style="studio"] .reader {
 
   html[data-document-style="studio"] .markdown-body h3 {
     font-size: 1.12em;
-    color: var(--md-studio-accent);
   }
 
   html[data-document-style="studio"] .reader {

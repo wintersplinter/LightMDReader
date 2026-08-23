@@ -97,6 +97,7 @@ html[data-document-style="editorial"] .markdown-body h2 {
 
 html[data-document-style="editorial"] .markdown-body h3 {
   margin: 1.75em 0 0.45em;
+  color: var(--md-editorial-accent);
   font-size: 1.25em;
 }
 
@@ -194,17 +195,8 @@ html[data-document-style="editorial"] .markdown-body ol {
   padding-left: 1.5em;
 }
 
-html[data-document-style="editorial"] .markdown-body ul {
-  list-style-type: disc;
-}
-
 html[data-document-style="editorial"] .markdown-body ul ul {
   border-left: 0;
-  list-style-type: circle;
-}
-
-html[data-document-style="editorial"] .markdown-body ul ul ul {
-  list-style-type: square;
 }
 
 html[data-document-style="editorial"] .markdown-body li,
@@ -219,22 +211,17 @@ html[data-document-style="editorial"] .markdown-body li > ol {
   border-left: 0;
 }
 
-html[data-document-style="editorial"] .markdown-body ul > li::marker {
-  content: normal;
-  color: var(--md-text-dim);
-}
-
 html[data-document-style="editorial"] .markdown-body ol > li::marker {
   color: var(--md-text-muted);
   font-family: var(--md-editorial-display);
   font-variant-numeric: tabular-nums;
 }
 
-html[data-document-style="editorial"] body.list-markers-enabled .markdown-body ul {
+html[data-document-style="editorial"] .markdown-body ul {
   list-style: none;
 }
 
-html[data-document-style="editorial"] body.list-markers-enabled .markdown-body ul > li::before {
+html[data-document-style="editorial"] .markdown-body ul > li::before {
   top: 0.7em;
   left: -0.88em;
   width: 0.3em;
@@ -393,7 +380,6 @@ html[data-document-style="editorial"] .reader {
 
   html[data-document-style="editorial"] .markdown-body h3 {
     font-size: 1.18em;
-    color: var(--md-editorial-accent);
   }
 
   html[data-document-style="editorial"] .reader {

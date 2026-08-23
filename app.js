@@ -43,7 +43,6 @@ const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const topbarLockBtn = document.getElementById("topbarLockBtn");
-const listMarkerBtn = document.getElementById("listMarkerBtn");
 const returnTopBtn = document.getElementById("returnTopBtn");
 const returnToReadBtn = document.getElementById("returnToReadBtn");
 const topbar = document.querySelector(".topbar");
@@ -1009,15 +1008,6 @@ window.addEventListener("beforeunload", (event) => {
   event.returnValue = "";
 });
 
-function setListMarkersEnabled(isEnabled) {
-  document.body.classList.toggle("list-markers-enabled", isEnabled);
-  localStorage.setItem("lightmdreader-list-markers", isEnabled ? "true" : "false");
-  listMarkerBtn.setAttribute("aria-pressed", String(isEnabled));
-  listMarkerBtn.setAttribute("aria-label", isEnabled ? "Hide list markers" : "Show list markers");
-  listMarkerBtn.title = isEnabled ? "Hide list markers" : "Show list markers";
-}
-
-setListMarkersEnabled(localStorage.getItem("lightmdreader-list-markers") === "true");
 updateEncryptionControls();
 
 themeSelect.addEventListener("change", (e) => {
@@ -2758,10 +2748,6 @@ editorPreview.addEventListener("click", (event) => {
 
 topbarLockBtn.addEventListener("click", () => {
   setTopbarLocked(!document.body.classList.contains("topbar-locked"));
-});
-
-listMarkerBtn.addEventListener("click", () => {
-  setListMarkersEnabled(!document.body.classList.contains("list-markers-enabled"));
 });
 
 fileInput.addEventListener("change", (e) => {

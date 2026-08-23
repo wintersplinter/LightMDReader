@@ -1,41 +1,89 @@
-/* Light markdown color overrides.
-   customMarkdown.css remains the dark/default structure and style. */
+/* ==========================================================
+   customMarkdown.light.css
+
+   Light markdown colour overrides. customMarkdown.css remains the
+   dark/default structure and style.
+
+   The palette is written once, as --md-light-* on a bare .markdown-body so
+   it resolves under every theme, and is then mapped onto the real --md-*
+   tokens in two places: here for the light theme on screen, and in
+   customMarkdown.print.css for paper, which always prints in light-theme
+   colours no matter which theme the app is showing.
+
+   Keeping the values in one place is the point. When print carried its own
+   copy of a palette it drifted away from the screen twice.
+   ========================================================== */
+
+.markdown-body {
+  --md-light-bg: transparent;
+  --md-light-text: #171717;
+  --md-light-text-muted: #4e545a;
+  --md-light-text-dim: #6b7076;
+
+  --md-light-green: #1f7a4a;
+  --md-light-green-soft: #1f7a4a18;
+  --md-light-color-code: #3f464d;
+
+  --md-light-blue: #376b9d;
+  --md-light-blue-soft: #376b9d18;
+
+  --md-light-brown-white: #181512;
+  --md-light-brown-light: #2d261f;
+  --md-light-brown-medium: #594a38;
+  --md-light-brown-dark: #725f45;
+  --md-light-brown-dark-backdrop: #725f4520;
+
+  --md-light-border: #d4d8de;
+  --md-light-border-soft: #e3e6ea;
+  --md-light-code-bg: #e5e7e8;
+  --md-light-table-bg: transparent;
+  --md-light-table-header-bg: #e7ebee;
+  --md-light-table-row-alt-bg: #f4f5f6;
+
+  --md-light-link: #195f6d;
+  --md-light-link-hover: #0f4651;
+
+  /* Element fills that are not driven by a token: kbd and details share one
+     surface, checkboxes sit slightly lighter. */
+  --md-light-surface: #eceff2;
+  --md-light-input-bg: #f7f8f9;
+}
 
 html[data-theme="light"] .markdown-body {
-  --md-bg: transparent;
-  --md-text: #171717;
-  --md-text-muted: #4e545a;
-  --md-text-dim: #6b7076;
+  --md-bg: var(--md-light-bg);
+  --md-text: var(--md-light-text);
+  --md-text-muted: var(--md-light-text-muted);
+  --md-text-dim: var(--md-light-text-dim);
 
-  --md-green: #1f7a4a;
-  --md-green-soft: #1f7a4a18;
-  --md-color-code: #3f464d;
+  --md-green: var(--md-light-green);
+  --md-green-soft: var(--md-light-green-soft);
+  --md-color-code: var(--md-light-color-code);
 
-  --md-blue: #376b9d;
-  --md-blue-soft: #376b9d18;
+  --md-blue: var(--md-light-blue);
+  --md-blue-soft: var(--md-light-blue-soft);
 
-  --md-brown-white: #181512;
-  --md-brown-light: #2d261f;
-  --md-brown-medium: #594a38;
-  --md-brown-dark: #725f45;
-  --md-brown-dark-backdrop: #725f4520;
+  --md-brown-white: var(--md-light-brown-white);
+  --md-brown-light: var(--md-light-brown-light);
+  --md-brown-medium: var(--md-light-brown-medium);
+  --md-brown-dark: var(--md-light-brown-dark);
+  --md-brown-dark-backdrop: var(--md-light-brown-dark-backdrop);
 
-  --md-border: #d4d8de;
-  --md-border-soft: #e3e6ea;
-  --md-code-bg: #e5e7e8;
-  --md-table-bg: transparent;
-  --md-table-header-bg: #e7ebee;
-  --md-table-row-alt-bg: #f4f5f6;
+  --md-border: var(--md-light-border);
+  --md-border-soft: var(--md-light-border-soft);
+  --md-code-bg: var(--md-light-code-bg);
+  --md-table-bg: var(--md-light-table-bg);
+  --md-table-header-bg: var(--md-light-table-header-bg);
+  --md-table-row-alt-bg: var(--md-light-table-row-alt-bg);
 
-  --md-link: #195f6d;
-  --md-link-hover: #0f4651;
+  --md-link: var(--md-light-link);
+  --md-link-hover: var(--md-light-link-hover);
 }
 
 html[data-theme="light"] .markdown-body kbd,
 html[data-theme="light"] .markdown-body details {
-  background: #eceff2;
+  background: var(--md-light-surface);
 }
 
 html[data-theme="light"] .markdown-body input[type="checkbox"] {
-  background: #f7f8f9;
+  background: var(--md-light-input-bg);
 }

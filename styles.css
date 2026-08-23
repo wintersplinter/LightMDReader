@@ -203,12 +203,6 @@ body.topbar-locked .layout {
 .btn[aria-pressed="true"] {
   border-color: var(--accent);
 }
-.list-marker-icon {
-  display: inline-block;
-  border-top: 1px solid currentColor;
-  vertical-align: 0.2em;
-  width: 1.4em;
-}
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -891,9 +885,11 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
     display: none !important;
   }
 
+  /* Paper is white. The document's own colours come from
+     customMarkdown.print.css, which maps every token onto the light
+     theme, so nothing here should hard-code a colour. */
   body {
     background: #fff;
-    color: #000;
   }
   .topbar,
   .sidebar,
@@ -925,17 +921,12 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
     min-height: 0;
     overflow: visible;
   }
-  .reader a {
-    color: #000;
-    text-decoration: underline;
-  }
   .reader .md-comment {
     display: none !important;
   }
   .reader pre {
-    border: 1px solid #ddd;
-    background: #f7f7f7;
     page-break-inside: avoid;
+    break-inside: avoid;
   }
   .reader h1,
   .reader h2,

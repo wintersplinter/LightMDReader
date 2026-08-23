@@ -415,7 +415,9 @@
   position: relative;
 }
 
-body.list-markers-enabled .markdown-body ul > li::before {
+/* The list marker. Every document style draws its own version of this;
+   there is no longer a toggle, so it is always present. */
+.markdown-body ul > li::before {
   border-top: var(--md-list-marker-line-weight) solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
   content: "";
   left: var(--md-list-marker-line-left);

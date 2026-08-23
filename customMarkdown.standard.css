@@ -143,17 +143,8 @@ html[data-document-style="standard"] .markdown-body ol {
   padding-left: 1.45em;
 }
 
-html[data-document-style="standard"] .markdown-body ul {
-  list-style-type: disc;
-}
-
 html[data-document-style="standard"] .markdown-body ul ul {
   border-left: 0;
-  list-style-type: circle;
-}
-
-html[data-document-style="standard"] .markdown-body ul ul ul {
-  list-style-type: square;
 }
 
 html[data-document-style="standard"] .markdown-body li,
@@ -168,22 +159,17 @@ html[data-document-style="standard"] .markdown-body li > ol {
   border-left: 0;
 }
 
-html[data-document-style="standard"] .markdown-body ul > li::marker {
-  content: normal;
-  color: var(--md-text-muted);
-}
-
 html[data-document-style="standard"] .markdown-body ol > li::marker {
   color: var(--md-text-muted);
   font-size: 0.92em;
   font-variant-numeric: tabular-nums;
 }
 
-html[data-document-style="standard"] body.list-markers-enabled .markdown-body ul {
+html[data-document-style="standard"] .markdown-body ul {
   list-style: none;
 }
 
-html[data-document-style="standard"] body.list-markers-enabled .markdown-body ul > li::before {
+html[data-document-style="standard"] .markdown-body ul > li::before {
   top: 0.66em;
   left: -0.82em;
   width: 0.32em;

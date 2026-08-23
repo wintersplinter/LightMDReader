@@ -1,171 +1,120 @@
 /* ==========================================================
    customMarkdown.print.css
 
-   Paper and PDF output is white no matter which application theme is
-   selected, so printing must not inherit theme colours. Every token that
-   carries meaning is redefined here for each document style.
+   Paper and PDF output should be the document as it is shown on screen,
+   in the light theme's colours, whichever theme the app happens to be
+   using. Only two things are deliberately different on paper: the hidden
+   ((: comment :)) markers are dropped, and the type is set in points.
 
-   This file is loaded last on purpose, but source order only decides between
-   selectors of EQUAL specificity. The theme stylesheets target
-   html[data-theme="..."] .markdown-body, so the shared block below has to
-   match that weight or the theme keeps winning. It is written as
-   html[data-theme] .markdown-body for exactly that reason.
+   The palette itself lives in customMarkdown.light.css as --md-light-*.
+   This file only re-points the real tokens at it, so screen and paper
+   cannot drift apart.
 
-   When the shared block was a bare .markdown-body it was outranked by the
-   light and brown themes, and printing in brown put a tan fill behind code
-   blocks and table headers. Only the dark theme printed correctly, because
-   its tokens live on a bare .markdown-body too.
+   This file is loaded last on purpose, but source order only decides
+   between selectors of EQUAL specificity. The theme stylesheets target
+   html[data-theme="..."] .markdown-body, so the block below has to match
+   that weight or the theme keeps winning. It is written as
+   html[data-theme] .markdown-body for exactly that reason: html[data-theme]
+   matches whichever theme is active, and app.js always sets the attribute.
 
-   Before this file existed, the default dark Signature style printed
-   near-white body text (--md-text: #f0f0f0) onto white paper.
+   When this block was a bare .markdown-body it was outranked by the light
+   and brown themes, and printing in brown put a tan fill behind code
+   blocks and table headers.
    ========================================================== */
 
 @media print {
-  /* ----- Shared: applies to every document style -----
-     html[data-theme] matches whichever theme is active, and app.js always
-     sets that attribute, so this reliably outranks the theme stylesheets. */
+  /* ----- Light palette, every theme, every document style ----- */
   html[data-theme] .markdown-body {
-    --md-bg: transparent;
-    --md-text: #14171a;
-    --md-text-muted: #454c54;
-    --md-text-dim: #5b636c;
+    --md-bg: var(--md-light-bg);
+    --md-text: var(--md-light-text);
+    --md-text-muted: var(--md-light-text-muted);
+    --md-text-dim: var(--md-light-text-dim);
 
-    --md-green: #1c6b3a;
-    --md-green-soft: #eaf3ed;
-    --md-color-code: #2f3438;
+    --md-green: var(--md-light-green);
+    --md-green-soft: var(--md-light-green-soft);
+    --md-color-code: var(--md-light-color-code);
 
-    --md-blue: #234a78;
-    --md-blue-soft: #eef2f7;
+    --md-blue: var(--md-light-blue);
+    --md-blue-soft: var(--md-light-blue-soft);
 
-    --md-border: #c8ccd0;
-    --md-border-soft: #dfe2e5;
-    --md-code-bg: #f4f5f6;
-    --md-table-bg: transparent;
-    --md-table-header-bg: #eef0f2;
-    --md-table-row-alt-bg: #f8f8f8;
+    --md-brown-white: var(--md-light-brown-white);
+    --md-brown-light: var(--md-light-brown-light);
+    --md-brown-medium: var(--md-light-brown-medium);
+    --md-brown-dark: var(--md-light-brown-dark);
+    --md-brown-dark-backdrop: var(--md-light-brown-dark-backdrop);
 
-    --md-link: #14171a;
-    --md-link-hover: #14171a;
+    --md-border: var(--md-light-border);
+    --md-border-soft: var(--md-light-border-soft);
+    --md-code-bg: var(--md-light-code-bg);
+    --md-table-bg: var(--md-light-table-bg);
+    --md-table-header-bg: var(--md-light-table-header-bg);
+    --md-table-row-alt-bg: var(--md-light-table-row-alt-bg);
 
-    --md-quote-bg: #f4f5f6;
-    --md-quote-border: #9aa1a8;
-    --md-quote-block-bg: #f4f5f6;
-    --md-quote-block-text: #14171a;
+    --md-link: var(--md-light-link);
+    --md-link-hover: var(--md-light-link-hover);
 
-    color: var(--md-text);
     background: transparent;
+    color: var(--md-text);
   }
 
-  /* ----- Brown heading ramp: Signature and Refined -----
-     h1 uses --md-brown-white, h2 --md-brown-light, h3 --md-brown-medium and
-     h4..h6 --md-brown-dark. Dark to mid grey keeps that hierarchy readable
-     once the colours are gone.
-
-     These are listed by name on purpose. This rule used to read
-     html:not([data-document-style="standard"]), which meant every style added
-     afterwards silently inherited the brown ramp. Name the styles that want
-     it, so a new style has to opt in rather than opt out. */
-  html[data-document-style="signature"] .markdown-body,
-  html[data-document-style="refined"] .markdown-body {
-    --md-brown-white: #14171a;
-    --md-brown-light: #23282d;
-    --md-brown-medium: #3a4046;
-    --md-brown-dark: #4e555c;
-    --md-brown-dark-backdrop: #f1f2f3;
-
-    --md-hard-accent-color: #14171a;
-    --md-soft-accent-color: #4e555c;
-
-    --md-title-bg: transparent;
-    --md-title-text: #14171a;
+  /* The two fills the light theme sets on elements rather than on tokens. */
+  html[data-theme] .markdown-body kbd,
+  html[data-theme] .markdown-body details {
+    background: var(--md-light-surface);
   }
 
-  /* ----- Standard style ----- */
+  html[data-theme] .markdown-body input[type="checkbox"] {
+    background: var(--md-light-input-bg);
+  }
+
+  /* Signature and Refined build their heading ramp on the brown tokens, and
+     Standard, Studio and Editorial each derive their accent from a theme
+     token, so all five follow the palette above without a per-style remap.
+     There used to be one here, which is what made every style print grey. */
+
+  /* ----- Print the fills -----
+     Chrome and Safari drop background colours on paper unless the reader
+     ticks "Background graphics" in the print dialog. That is why the list
+     bullets vanished from the PDF: in Standard, Studio and Editorial the
+     bullet is a coloured ::before box, not a real list marker, and a
+     dropped background leaves nothing behind. Same for the Studio accent
+     bar, the table header and stripe fills, and the code block fill.
+
+     print-color-adjust is inherited, so setting it at the root covers
+     pseudo-elements and everything else in one go. */
+  html,
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ----- Per-style print sizing -----
+     Colours are no longer touched here; only the type is set in points,
+     which is what paper measures in. Signature is left at its own size on
+     purpose: it is a large-type style and shrinking it would stop the PDF
+     from matching the document. */
   html[data-document-style="standard"] .markdown-body {
-    --md-standard-accent: #5b6572;
-    --md-standard-accent-soft: #f2f3f5;
-    --md-standard-surface: #f5f6f7;
-
     font-size: 10.5pt;
     line-height: 1.48;
   }
 
-  /* ----- Studio style -----
-     The green accent becomes a neutral dark grey: the accent bars and rules
-     still separate sections, without needing colour to be printed. */
   html[data-document-style="studio"] .markdown-body {
-    --md-studio-accent: #3a4046;
-    --md-studio-accent-soft: #f4f5f6;
-    --md-studio-surface: #f5f6f7;
-    --md-studio-rule: #c8ccd0;
-
     font-size: 10.5pt;
     line-height: 1.52;
   }
 
-  /* ----- Editorial style -----
-     Serif headings print well as solid black. The accent rule under the title
-     is the only coloured element, so it goes dark rather than disappearing. */
   html[data-document-style="editorial"] .markdown-body {
-    --md-editorial-accent: #23282d;
-    --md-editorial-accent-soft: #f2f3f5;
-    --md-editorial-surface: #f5f6f7;
-    --md-editorial-rule: #c8ccd0;
-
     font-size: 11pt;
     line-height: 1.55;
   }
 
-  /* ----- Refined style -----
-     Inherits the brown ramp remapped above; these are the extra tokens the
-     style defines on top of it. */
   html[data-document-style="refined"] .markdown-body {
-    --md-refined-accent: #4e555c;
-    --md-refined-rule: #a9b0b6;
-    --md-refined-surface: #f5f6f7;
-
     font-size: 11pt;
     line-height: 1.55;
   }
 
-  /* Accent bars and title rules are backgrounds, and browsers drop those
-     unless the reader opts in. Give them a border so the mark survives. */
-  html[data-document-style="studio"] .markdown-body h1::after,
-  html[data-document-style="studio"] .markdown-body h2::before,
-  html[data-document-style="editorial"] .markdown-body h1::after,
-  html[data-document-style="refined"] .markdown-body h1::after {
-    background: transparent;
-    border-top: 2px solid var(--md-text);
-    height: 0;
-  }
-
-  html[data-document-style="studio"] .markdown-body h2::before {
-    border-top: 0;
-    border-left: 3px solid var(--md-text);
-    width: 0;
-  }
-
-  /* Links must remain identifiable without colour. */
-  html[data-theme] .markdown-body a {
-    color: var(--md-link);
-    text-decoration: underline;
-  }
-
-  /* Browsers omit backgrounds unless the user opts in, so anything that
-     relies on a fill to be distinguishable also gets a border. */
-  html[data-theme] .markdown-body pre,
-  html[data-theme] .markdown-body blockquote,
-  html[data-theme] .markdown-body table,
-  html[data-theme] .markdown-body th,
-  html[data-theme] .markdown-body td {
-    border: 1px solid var(--md-border);
-  }
-
-  html[data-theme] .markdown-body code {
-    border: 1px solid var(--md-border-soft);
-  }
-
-  /* Blocked remote placeholders carry no information worth printing. */
+  /* Blocked remote placeholders carry no information worth printing, but
+     the space they hold does, so they are outlined rather than removed. */
   html[data-theme] .markdown-body .remote-blocked {
     border: 1px dashed var(--md-border);
     color: var(--md-text-dim);

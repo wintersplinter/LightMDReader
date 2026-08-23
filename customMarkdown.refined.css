@@ -218,18 +218,9 @@ html[data-document-style="refined"] .markdown-body ol {
   padding-left: 1.5em;
 }
 
-html[data-document-style="refined"] .markdown-body ul {
-  list-style-type: disc;
-}
-
-html[data-document-style="refined"] .markdown-body ul ul {
-  border-left: 0;
-  list-style-type: circle;
-}
-
+html[data-document-style="refined"] .markdown-body ul ul,
 html[data-document-style="refined"] .markdown-body ul ul ul {
   border-left: 0;
-  list-style-type: square;
 }
 
 html[data-document-style="refined"] .markdown-body li,
@@ -244,23 +235,18 @@ html[data-document-style="refined"] .markdown-body li > ol {
   border-left: 0;
 }
 
-html[data-document-style="refined"] .markdown-body ul > li::marker {
-  content: normal;
-  color: var(--md-brown-medium);
-}
-
 html[data-document-style="refined"] .markdown-body ol > li::marker {
   color: var(--md-brown-medium);
   font-variant-numeric: tabular-nums;
 }
 
-/* Signature's marker toggle draws a horizontal rule to the left of each
-   item. Refined keeps the idea but shortens it so it reads as a tick. */
-html[data-document-style="refined"] body.list-markers-enabled .markdown-body ul {
+/* Signature's marker is a horizontal rule to the left of each item.
+   Refined keeps the idea but shortens it so it reads as a tick. */
+html[data-document-style="refined"] .markdown-body ul {
   list-style: none;
 }
 
-html[data-document-style="refined"] body.list-markers-enabled .markdown-body ul > li::before {
+html[data-document-style="refined"] .markdown-body ul > li::before {
   top: 0.85em;
   left: -1.05em;
   width: 0.6em;
