@@ -87,7 +87,14 @@ const confirmDialogPrimary = document.getElementById("confirmDialogPrimary");
 const confirmDialogSecondary = document.getElementById("confirmDialogSecondary");
 const confirmDialogCancel = document.getElementById("confirmDialogCancel");
 const availableThemes = new Set(["dark", "light", "brown"]);
-const availableDocumentStyles = new Set(["signature", "standard", "studio", "editorial", "refined"]);
+const availableDocumentStyles = new Set([
+  "signature",
+  "standard",
+  "studio",
+  "editorial",
+  "refined",
+  "graphite",
+]);
 const availablePdfPaperSizes = new Set(["browser", "a4", "letter"]);
 const markdownFilePattern = /\.(md|markdown|txt)$/i;
 const imageFilePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;

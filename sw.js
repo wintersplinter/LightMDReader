@@ -1,4 +1,4 @@
-const VERSION = "v3-8-0";
+const VERSION = "v3-9-0";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;
@@ -15,6 +15,7 @@ const ASSETS = [
   "./customMarkdown.studio.css",
   "./customMarkdown.editorial.css",
   "./customMarkdown.refined.css",
+  "./customMarkdown.graphite.css",
   "./customMarkdown.print.css",
   "./MDrender.js",
   "./app.js",

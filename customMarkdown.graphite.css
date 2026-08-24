@@ -1,0 +1,540 @@
+/* ==========================================================
+   customMarkdown.graphite.css
+
+   Graphite document style: achromatic and technical.
+
+   Every other style leans on an accent colour to mark structure. This one has
+   none. It resolves only the neutral tokens - text, muted, dim, border - so it
+   stays greyscale under the dark, light and brown themes alike, and prints
+   without losing anything. Hierarchy has to come from somewhere else, so it
+   comes from weight, letter-spacing, hairlines and vertical space.
+
+   The reference is an engineering drawing rather than a book: square corners
+   throughout, rules at a single hairline weight, outlined rather than filled
+   marks, and uppercase tracked labels for the deepest headings. No serif, no
+   ornament, no colour.
+
+   Loaded after customMarkdown.css so it can reset the Signature decorations,
+   and selected independently from the colour themes. Print behaviour lives in
+   customMarkdown.print.css.
+   ========================================================== */
+
+html[data-document-style="graphite"] .markdown-body {
+  /* Named so the intent is legible, but every one of these is a neutral. The
+     style must never reach for --md-green or --md-blue. */
+  --md-graphite-ink: var(--md-text);
+  --md-graphite-quiet: var(--md-text-muted);
+  --md-graphite-rule: var(--md-border);
+  --md-graphite-hairline: 1px;
+  --md-graphite-heavy: 3px;
+
+  /* Bahnschrift is Microsoft's DIN 1451 - the German industrial standard face
+     used on road signs and technical drawings. It ships with Windows 10 and
+     11. Helvetica Neue and Arimo carry the same neutral grotesque tone
+     elsewhere. Deliberately not Corbel or Candara: Studio already uses those,
+     and they are humanist where this wants to be mechanical. */
+  --md-graphite-display:
+    Bahnschrift, "DIN Next", "Helvetica Neue", Helvetica, Arimo, "Liberation Sans", Arial, sans-serif;
+
+  /* Body stays on a plainer grotesque. DIN is excellent at heading sizes and
+     tiring for paragraphs. */
+  --md-graphite-text:
+    "Segoe UI", "Helvetica Neue", Helvetica, Arimo, "Liberation Sans", Arial, sans-serif;
+
+  font-family: var(--md-graphite-text);
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+
+/* Headings are set on a modular scale rather than tuned one at a time, so the
+   steps relate to each other instead of merely differing: 3.05 / 1.45 / 1.2
+   / 0.98 against the body size.
+
+   h2 looks oversized in that list and is not. Small caps here are synthesised
+   - the browser scales capitals down, because none of these system faces
+   carries a real small-cap set - so a small-cap heading reads about a size
+   below its em value. Setting h2 at 1.45em is what keeps it ranking above h3
+   optically. Trust the render, not the number. */
+
+/* ----------------------------------------------------------
+   Rhythm
+   Air is the main separator here, so the intervals are wider than the other
+   styles and more uniform.
+   ---------------------------------------------------------- */
+
+html[data-document-style="graphite"] .markdown-body p,
+html[data-document-style="graphite"] .markdown-body ul,
+html[data-document-style="graphite"] .markdown-body ol,
+html[data-document-style="graphite"] .markdown-body blockquote,
+html[data-document-style="graphite"] .markdown-body pre,
+html[data-document-style="graphite"] .markdown-body table,
+html[data-document-style="graphite"] .markdown-body details,
+html[data-document-style="graphite"] .markdown-body figure {
+  margin-bottom: 1.05em;
+}
+
+/* ----------------------------------------------------------
+   Headings
+   Signature centres headings, pads them heavily, underlines h3 and h4, and
+   hangs decorative dots off h1. All of that is reset first.
+   ---------------------------------------------------------- */
+
+html[data-document-style="graphite"] .markdown-body h1,
+html[data-document-style="graphite"] .markdown-body h2,
+html[data-document-style="graphite"] .markdown-body h3,
+html[data-document-style="graphite"] .markdown-body h4,
+html[data-document-style="graphite"] .markdown-body h5,
+html[data-document-style="graphite"] .markdown-body h6 {
+  display: block;
+  padding: 0;
+  border: 0;
+  color: var(--md-graphite-ink);
+  font-family: var(--md-graphite-display);
+  line-height: 1.22;
+  text-align: left;
+  text-decoration: none;
+}
+
+/* Position carries the hierarchy, in three steps rather than two.
+
+   Centred (h1, h2) means "this is a title": it leaves the column and is read
+   as an event. Indented (h3) means "this is a subdivision": still in the
+   column, but stepped in, so it is read as belonging under what came before.
+   Flush left (h4 and below) means "this is a label": it belongs to the text
+   directly under it and is read in passing.
+
+   Three positions, three ranks, and not one line of ornament spent on it. */
+html[data-document-style="graphite"] .markdown-body h1,
+html[data-document-style="graphite"] .markdown-body h2 {
+  text-align: center;
+}
+
+/* Centred text that is letterspaced sits fractionally left of true centre:
+   the tracking is added after every character including the last, so the line
+   box is wider than the glyphs by one full step. text-indent equal to the
+   tracking puts it back. A hand-kerning correction, in one line. */
+html[data-document-style="graphite"] .markdown-body h1 {
+  text-indent: -0.03em;
+}
+
+html[data-document-style="graphite"] .markdown-body h2 {
+  text-indent: 0.06em;
+}
+
+
+/* The title is announced by a rule above it rather than below. A masthead
+   rule reads as "this begins here"; an underline reads as decoration.
+
+   Set large and LIGHT. Weight is the loudest thing type can do, and a title
+   does not need to shout - it is already the biggest thing on the page. A
+   light face at 3em reads as deliberate where a bold one reads as default,
+   and the negative tracking is what large display type needs to stop the
+   letters drifting apart. */
+html[data-document-style="graphite"] .markdown-body h1 {
+  position: relative;
+  margin: 0 0 0.55em;
+  padding-top: 0.5em;
+  border-top: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+  font-size: 3.05em;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+
+/* A short heavy segment sitting on the hairline. Two weights of the same rule
+   is an old Swiss device: the thin line states the measure, the thick one
+   marks where the document starts. It is the one piece of pure art direction
+   in the style, which is why it is 2.4em long and not a full-width band. */
+html[data-document-style="graphite"] .markdown-body h1::before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: calc(var(--md-graphite-heavy) * -1);
+  left: 50%;
+  width: 2.4em;
+  height: var(--md-graphite-heavy);
+  transform: translateX(-50%);
+  background: var(--md-graphite-ink);
+}
+
+html[data-document-style="graphite"] .markdown-body h1::after {
+  content: none;
+  display: none;
+}
+
+/* A standfirst. The paragraph that opens a section is set a step larger, a
+   step lighter and a shade back, so the eye is walked into the text instead
+   of dropped at it. Costs no ornament and is the single clearest signal that
+   a page was art-directed rather than merely styled. */
+html[data-document-style="graphite"] .markdown-body h1 + p {
+  margin-top: 0;
+  margin-bottom: 1.6em;
+  color: var(--md-graphite-quiet);
+  font-size: 1.14em;
+  font-weight: 300;
+  line-height: 1.62;
+}
+
+/* h2 is answered by a short heavy mark centred beneath it - the same dark
+   segment that sits on the h1 rule, at h2's scale. It closes the heading
+   instead of dividing the page, which a full-width border-bottom would do
+   (Signature puts a brown one here; it is switched off in the reset above).
+
+   The mark is 2px rather than the 3px used on h1. Both are about 6% of their
+   heading's font size, so they read as the same weight of line even though
+   the numbers differ. */
+html[data-document-style="graphite"] .markdown-body h2 {
+  margin: 2.6em 0 0.95em;
+  font-size: 1.45em;
+  font-weight: 600;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  text-wrap: balance;
+}
+
+html[data-document-style="graphite"] .markdown-body h2::after {
+  content: "";
+  display: block;
+  width: 2.2em;
+  height: 2px;
+  margin: 0.62em auto 0;
+  background: var(--md-graphite-ink);
+}
+
+/* h3 sits at body size. Weight and tracking carry it, nothing else. */
+/* h3 is small caps too, which makes h1-h3 read as one centred family. Two
+   small-cap levels in a row is a real risk when skimming, so they are held
+   apart by four things at once, not one: position (centred against indented),
+   size (1.45 against 1.2), weight (600 against 400), and the mark, which only
+   h2 carries. Change any one and check a page with several of each first.
+
+   The indent is on margin-left rather than text-indent so that a heading long
+   enough to wrap keeps every line stepped in, not just the first. */
+html[data-document-style="graphite"] .markdown-body h3 {
+  margin: 2em 0 0.5em 1.6em;
+  font-size: 1.2em;
+  font-weight: 400;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  text-wrap: balance;
+}
+
+/* h4 and below are labels rather than titles. They step down by greyness and
+   tracking rather than by size, which is nearly exhausted by this point. */
+html[data-document-style="graphite"] .markdown-body h4 {
+  margin: 1.7em 0 0.45em;
+  color: var(--md-graphite-quiet);
+  font-size: 0.98em;
+  font-weight: 600;
+  font-variant: small-caps;
+  letter-spacing: 0.13em;
+}
+
+html[data-document-style="graphite"] .markdown-body h5 {
+  margin: 1.55em 0 0.4em;
+  color: var(--md-graphite-quiet);
+  font-size: 0.98em;
+  font-weight: 400;
+  font-variant: small-caps;
+  letter-spacing: 0.13em;
+}
+
+html[data-document-style="graphite"] .markdown-body h6 {
+  margin: 1.4em 0 0.4em;
+  color: var(--md-graphite-quiet);
+  font-family: var(--md-font-code);
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Chrome's line breaker, told to avoid orphans and ragged last lines. This is
+   the kind of thing a designer would otherwise fix by hand, one line at a
+   time, and it degrades to normal wrapping everywhere it is unsupported. */
+html[data-document-style="graphite"] .markdown-body p,
+html[data-document-style="graphite"] .markdown-body li {
+  text-wrap: pretty;
+}
+
+html[data-document-style="graphite"] .markdown-body h2 + p,
+html[data-document-style="graphite"] .markdown-body h3 + p,
+html[data-document-style="graphite"] .markdown-body h4 + p,
+html[data-document-style="graphite"] .markdown-body h5 + p,
+html[data-document-style="graphite"] .markdown-body h6 + p {
+  margin-top: 0;
+}
+
+/* ----------------------------------------------------------
+   Inline
+   ---------------------------------------------------------- */
+
+html[data-document-style="graphite"] .markdown-body strong {
+  color: var(--md-graphite-ink);
+  font-weight: 600;
+}
+
+/* A link cannot be marked by colour here, so it is marked by a rule under it.
+   That is also how it already prints, which keeps screen and paper in step. */
+html[data-document-style="graphite"] .markdown-body a {
+  color: var(--md-graphite-ink);
+  border-bottom: var(--md-graphite-hairline) solid var(--md-graphite-quiet);
+  text-decoration: none;
+}
+
+html[data-document-style="graphite"] .markdown-body a:hover,
+html[data-document-style="graphite"] .markdown-body a:focus {
+  color: var(--md-graphite-ink);
+  border-bottom-color: var(--md-graphite-ink);
+}
+
+/* mark is the one place the base stylesheet hard-codes yellow. An achromatic
+   style cannot keep it, so emphasis becomes a grey field. */
+html[data-document-style="graphite"] .markdown-body mark {
+  padding: 0.05em 0.3em;
+  border: 0;
+  border-radius: 0;
+  background: var(--md-code-bg);
+  color: var(--md-graphite-ink);
+  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--md-border) 55%, transparent);
+}
+
+html[data-document-style="graphite"] .markdown-body kbd {
+  border-radius: 0;
+}
+
+/* ----------------------------------------------------------
+   Lists
+   The marker is an outlined square: a drawn mark rather than a printed dot,
+   and distinct from Standard's disc, Studio's filled square, Editorial's
+   circle and the rules used by Signature and Refined.
+   ---------------------------------------------------------- */
+
+/* The marker hangs in the gutter so the list text keeps the same left edge as
+   the paragraphs around it. An indented list breaks the column; a hung one
+   keeps it, which is why books have set lists this way for centuries. Nested
+   levels indent normally, because there the step IS the information. */
+html[data-document-style="graphite"] .markdown-body ul {
+  margin-top: 0.45em;
+  padding-left: 0;
+}
+
+html[data-document-style="graphite"] .markdown-body ol {
+  margin-top: 0.45em;
+  padding-left: 1.55em;
+}
+
+html[data-document-style="graphite"] .markdown-body li > ul,
+html[data-document-style="graphite"] .markdown-body li > ol {
+  padding-left: 1.5em;
+}
+
+html[data-document-style="graphite"] .markdown-body ul ul {
+  border-left: 0;
+}
+
+html[data-document-style="graphite"] .markdown-body li,
+html[data-document-style="graphite"] .markdown-body li > p {
+  margin: 0.3em 0;
+}
+
+html[data-document-style="graphite"] .markdown-body li > ul,
+html[data-document-style="graphite"] .markdown-body li > ol {
+  margin-top: 0.24em;
+  margin-bottom: 0.24em;
+  border-left: 0;
+}
+
+html[data-document-style="graphite"] .markdown-body ol > li::marker {
+  color: var(--md-graphite-quiet);
+  font-family: var(--md-font-code);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-document-style="graphite"] .markdown-body ul {
+  list-style: none;
+}
+
+html[data-document-style="graphite"] .markdown-body ul > li::before {
+  top: 0.72em;
+  left: -0.85em;
+  width: 0.34em;
+  height: 0.34em;
+  border: var(--md-graphite-hairline) solid var(--md-graphite-quiet);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Nested levels fill in, so depth is still readable without another shape. */
+html[data-document-style="graphite"] .markdown-body ul ul > li::before {
+  background: var(--md-graphite-quiet);
+}
+
+html[data-document-style="graphite"] .markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--md-graphite-quiet);
+}
+
+/* ----------------------------------------------------------
+   Blocks
+   ---------------------------------------------------------- */
+
+/* No fill and no italic. The quotation is set in from the measure and marked
+   by a single hairline, which is all it needs. */
+html[data-document-style="graphite"] .markdown-body blockquote {
+  margin: 1.5em 0;
+  padding: 0 0 0 1.4em;
+  border: 0;
+  border-left: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--md-graphite-quiet);
+  font-style: normal;
+}
+
+html[data-document-style="graphite"] .markdown-body :not(pre) > code {
+  padding: 0.08em 0.32em;
+  border: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--md-graphite-ink);
+  font-size: 0.9em;
+}
+
+html[data-document-style="graphite"] .markdown-body pre {
+  padding: 0.9em 1.05em;
+  border: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+  border-radius: 0;
+  background: var(--md-code-bg);
+}
+
+html[data-document-style="graphite"] .markdown-body pre code {
+  color: var(--md-graphite-ink);
+}
+
+/* A single hairline across the measure. The base style draws a doubled rule
+   at a golden-section width with huge margins; that is ornament. */
+html[data-document-style="graphite"] .markdown-body hr {
+  width: 100%;
+  height: 0;
+  margin: 2.6em 0;
+  border: 0;
+  border-top: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+}
+
+html[data-document-style="graphite"] .markdown-body hr::before {
+  content: none;
+  display: none;
+}
+
+/* ----------------------------------------------------------
+   Tables
+   Ruled, not filled. Column headings become labels in the same uppercase
+   tracked treatment as h4, so the table reads as part of the system.
+   ---------------------------------------------------------- */
+
+html[data-document-style="graphite"] .markdown-body table {
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+
+html[data-document-style="graphite"] .markdown-body thead {
+  background: transparent;
+}
+
+html[data-document-style="graphite"] .markdown-body tbody tr:nth-child(even) {
+  background: transparent;
+}
+
+html[data-document-style="graphite"] .markdown-body tr {
+  border-bottom: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+}
+
+html[data-document-style="graphite"] .markdown-body th,
+html[data-document-style="graphite"] .markdown-body td {
+  padding: 0.5em 0.85em 0.5em 0;
+  border: 0;
+}
+
+/* Tabular figures: every digit the same width, so a column of numbers lines
+   up on its own without any alignment rule. */
+html[data-document-style="graphite"] .markdown-body td {
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-document-style="graphite"] .markdown-body th {
+  border-bottom: var(--md-graphite-hairline) solid var(--md-graphite-ink);
+  color: var(--md-graphite-quiet);
+  font-family: var(--md-graphite-display);
+  font-size: 0.96em;
+  font-weight: 600;
+  font-variant: small-caps;
+  letter-spacing: 0.11em;
+}
+
+/* ----------------------------------------------------------
+   Detail
+   ---------------------------------------------------------- */
+
+html[data-document-style="graphite"] .markdown-body summary,
+html[data-document-style="graphite"] .markdown-body dt {
+  color: var(--md-graphite-ink);
+  font-family: var(--md-graphite-display);
+  font-weight: 600;
+}
+
+html[data-document-style="graphite"] .markdown-body details {
+  border-radius: 0;
+  border: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+}
+
+html[data-document-style="graphite"] .markdown-body img,
+html[data-document-style="graphite"] .markdown-body figure {
+  border-radius: 0;
+}
+
+html[data-document-style="graphite"] .markdown-body .footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: var(--md-graphite-hairline) solid var(--md-graphite-rule);
+  font-size: 0.9em;
+}
+
+/* A narrow measure. Long lines are the fastest way to make dense material
+   harder than it needs to be. */
+html[data-document-style="graphite"] .reader {
+  max-width: 800px;
+  padding: 28px 34px;
+}
+
+@media (max-width: 700px) {
+  html[data-document-style="graphite"] .markdown-body {
+    font-size: 14px;
+  }
+
+  html[data-document-style="graphite"] .markdown-body h1 {
+    font-size: 2.25em;
+  }
+
+  html[data-document-style="graphite"] .markdown-body h2 {
+    font-size: 1.32em;
+  }
+
+  html[data-document-style="graphite"] .markdown-body h3 {
+    margin-left: 0.9em;
+    font-size: 1.12em;
+  }
+
+  html[data-document-style="graphite"] .markdown-body h1 + p {
+    font-size: 1.06em;
+  }
+
+  /* No gutter to hang into at this width, so the list markers come inside. */
+  html[data-document-style="graphite"] .markdown-body ul {
+    padding-left: 1.3em;
+  }
+
+  html[data-document-style="graphite"] .reader {
+    padding: 18px;
+  }
+}

@@ -113,6 +113,14 @@
     line-height: 1.55;
   }
 
+  /* Graphite is achromatic by construction, so it needs no colour handling
+     here at all - it already resolves nothing but neutral tokens. Only the
+     type is set in points. */
+  html[data-document-style="graphite"] .markdown-body {
+    font-size: 10.5pt;
+    line-height: 1.62;
+  }
+
   /* ----- Reader box -----
      Every style sets its own .reader padding for the screen, at a specificity
      (html[data-document-style] .reader) that outranks the plain

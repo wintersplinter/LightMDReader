@@ -27,7 +27,7 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Block remote images until the host is allowed, so opening a document does not announce it.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
 - Switch between dark, light, and brown themes.
-- Switch between five document styles: Signature, Refined, Editorial, Studio, and Standard.
+- Switch between six document styles: Signature, Refined, Editorial, Studio, Standard, and Graphite.
 - Toggle custom list marker styling.
 - Lock the top menu while scrolling.
 - Return to the top of the page with the floating button.
@@ -84,10 +84,13 @@ The style menu changes how a document is rendered. It is independent of the dark
 | **Editorial** | Serif (Constantia, Palatino), short accent rule, italic h4 | A considered written document | Long-form writing, reports, anything to be read start to finish |
 | **Studio** | Tight geometric sans (Corbel, Candara), accent bar beside each h2, mono labels | Modern and sleek | Specs, notes with structure, documentation |
 | **Standard** | Familiar sans with rules under h1 and h2 | Deliberately plain | Anything that should look like ordinary Markdown |
+| **Graphite** | DIN-like grotesque (Bahnschrift), rule *above* h1, uppercase h2 with a gutter mark | Achromatic and technical | Dense or analytical material, where colour would be noise |
 
 All heading faces are system fonts. Nothing is downloaded, so a style looks the same offline as online, and the app makes no font request. On Windows that means Constantia and Corbel; on macOS, Palatino and Avenir Next; elsewhere the stacks fall back to whatever serif or sans is available.
 
-Every style resolves its colours from theme tokens rather than fixed values, so adding a theme does not require touching the styles. Print colours for all five live in `customMarkdown.print.css`.
+Every style resolves its colours from theme tokens rather than fixed values, so adding a theme does not require touching the styles. Print colours for all six live in `customMarkdown.print.css`.
+
+Graphite is the exception that proves the rule: it resolves only the neutral tokens and never touches `--md-green` or `--md-blue`, so it stays greyscale under every theme and loses nothing when printed. Hierarchy there comes from weight, letter-spacing, hairlines and vertical space instead of from an accent colour.
 
 ## PDF Export
 
@@ -252,6 +255,7 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 |-- customMarkdown.studio.css   # Studio document style overrides
 |-- customMarkdown.editorial.css # Editorial document style overrides
 |-- customMarkdown.refined.css  # Refined document style overrides
+|-- customMarkdown.graphite.css # Graphite document style overrides
 |-- customMarkdown.print.css    # Print colours for every style and theme (loaded last)
 |-- vendor/                     # Vendored runtime libraries plus VERSIONS.json
 |-- scripts/vendor.mjs          # Refreshes vendor/ from node_modules (run by hand)
