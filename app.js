@@ -39,6 +39,7 @@ const saveBtn = document.getElementById("saveBtn");
 const saveAsBtn = document.getElementById("saveAsBtn");
 const encryptionBtn = document.getElementById("encryptionBtn");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
+const revealBtn = document.getElementById("revealBtn");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
@@ -869,6 +870,50 @@ function updateSaveControls() {
   saveAsBtn.disabled = !hasDocument || !window.showSaveFilePicker;
   updateDirtyIndicator();
   updateEncryptionControls();
+  updateRevealControl();
+}
+
+/**
+ * Opens the operating system's file dialog already sitting in the folder the
+ * open document came from.
+ *
+ * This is as close to "show in Explorer" as a web page can get. A page cannot
+ * launch Explorer, and the File System Access API deliberately never exposes an
+ * absolute path: a handle knows its own name and nothing about the drive or the
+ * directories above it. What the API does offer is `startIn`, which accepts a
+ * handle and opens the picker there, so one click lands the user in the right
+ * folder with the OS's own copy-path and open-location commands to hand.
+ *
+ * The picker is opened read-only and its result is discarded on purpose. This
+ * button navigates; it never changes which document is open.
+ */
+async function revealCurrentLocation() {
+  const startIn = currentDirectoryHandle || currentFileHandle;
+
+  if (!startIn || !window.showOpenFilePicker) return;
+
+  try {
+    await window.showOpenFilePicker({ startIn, multiple: false });
+    setStatus("Ready");
+  } catch (error) {
+    // Dismissing the dialog is the normal way to use this button.
+    if (error.name === "AbortError") {
+      setStatus("Ready");
+      return;
+    }
+
+    console.error(error);
+    setStatus(error.message || "Could not open the folder");
+  }
+}
+
+function updateRevealControl() {
+  const target = currentDirectoryHandle || currentFileHandle;
+  const isFolder = Boolean(currentDirectoryHandle);
+
+  revealBtn.disabled = !target || !window.showOpenFilePicker;
+  revealBtn.setAttribute("aria-label", isFolder ? "Show folder" : "Show file location");
+  revealBtn.title = isFolder ? "Show folder" : "Show file location";
 }
 
 /**
@@ -1717,6 +1762,43 @@ async function hydrateLocalImages(root, context) {
   );
 }
 
+/**
+ * Waits until every image under `root` has finished loading.
+ *
+ * hydrateLocalImages only sets the src attribute, and the fragment it works on
+ * is an inert <template> - that is deliberate, it stops the document issuing
+ * requests before the local paths are swapped for blob URLs. The consequence is
+ * that the browser does not start fetching an image until the fragment is
+ * attached to the live document, so immediately after a render every image is
+ * still at complete === false and naturalWidth === 0.
+ *
+ * window.print() snapshots the page synchronously, so printing at that moment
+ * puts an empty box on the page where the image should be. It shows up on
+ * screen a moment later, which is why the image is visible in the preview but
+ * missing from the PDF.
+ *
+ * Broken images resolve too: a missing file must not hold the export back.
+ */
+function awaitImages(root, timeoutMs = 5000) {
+  const pending = [...root.querySelectorAll("img")].filter((image) => !image.complete);
+
+  if (!pending.length) return Promise.resolve();
+
+  const loaded = Promise.all(
+    pending.map(
+      (image) =>
+        new Promise((resolve) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        }),
+    ),
+  );
+
+  const timeout = new Promise((resolve) => window.setTimeout(resolve, timeoutMs));
+
+  return Promise.race([loaded, timeout]);
+}
+
 function wireLocalMarkdownLinks(context, root = reader) {
   if (!context?.path || !markdownFiles.length) return;
 
@@ -2336,6 +2418,7 @@ function clearFolderMode() {
   folderNav.innerHTML = "";
   folderSection.hidden = true;
   refreshFolderBtn.disabled = true;
+  updateRevealControl();
 }
 
 function setSingleFileMode(file, fileHandle = null) {
@@ -2559,6 +2642,7 @@ async function openFolder() {
     markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
     renderFolderNav();
     refreshFolderBtn.disabled = false;
+    updateRevealControl();
 
     if (!markdownFiles.length) {
       currentFolderPath = "";
@@ -2748,6 +2832,10 @@ editorPreview.addEventListener("click", (event) => {
 
 topbarLockBtn.addEventListener("click", () => {
   setTopbarLocked(!document.body.classList.contains("topbar-locked"));
+});
+
+revealBtn.addEventListener("click", () => {
+  revealCurrentLocation();
 });
 
 fileInput.addEventListener("change", (e) => {
@@ -2984,7 +3072,9 @@ if ("launchQueue" in window && "LaunchParams" in window) {
 exportBtn.addEventListener("click", async () => {
   if (reader.hidden && editorShell.hidden) return;
 
-  if (!editorShell.hidden) {
+  const isEditing = !editorShell.hidden;
+
+  if (isEditing) {
     window.clearTimeout(editorPreviewTimer);
 
     try {
@@ -2994,6 +3084,18 @@ exportBtn.addEventListener("click", async () => {
       showPreviewError(error.message || "Could not prepare the PDF preview.");
       return;
     }
+  }
+
+  // Printing before the images have loaded leaves empty boxes in the PDF.
+  // This matters most when editing, where the preview is re-rendered on the
+  // line above and every image starts loading from scratch, but the reader can
+  // hit it too when the export is clicked straight after opening a document.
+  const printRoot = isEditing ? editorPreview : reader;
+
+  if ([...printRoot.querySelectorAll("img")].some((image) => !image.complete)) {
+    setStatus("Preparing images...");
+    await awaitImages(printRoot);
+    setStatus(isEditing ? "Editing" : "Rendered");
   }
 
   window.print();
