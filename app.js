@@ -1799,6 +1799,89 @@ function awaitImages(root, timeoutMs = 5000) {
   return Promise.race([loaded, timeout]);
 }
 
+/* ----------------------------------------------------------
+   Title pages for PDF export
+
+   Every h1 becomes a book-style title page: the heading, plus any run of
+   h3..h6 directly after it, centred on a page of its own. h2 already starts a
+   new page, and body text always begins on the page after the title.
+
+   The grouping has to be a real element, because markdown produces a flat list
+   of siblings and CSS cannot box two of them together. Doing that permanently
+   would change the DOM the rest of the app reads: `.markdown-body > *:first-child`
+   and every `h1 + p` rule are written against headings being direct children.
+   So the wrapping happens on beforeprint and is undone on afterprint, which
+   covers the Export button and Ctrl+P alike and leaves the screen untouched.
+   ---------------------------------------------------------- */
+
+const titlePageClass = "pdf-title-page";
+const titlePageSubheadings = new Set(["H3", "H4", "H5", "H6"]);
+
+function buildTitlePages(root) {
+  [...root.querySelectorAll("h1")].forEach((heading) => {
+    const parent = heading.parentElement;
+
+    // A heading nested in a blockquote or list item is not a document title.
+    if (!parent || !parent.classList.contains("markdown-body")) return;
+
+    // Whitespace between the headings is moved along with them. Skipping it
+    // would leave those text nodes behind, and unwrapping afterwards would
+    // then put the headings back in a different place relative to them - the
+    // DOM would render the same but no longer be the document that was
+    // rendered, and repeated exports would keep shifting it.
+    const group = [heading];
+    const whitespace = [];
+    let node = heading.nextSibling;
+
+    while (node) {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) {
+        whitespace.push(node);
+        node = node.nextSibling;
+        continue;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE || !titlePageSubheadings.has(node.tagName)) break;
+
+      group.push(...whitespace, node);
+      whitespace.length = 0;
+      node = node.nextSibling;
+    }
+
+    const wrapper = document.createElement("div");
+
+    wrapper.className = titlePageClass;
+    parent.insertBefore(wrapper, heading);
+    wrapper.append(...group);
+  });
+}
+
+function clearTitlePages(root) {
+  [...root.querySelectorAll(`.${titlePageClass}`)].forEach((wrapper) => {
+    wrapper.replaceWith(...wrapper.childNodes);
+  });
+}
+
+function activePrintRoot() {
+  return editorShell.hidden ? reader : editorPreview;
+}
+
+window.addEventListener("beforeprint", () => {
+  // Clearing first keeps this idempotent: some browsers fire beforeprint more
+  // than once for a single dialog, and wrapping a wrapper would nest pages.
+  const root = activePrintRoot();
+
+  clearTitlePages(root);
+  buildTitlePages(root);
+});
+
+// Always runs, including when the print dialog is cancelled. Clearing both
+// roots is deliberate: the mode can change while the dialog is open, and a
+// leftover wrapper would be visible on screen.
+window.addEventListener("afterprint", () => {
+  clearTitlePages(reader);
+  clearTitlePages(editorPreview);
+});
+
 function wireLocalMarkdownLinks(context, root = reader) {
   if (!context?.path || !markdownFiles.length) return;
 

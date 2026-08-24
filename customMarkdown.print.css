@@ -113,6 +113,103 @@
     line-height: 1.55;
   }
 
+  /* ----- Reader box -----
+     Every style sets its own .reader padding for the screen, at a specificity
+     (html[data-document-style] .reader) that outranks the plain
+     `.reader { padding: 0 }` in styles.css, so 24-30px of it survived into
+     print. On paper the @page margin already provides the inset. It also broke
+     the title pages below: the leftover top padding pushed a 100vh block a
+     sliver past the page box, and that sliver printed as a blank sheet.
+
+     The drop zone's transparent border and screen-height minimum are part of
+     the same offset, and mean nothing on paper. */
+  html[data-document-style] .reader {
+    padding: 0;
+  }
+
+  .drop-zone {
+    min-height: 0;
+    border: 0;
+  }
+
+  /* ----- Title pages -----
+     app.js wraps each h1, plus any run of h3..h6 directly after it, in a
+     .pdf-title-page on beforeprint and unwraps it again on afterprint. The
+     wrapper never exists while the document is on screen.
+
+     vh is the page box height in print, not the window height. The box is
+     deliberately 92vh rather than a full 100vh: a block of exactly one page
+     ends flush on the page boundary, and the forced break after it then lands
+     on the following page, which prints as a blank sheet. 8vh of slack avoids
+     that. It is min-height, not height, so an unusually long title grows the
+     box instead of spilling out of it.
+
+     The 8vh padding-bottom is what lifts the block above the true centre,
+     where a title sits on a printed page. Raise it to sit higher. */
+  html[data-theme] .markdown-body .pdf-title-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 92vh;
+    margin: 0;
+    padding-bottom: 8vh;
+    text-align: center;
+    break-before: page;
+    page-break-before: always;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  /* No blank sheet in front of a leading title page, none after a trailing
+     one. A forced break at either end of the flow produces an empty page. */
+  html[data-theme] .markdown-body > .pdf-title-page:first-child {
+    break-before: auto;
+    page-break-before: auto;
+  }
+
+  html[data-theme] .markdown-body > .pdf-title-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Inside the wrapper the heading is the page, so the break rules that
+     normally separate sections have to stand down, or Chrome inserts a page
+     break inside the title page itself. Alignment is forced here because the
+     styles disagree: Signature centres its headings, the other four are left
+     aligned, and a title page is centred in all five. */
+  html[data-theme] .markdown-body .pdf-title-page h1,
+  html[data-theme] .markdown-body .pdf-title-page h3,
+  html[data-theme] .markdown-body .pdf-title-page h4,
+  html[data-theme] .markdown-body .pdf-title-page h5,
+  html[data-theme] .markdown-body .pdf-title-page h6 {
+    max-width: 100%;
+    break-before: auto;
+    page-break-before: auto;
+    break-after: auto;
+    page-break-after: auto;
+    text-align: center;
+  }
+
+  html[data-theme] .markdown-body .pdf-title-page h1 {
+    margin: 0;
+  }
+
+  html[data-theme] .markdown-body .pdf-title-page h3,
+  html[data-theme] .markdown-body .pdf-title-page h4,
+  html[data-theme] .markdown-body .pdf-title-page h5,
+  html[data-theme] .markdown-body .pdf-title-page h6 {
+    margin: 1.1em 0 0;
+  }
+
+  /* Studio, Editorial and Refined hang an accent rule off h1::after. It is a
+     left-aligned block, so on a centred title page it has to be re-centred. */
+  html[data-theme] .markdown-body .pdf-title-page h1::after {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   /* Blocked remote placeholders carry no information worth printing, but
      the space they hold does, so they are outlined rather than removed. */
   html[data-theme] .markdown-body .remote-blocked {
