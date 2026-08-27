@@ -23,6 +23,7 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Add private Markdown comments with custom `((:comment:))` and `((::hidden comment::))` syntax.
 - Sanitize rendered HTML with DOMPurify before inserting it into the page.
 - Build a table of contents from the rendered document headings.
+- Read the open document aloud with a speech voice installed on your own machine. Cloud voices are never offered, so the text never leaves the computer.
 - Resolve relative local images and links when using folder mode.
 - Block remote images until the host is allowed, so opening a document does not announce it.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
@@ -105,6 +106,26 @@ The paper size selector supports:
 Every `h1` and `h2` starts on a new page during PDF export. The first heading in the document is exempt so exports do not start with an empty page.
 
 Browser print dialogs can still override paper size, margins, headers, footers, and scaling. For the cleanest PDF, check those settings before saving.
+
+## Read Aloud
+
+The **Read aloud** button speaks the rendered document. It uses the browser's own speech engine, and it will only ever use a voice that runs on your machine.
+
+That distinction matters. Browsers list two kinds of speech voice:
+
+- **Local voices** are synthesized by your operating system. On Windows these are the Microsoft SAPI voices (David, Zira, Frank, Hanna, and any others you have installed). Nothing is transmitted.
+- **Cloud voices** send the text to a server to be synthesized there. Chrome ships these as the "Google ..." voices; Edge calls them "... Online (Natural)". They sound better, and they are a network upload of whatever you are reading.
+
+A page's Content-Security-Policy cannot block a cloud voice, because the upload is made by the browser itself and not by the page. The only reliable defence is not to use one. LightMDReader therefore lists only voices reporting `localService === true`, and refuses to speak when no such voice is selected — it never falls back to the system default voice, which on a stock Chrome install is a cloud voice.
+
+The consequence is that read-aloud sounds like your operating system's built-in voices rather than like a modern neural voice. That is the price of the guarantee.
+
+Notes:
+
+- The voice picker lists the offline voices found on this system. Your choice is remembered in `localStorage`. If the list says "No offline voice", install a speech voice through your operating system's language settings.
+- Fenced code blocks are skipped, as are hidden Markdown comments.
+- The document is spoken in short pieces, which works around a Chrome bug that truncates long utterances and makes **Stop** take effect immediately.
+- Reading stops by itself when you open another document, switch to the editor, or leave the page.
 
 ## Local Links And Images
 
@@ -295,6 +316,7 @@ LightMDReader renders Markdown locally in the browser. The rendering pipeline tr
 - **No CDN trust.** Every rendering library is vendored, so a compromised CDN cannot reach document text, file handles, access tokens, or the encryption key. The app also starts and renders with no network at all.
 - **Inert-first rendering.** Sanitized HTML is built inside an inert template, so local images are resolved and remote ones neutralized before anything is attached to the live page.
 
+- **Read aloud is offline.** The read-aloud voice list is filtered to voices the browser reports as local, so document text is never uploaded to a speech service. See [Read Aloud](#read-aloud).
 - **Remote images.** Blocked until you allow the host, so opening a document does not disclose your IP address and the time to a server you did not choose. See [Remote Images](#remote-images). The blocking happens on the inert fragment before it is attached to the page, so a blocked reference never gets the chance to fire. Note that the policy only permits `https:` images in the first place, so an `http://` image will not load even once allowed.
 
 Google Identity Services is fetched on first use of encryption, not on page load.

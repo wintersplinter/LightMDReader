@@ -67,6 +67,9 @@ const folderNav = document.getElementById("folderNav");
 const themeSelect = document.getElementById("themeSelect");
 const documentStyleSelect = document.getElementById("documentStyleSelect");
 const pdfPaperSelect = document.getElementById("pdfPaperSelect");
+const voiceSelect = document.getElementById("voiceSelect");
+const speakBtn = document.getElementById("speakBtn");
+const stopSpeakBtn = document.getElementById("stopSpeakBtn");
 const imagePreview = document.getElementById("imagePreview");
 const imagePreviewStage = document.getElementById("imagePreviewStage");
 const imagePreviewImg = document.getElementById("imagePreviewImg");
@@ -1009,6 +1012,287 @@ function setPdfPaperSize(size) {
 
 setPdfPaperSize(localStorage.getItem("lightmdreader-pdf-paper") || "browser");
 
+/**
+ * Read aloud.
+ *
+ * Speech comes from the browser's own SpeechSynthesis engine. Part of what
+ * that engine offers are cloud voices ("Google ..." in Chrome, "... Online
+ * (Natural)" in Edge). Those upload the text to a server, and because the
+ * request is made by the browser and not by this page, the Content-Security-
+ * Policy cannot stop it. Only voices reporting localService === true are
+ * synthesized on this machine, so those are the only ones listed here, and
+ * nothing is ever spoken without one. In particular this never falls back to
+ * the system default voice, which is a cloud voice on a stock Chrome install.
+ */
+const speechSupported =
+  "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+const speechVoiceKey = "lightmdreader-voice";
+// Chrome truncates long utterances, so the document is spoken in small pieces.
+// Short pieces also make Stop take effect immediately.
+const maxSpeechChunkChars = 220;
+const speechBlockSelector =
+  "p, li, h1, h2, h3, h4, h5, h6, blockquote, dt, dd, figcaption, th, td";
+let speechVoices = [];
+let speechChunks = [];
+let speechChunkIndex = 0;
+let speechState = "idle";
+let speechKeepAliveTimer = null;
+
+function getSelectedVoice() {
+  return speechVoices.find((voice) => voice.voiceURI === voiceSelect.value) || null;
+}
+
+function populateVoiceSelect() {
+  if (!speechSupported) return;
+
+  speechVoices = window.speechSynthesis
+    .getVoices()
+    .filter((voice) => voice.localService)
+    .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+
+  const stored = localStorage.getItem(speechVoiceKey);
+  const uiLanguage = (navigator.language || "en").slice(0, 2).toLowerCase();
+  const preferred =
+    speechVoices.find((voice) => voice.voiceURI === stored) ||
+    speechVoices.find((voice) => voice.lang.slice(0, 2).toLowerCase() === uiLanguage) ||
+    speechVoices[0] ||
+    null;
+
+  const options = speechVoices.map((voice) => {
+    const option = document.createElement("option");
+    option.value = voice.voiceURI;
+    option.textContent = `${voice.name} (${voice.lang})`;
+    return option;
+  });
+
+  if (!options.length) {
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "No offline voice";
+    options.push(empty);
+  }
+
+  voiceSelect.replaceChildren(...options);
+  voiceSelect.disabled = !speechVoices.length;
+
+  if (preferred) {
+    voiceSelect.value = preferred.voiceURI;
+  }
+
+  updateSpeechControls();
+}
+
+// Sentences first, words only when a single sentence is longer than the limit.
+function splitIntoSpeechChunks(text) {
+  const sentences = text.match(/[^.!?…]+[.!?…]*\s*/g) || [text];
+  const chunks = [];
+  let current = "";
+
+  const flush = () => {
+    if (current.trim()) chunks.push(current.trim());
+    current = "";
+  };
+
+  sentences.forEach((sentence) => {
+    if (sentence.length > maxSpeechChunkChars) {
+      flush();
+      sentence.split(/\s+/).forEach((word) => {
+        if (current && `${current} ${word}`.length > maxSpeechChunkChars) flush();
+        current = current ? `${current} ${word}` : word;
+      });
+      return;
+    }
+
+    if (current && (current + sentence).length > maxSpeechChunkChars) flush();
+    current += sentence;
+  });
+
+  flush();
+
+  return chunks;
+}
+
+function collectSpeechChunks() {
+  const blocks = [...reader.querySelectorAll(speechBlockSelector)].filter(
+    (block) =>
+      // Reading code punctuation aloud helps nobody.
+      !block.closest("pre") &&
+      // Containers whose text a nested block already covers.
+      !block.querySelector(speechBlockSelector),
+  );
+
+  const chunks = [];
+
+  blocks.forEach((block) => {
+    const clone = block.cloneNode(true);
+    clone.querySelectorAll(".md-comment, pre").forEach((node) => node.remove());
+    const text = clone.textContent.replace(/\s+/g, " ").trim();
+
+    if (text) chunks.push(...splitIntoSpeechChunks(text));
+  });
+
+  return chunks;
+}
+
+// Chrome stops speaking after roughly fifteen seconds unless it is nudged.
+function startSpeechKeepAlive() {
+  stopSpeechKeepAlive();
+  speechKeepAliveTimer = window.setInterval(() => {
+    if (speechState !== "speaking") return;
+    window.speechSynthesis.resume();
+  }, 8000);
+}
+
+function stopSpeechKeepAlive() {
+  window.clearInterval(speechKeepAliveTimer);
+  speechKeepAliveTimer = null;
+}
+
+function speakNextChunk() {
+  const voice = getSelectedVoice();
+
+  if (!voice || speechChunkIndex >= speechChunks.length) {
+    const finished = Boolean(voice);
+    stopReading();
+
+    if (finished) setStatus("Finished reading");
+
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(speechChunks[speechChunkIndex]);
+
+  utterance.voice = voice;
+  utterance.lang = voice.lang;
+  utterance.onend = () => {
+    if (speechState === "idle") return;
+
+    speechChunkIndex += 1;
+    speakNextChunk();
+  };
+  utterance.onerror = (event) => {
+    if (event.error === "interrupted" || event.error === "canceled") return;
+
+    stopReading();
+    setStatus("Reading aloud failed");
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function startReading() {
+  if (!speechSupported) return;
+
+  const voice = getSelectedVoice();
+
+  if (!voice) {
+    setStatus("No offline voice is installed, so nothing was read aloud.");
+    return;
+  }
+
+  speechChunks = collectSpeechChunks();
+
+  if (!speechChunks.length) {
+    setStatus("There is nothing to read aloud.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  speechChunkIndex = 0;
+  speechState = "speaking";
+  startSpeechKeepAlive();
+  updateSpeechControls();
+  setStatus(`Reading aloud with ${voice.name}`);
+  speakNextChunk();
+}
+
+function pauseReading() {
+  if (speechState !== "speaking") return;
+
+  window.speechSynthesis.pause();
+  speechState = "paused";
+  stopSpeechKeepAlive();
+  updateSpeechControls();
+  setStatus("Reading paused");
+}
+
+function resumeReading() {
+  if (speechState !== "paused") return;
+
+  window.speechSynthesis.resume();
+  speechState = "speaking";
+  startSpeechKeepAlive();
+  updateSpeechControls();
+  setStatus("Reading aloud");
+}
+
+function stopReading() {
+  if (!speechSupported) return;
+
+  const wasReading = speechState !== "idle";
+
+  speechState = "idle";
+  speechChunks = [];
+  speechChunkIndex = 0;
+  stopSpeechKeepAlive();
+  window.speechSynthesis.cancel();
+  updateSpeechControls();
+
+  if (wasReading) setStatus("Reading stopped");
+}
+
+function updateSpeechControls() {
+  if (!speechSupported) {
+    voiceSelect.hidden = true;
+    speakBtn.hidden = true;
+    stopSpeakBtn.hidden = true;
+    return;
+  }
+
+  const readable =
+    !reader.hidden && Boolean(reader.textContent.trim()) && speechVoices.length > 0;
+
+  speakBtn.disabled = speechState === "idle" && !readable;
+  speakBtn.textContent =
+    speechState === "speaking" ? "Pause" : speechState === "paused" ? "Resume" : "Read aloud";
+  speakBtn.classList.toggle("is-active", speechState !== "idle");
+  stopSpeakBtn.hidden = speechState === "idle";
+  voiceSelect.title = speechVoices.length
+    ? "Offline voices only. Cloud voices are never listed."
+    : "No offline voice is installed on this system.";
+}
+
+speakBtn.addEventListener("click", () => {
+  if (speechState === "speaking") {
+    pauseReading();
+    return;
+  }
+
+  if (speechState === "paused") {
+    resumeReading();
+    return;
+  }
+
+  startReading();
+});
+
+stopSpeakBtn.addEventListener("click", stopReading);
+
+voiceSelect.addEventListener("change", () => {
+  localStorage.setItem(speechVoiceKey, voiceSelect.value);
+  stopReading();
+});
+
+if (speechSupported) {
+  populateVoiceSelect();
+  window.speechSynthesis.addEventListener("voiceschanged", populateVoiceSelect);
+  // Some browsers keep speaking after the page is gone.
+  window.addEventListener("pagehide", stopReading);
+} else {
+  updateSpeechControls();
+}
+
+
 function updateTopbarOffset() {
   document.documentElement.style.setProperty("--topbar-height", `${topbar.offsetHeight}px`);
 }
@@ -1153,6 +1437,7 @@ function showEmpty() {
   errorState.hidden = true;
   reader.hidden = true;
   editorShell.hidden = true;
+  stopReading();
   exportBtn.disabled = true;
   downloadBtn.disabled = true;
   editBtn.disabled = true;
@@ -1170,6 +1455,7 @@ function showError(message) {
   errorState.hidden = false;
   reader.hidden = true;
   editorShell.hidden = true;
+  stopReading();
   exportBtn.disabled = true;
   returnToReadBtn.hidden = true;
   downloadBtn.disabled = true;
@@ -1183,6 +1469,7 @@ function showError(message) {
 
 function showReader(content) {
   document.body.classList.remove("editor-active");
+  stopReading();
   reader.replaceChildren(content);
   buildTableOfContents();
   reader.hidden = false;
@@ -1194,6 +1481,7 @@ function showReader(content) {
   editBtn.disabled = false;
   returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = currentMode === "empty";
+  updateSpeechControls();
   updateSaveControls();
 }
 
@@ -1204,6 +1492,7 @@ function showEditor(markdownText) {
   markdownInput.value = markdownText;
   reader.hidden = true;
   editorShell.hidden = false;
+  stopReading();
   emptyState.hidden = true;
   errorState.hidden = true;
   exportBtn.disabled = false;

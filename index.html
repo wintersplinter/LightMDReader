@@ -168,6 +168,25 @@
           <option value="graphite">Graphite style</option>
         </select>
 
+        <select id="voiceSelect" class="select" aria-label="Read-aloud voice" disabled>
+          <option value="">No offline voice</option>
+        </select>
+
+        <button id="speakBtn" class="btn secondary" type="button" disabled>
+          Read aloud
+        </button>
+
+        <button
+          id="stopSpeakBtn"
+          class="btn secondary icon-btn"
+          type="button"
+          aria-label="Stop reading"
+          title="Stop reading"
+          hidden
+        >
+          &#x25A0;&#xFE0E;
+        </button>
+
         <select id="pdfPaperSelect" class="select" aria-label="PDF paper size">
           <option value="browser">Browser paper</option>
           <option value="a4">A4</option>
