@@ -289,14 +289,22 @@ html[data-document-style="graphite"] .markdown-body a:focus {
 }
 
 /* mark is the one place the base stylesheet hard-codes yellow. An achromatic
-   style cannot keep it, so emphasis becomes a grey field. */
+   style cannot keep it, so emphasis becomes a grey field with a band under it.
+   Both are mixed from the INK, not from --md-code-bg and --md-border as they
+   first were: those two tokens are defined to sit at the same value as the
+   surrounding paper, so the field measured 1.05:1 against the page in dark and
+   1.04:1 in brown and simply did not exist. Mixing towards transparent is also
+   how the other five styles set mark, and it composites over any theme. The
+   percentages are deliberately low — this should read as emphasis, not as a
+   highlighter. Printing needs no rule: print.css remaps --md-text to the light
+   palette, so both mixes follow it onto paper. */
 html[data-document-style="graphite"] .markdown-body mark {
   padding: 0.05em 0.3em;
   border: 0;
   border-radius: 0;
-  background: var(--md-code-bg);
+  background: color-mix(in srgb, var(--md-graphite-ink) 10%, transparent);
   color: var(--md-graphite-ink);
-  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--md-border) 55%, transparent);
+  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--md-graphite-ink) 26%, transparent);
 }
 
 html[data-document-style="graphite"] .markdown-body kbd {
