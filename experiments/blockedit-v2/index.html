@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Block Edit v2 &mdash; definitions and footnotes</title>
+<link rel="stylesheet" href="blockedit.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-title">Block&nbsp;Edit&nbsp;v2</div>
+  <div class="topbar-actions">
+    <button type="button" id="btn-selftest" class="btn">Run round-trip self-test</button>
+    <button type="button" id="btn-source" class="btn">Show source</button>
+    <button type="button" id="btn-reset" class="btn">Reset document</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="doc-pane">
+    <div id="doc" class="markdown-body" aria-label="Document"></div>
+    <p class="hint">
+      Click any block to edit it as Markdown. Click another block, or press
+      <kbd>Esc</kbd>, to render it again.
+      <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> at the edge of a block move to the neighbour.
+      A blank line inside a block splits it. <kbd>Backspace</kbd> at the very start merges
+      it into the block above. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> opens a new block below.
+      Dimmed blocks are definitions &mdash; real lines with no rendered output. A hollow red ring
+      in the left margin means the block carries a hidden comment. The footnote list at the
+      end is generated: click an entry to jump to its definition.
+    </p>
+  </section>
+
+  <aside class="side-pane" id="side">
+    <div class="side-section">
+      <h2>Integrity</h2>
+      <dl class="stats">
+        <dt>Blocks</dt><dd id="stat-blocks">0</dd>
+        <dt>Definitions</dt><dd id="stat-defs">0</dd>
+        <dt>Document</dt><dd id="stat-dirty">unchanged</dd>
+        <dt>Commits</dt><dd id="stat-commits">0</dd>
+        <dt>Render</dt><dd id="stat-render">0 ms</dd>
+      </dl>
+      <p class="note" id="integrity-note">
+        Entering and leaving a block never writes to the document. Only a block whose
+        text actually differs is committed, and every commit is logged below.
+        <strong>Render</strong> is one parse of the whole document plus one render per
+        block; unchanged blocks keep their existing DOM node.
+      </p>
+    </div>
+    <div class="side-section">
+      <h2>Commit log</h2>
+      <ul class="log" id="log"><li class="log-empty">Nothing committed yet.</li></ul>
+    </div>
+    <div class="side-section" id="source-section" hidden>
+      <h2>Live source</h2>
+      <pre class="source" id="source"></pre>
+    </div>
+  </aside>
+</main>
+
+<script src="vendor/markdown-it.min.js"></script>
+<script src="vendor/markdown-it-footnote.min.js"></script>
+<script src="vendor/markdown-it-attrs.browser.js"></script>
+<script src="vendor/markdown-it-mark.min.js"></script>
+<script src="vendor/purify.min.js"></script>
+<script src="sample.js"></script>
+<script src="blockedit.js"></script>
+</body>
+</html>
