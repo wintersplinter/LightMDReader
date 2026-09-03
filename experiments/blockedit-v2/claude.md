@@ -12,6 +12,10 @@ Solved here (see README.md):
 - the custom comment syntax moved out of the pre-parse string pass, which used
   to shift line maps
 
+The block model itself is NOT in this folder. It is `lib/blockModel.js`, unit
+tested in `tests/unit/blockModel.test.js` (`npm test`). Change it there, not here.
+This page imports it, so it must be served from the repo root, not opened from disk.
+
 The safety guarantees must survive any further change:
 - the document stays a strict line partition (`seps[0] blocks[0] seps[1] ...`)
 - identical text is never written back on leaving a block

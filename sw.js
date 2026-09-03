@@ -1,4 +1,4 @@
-const VERSION = "v3-10-1";
+const VERSION = "v4-0-0";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;
@@ -17,10 +17,13 @@ const ASSETS = [
   "./customMarkdown.refined.css",
   "./customMarkdown.graphite.css",
   "./customMarkdown.print.css",
+  "./blockedit.css",
   "./MDrender.js",
   "./app.js",
   "./lib/paths.js",
   "./lib/crypto.js",
+  "./lib/blockModel.js",
+  "./lib/blockRender.js",
   "./cheatsheet.md",
   "./manifest.webmanifest",
   "./icons/icon-16.png",

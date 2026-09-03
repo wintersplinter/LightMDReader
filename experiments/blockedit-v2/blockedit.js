@@ -31,6 +31,8 @@
  *    never editable. It renders after the last block as a derived region.
  */
 
+import { createBlockModel } from "../../lib/blockModel.js";
+
 (function () {
   "use strict";
 
@@ -118,80 +120,19 @@
     return html.replace(/<[^>]*>/g, "").trim() === "";
   }
 
-  // ------------------------------------------------------------ block splits
+  // -------------------------------------------------------------- the model
 
-  /* Top-level block ranges. Two sources:
-     - the line map of each top-level markdown-it token
-     - any run of non-blank lines no token claimed (definition blocks) */
-  function blockRanges(src, lines) {
-    var tokens;
-    try {
-      tokens = md.parse(src, {});
-    } catch (error) {
-      tokens = [];
-    }
-
-    var ranges = [];
-    var cursor = 0;
-
-    tokens.forEach(function (token) {
-      if (!token.map) return;
-      var start = token.map[0];
-      var rawEnd = token.map[1];
-      if (start < cursor) return;
-      cursor = Math.max(cursor, rawEnd);
-
-      var end = rawEnd;
-      while (end > start && String(lines[end - 1] || "").trim() === "") end--;
-      if (end <= start) return;
-
-      ranges.push([start, end]);
-    });
-
-    var claimed = new Set();
-    ranges.forEach(function (range) {
-      for (var i = range[0]; i < range[1]; i++) claimed.add(i);
-    });
-
-    var runStart = null;
-    for (var i = 0; i <= lines.length; i++) {
-      var unclaimed = i < lines.length && !claimed.has(i) && lines[i].trim() !== "";
-      if (unclaimed) {
-        if (runStart === null) runStart = i;
-      } else if (runStart !== null) {
-        ranges.push([runStart, i]);
-        runStart = null;
-      }
-    }
-
-    ranges.sort(function (a, b) { return a[0] - b[0]; });
-    return ranges;
-  }
+  /* parseDoc / serializeDoc / spliceBlocks / insertBlocks live in
+     ../../lib/blockModel.js and are unit tested in tests/unit/blockModel.test.js.
+     This page is one caller of them, not the place they are defined. */
+  var model = createBlockModel(md);
 
   function parseDoc(src) {
-    var lines = String(src).split("\n");
-    var ranges = blockRanges(src, lines);
-    var blocks = [];
-    var seps = [];
-    var prev = 0;
-
-    ranges.forEach(function (range) {
-      seps.push(lines.slice(prev, range[0]));
-      blocks.push(lines.slice(range[0], range[1]));
-      prev = range[1];
-    });
-    seps.push(lines.slice(prev));
-
-    return { blocks: blocks, seps: seps };
+    return model.parseDoc(src);
   }
 
   function serializeDoc(doc) {
-    var out = [];
-    doc.seps.forEach(function (sep, i) {
-      out.push.apply(out, sep);
-      if (i < doc.blocks.length) out.push.apply(out, doc.blocks[i]);
-    });
-    return out.join("\n");
+    return model.serializeDoc(doc);
   }
 
   // ------------------------------------------------------------------- state
@@ -217,25 +158,18 @@
     statRender: document.getElementById("stat-render"),
   };
 
+  /* `state` carries the { blocks, seps } shape the model works on, so it is
+     passed straight through. */
   function source() {
-    return serializeDoc(state);
+    return model.serializeDoc(state);
   }
 
   function blockText(i) {
-    return state.blocks[i].join("\n");
+    return model.blockText(state, i);
   }
 
-  /* Line range of each block in the serialised document. Derived, never
-     stored, so it cannot drift from the partition. */
   function blockOffsets() {
-    var offsets = [];
-    var line = 0;
-    for (var i = 0; i < state.blocks.length; i++) {
-      line += state.seps[i].length;
-      offsets.push([line, line + state.blocks[i].length]);
-      line += state.blocks[i].length;
-    }
-    return offsets;
+    return model.blockOffsets(state);
   }
 
   // ------------------------------------------------------- document renderer
@@ -349,41 +283,11 @@
   // -------------------------------------------------------------- edit model
 
   function spliceBlocks(from, count, text) {
-    var sub = parseDoc(text);
-    var k = sub.blocks.length;
-    var before = state.seps[from].concat(sub.seps[0]);
-    var after = sub.seps[k].concat(state.seps[from + count]);
-    var newSeps = k === 0 ? [before.concat(after)] : [before].concat(sub.seps.slice(1, k), [after]);
-
-    state.seps.splice.apply(state.seps, [from, count + 1].concat(newSeps));
-    state.blocks.splice.apply(state.blocks, [from, count].concat(sub.blocks));
-    return k;
+    return model.spliceBlocks(state, from, count, text);
   }
 
   function insertBlocks(at, text) {
-    var sub = parseDoc(text);
-    var k = sub.blocks.length;
-    if (!k) return 0;
-
-    var existing = state.seps[at];
-    var before;
-    var after;
-
-    if (state.blocks.length === 0) {
-      before = [];
-      after = existing;
-    } else if (at < state.blocks.length) {
-      before = existing;
-      after = [""];
-    } else {
-      before = [""];
-      after = existing;
-    }
-
-    var newSeps = [before].concat(sub.seps.slice(1, k), [after]);
-    state.seps.splice.apply(state.seps, [at, 1].concat(newSeps));
-    state.blocks.splice.apply(state.blocks, [at, 0].concat(sub.blocks));
-    return k;
+    return model.insertBlocks(state, at, text);
   }
 
   // ------------------------------------------------------------------ render
@@ -393,29 +297,42 @@
     ta.style.height = ta.scrollHeight + "px";
   }
 
-  function makeBlockElement(i, entry) {
-    var el = document.createElement("div");
-    el.className = "block" + (entry.raw ? " block-raw" : "");
-    el.dataset.index = String(i);
-    el.innerHTML = entry.html;
+  /* A template keeps the tree inert: nothing loads until it is attached. */
+  function nodesFromHtml(html) {
+    var template = document.createElement("template");
+    template.innerHTML = html;
+    return Array.prototype.filter.call(template.content.childNodes, function (node) {
+      return node.nodeType === 1 || (node.nodeType === 3 && node.textContent.trim() !== "");
+    });
+  }
 
-    /* A hidden comment renders to nothing, so without this there is no way to
-       tell that a block is carrying one. The marker sits in the gutter. */
-    if (entry.hidden) {
-      var marker = document.createElement("span");
-      marker.className = "block-hidden-marker";
-      marker.title = "This block contains a hidden comment";
-      marker.setAttribute("aria-label", "Contains a hidden comment");
-      el.appendChild(marker);
-      el.classList.add("has-hidden-comment");
-    }
+  /* Flat DOM: a block becomes a RUN of ordinary top-level elements, not one
+     wrapper. The app's stylesheets are full of `h1 + p` and
+     `.markdown-body > *:first-child`, and a wrapper would break every one of
+     them — the rendered document has to keep exactly the shape the reader has.
+     Elements are tagged with data-block instead. */
+  function makeBlockNodes(i, entry) {
+    var nodes = nodesFromHtml(entry.html);
+    if (!nodes.length) nodes = nodesFromHtml("<p></p>");
 
-    return el;
+    nodes.forEach(function (node, position) {
+      if (node.nodeType !== 1) return;
+      node.setAttribute("data-block", String(i));
+      if (entry.raw) node.classList.add("block-raw");
+      /* The ring goes on the first element of the block only, and never on a
+         block that already shows its own source. */
+      if (entry.hidden && !entry.raw && position === 0) {
+        node.classList.add("has-hidden-comment");
+      }
+    });
+
+    return nodes;
   }
 
   function makeEditorElement() {
     var wrap = document.createElement("div");
     wrap.className = "block-editor";
+    wrap.dataset.editingBlock = String(state.editing.isNew ? state.editing.at : state.editing.index);
     if (state.editing.isNew) wrap.dataset.new = "true";
 
     var ta = document.createElement("textarea");
@@ -464,52 +381,75 @@
     var rendered = renderDocument();
     state.lastRender = rendered;
 
-    var desired = [];
+    var groups = [];
     var n = state.blocks.length;
     var editing = state.editing;
 
-    for (var i = 0; i <= n; i++) {
+    for (var i = 0; i < n + 1; i++) {
       if (editing && editing.isNew && editing.at === i) {
-        desired.push({ kind: "editor", key: "editor:new:" + i });
+        groups.push({ kind: "editor", key: "editor:new:" + i });
       }
       if (i < n) {
         if (editing && !editing.isNew && editing.index === i) {
-          desired.push({ kind: "editor", key: "editor:" + i });
+          groups.push({ kind: "editor", key: "editor:" + i });
         } else {
-          desired.push({
+          var entry = rendered.blocks[i];
+          groups.push({
             kind: "block",
             index: i,
-            entry: rendered.blocks[i],
-            key: "block:" + i + ":" + (rendered.blocks[i].hidden ? "h" : "-") + ":" + rendered.blocks[i].html,
+            entry: entry,
+            key: "block:" + i + ":" + (entry.raw ? "r" : "-") + (entry.hidden ? "h" : "-") + ":" + entry.html,
           });
         }
       }
     }
-    if (rendered.tail) desired.push({ kind: "tail", key: "tail:" + rendered.tail });
+    if (rendered.tail) groups.push({ kind: "tail", key: "tail:" + rendered.tail });
 
     var container = els.doc;
-    var builtEditor = false;
 
-    desired.forEach(function (want, position) {
-      var have = container.children[position];
-      if (have && have._key === want.key) return;
-
-      var el;
-      if (want.kind === "editor") {
-        el = makeEditorElement();
-        builtEditor = true;
-      } else if (want.kind === "tail") {
-        el = makeTailElement(rendered);
-      } else {
-        el = makeBlockElement(want.index, want.entry);
+    /* What is on screen now, grouped by the key each node was built with. */
+    var existing = [];
+    var run = null;
+    Array.prototype.forEach.call(container.childNodes, function (node) {
+      if (!run || run.key !== node._groupKey) {
+        run = { key: node._groupKey, nodes: [] };
+        existing.push(run);
       }
-      el._key = want.key;
-
-      if (have) container.replaceChild(el, have);
-      else container.appendChild(el);
+      run.nodes.push(node);
     });
 
-    while (container.children.length > desired.length) {
+    var builtEditor = false;
+    var desired = [];
+
+    groups.forEach(function (group, position) {
+      var have = existing[position];
+      if (have && have.key === group.key) {
+        desired.push.apply(desired, have.nodes);
+        return;
+      }
+
+      var nodes;
+      if (group.kind === "editor") {
+        nodes = [makeEditorElement()];
+        builtEditor = true;
+      } else if (group.kind === "tail") {
+        nodes = [makeTailElement(rendered)];
+      } else {
+        nodes = makeBlockNodes(group.index, group.entry);
+      }
+      nodes.forEach(function (node) { node._groupKey = group.key; });
+      desired.push.apply(desired, nodes);
+    });
+
+    /* One keyed pass. A node that was reused is moved, never rebuilt, so an
+       unchanged block keeps its scroll position and its loaded images. */
+    var at = 0;
+    desired.forEach(function (node) {
+      var current = container.childNodes[at];
+      if (current !== node) container.insertBefore(node, current || null);
+      at++;
+    });
+    while (container.childNodes.length > desired.length) {
       container.removeChild(container.lastChild);
     }
 
@@ -705,20 +645,43 @@
 
     if (event.target.closest("a[href]")) return;
     if (event.target.closest(".footnote-tail")) return;
+    if (event.target.closest(".block-editor")) return;
 
-    var blockEl = event.target.closest(".block");
+    var blockEl = event.target.closest("[data-block]");
     if (!blockEl) return;
 
-    var index = Number(blockEl.dataset.index);
+    var index = Number(blockEl.getAttribute("data-block"));
     var moved = stopEditing();
     if (moved.delta && index >= moved.shiftFrom) index += moved.delta;
     startEditing(Math.max(0, Math.min(state.blocks.length - 1, index)), "end");
   });
 
+  /* A block no longer has a box of its own, so the hover cue is applied to
+     every element of the run at once. */
+  var hoveredIndex = null;
+  var hoveredNodes = [];
+
+  function setHoveredBlock(index) {
+    if (index === hoveredIndex) return;
+    hoveredNodes.forEach(function (node) { node.classList.remove("is-hovered"); });
+    hoveredIndex = index;
+    hoveredNodes = index == null
+      ? []
+      : Array.prototype.slice.call(els.doc.querySelectorAll('[data-block="' + index + '"]'));
+    hoveredNodes.forEach(function (node) { node.classList.add("is-hovered"); });
+  }
+
+  els.doc.addEventListener("mousemove", function (event) {
+    var el = event.target.closest("[data-block]");
+    setHoveredBlock(el ? el.getAttribute("data-block") : null);
+  });
+
+  els.doc.addEventListener("mouseleave", function () { setHoveredBlock(null); });
+
   document.addEventListener("pointerdown", function (event) {
     if (!state.editing) return;
     if (event.target.closest(".block-editor")) return;
-    if (event.target.closest(".block")) return;
+    if (event.target.closest("[data-block]")) return;
     if (event.target.closest("li.footnote-item[data-label]")) return;
     stopEditing();
     renderDoc();

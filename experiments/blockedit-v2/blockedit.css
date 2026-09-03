@@ -163,39 +163,30 @@ kbd {
 
 /* ---------- blocks ---------- */
 
-.block {
-  position: relative;
-  border-radius: 6px;
-  padding: 0.1rem 0.6rem;
-  margin: 0 -0.6rem;
+/* FLAT DOM.
+   A block is a run of ordinary top-level elements, tagged with data-block --
+   never a wrapper. The document styles are full of `h1 + p` and
+   `.markdown-body > *:first-child`; a wrapper would break every one of them and
+   edit mode would render differently from reading mode.
+
+   So nothing here may affect layout: no padding, no margin, no display change
+   on a rendered element. */
+[data-block] {
   cursor: text;
-  transition: background-color 90ms ease;
+  transition: background-color 90ms ease, box-shadow 90ms ease;
 }
 
-.block:hover { background: var(--accent-soft); }
-
-.block::before {
-  content: "";
-  position: absolute;
-  left: -0.15rem;
-  top: 0.35rem;
-  bottom: 0.35rem;
-  width: 2px;
+/* The hover cue fakes padding with a box-shadow spread, which paints outside
+   the element without occupying any space. */
+[data-block].is-hovered {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 5px var(--accent-soft);
   border-radius: 2px;
-  background: transparent;
 }
-.block:hover::before { background: var(--accent-soft); }
-
-.block > :first-child { margin-top: 0; }
-.block > :last-child { margin-bottom: 0; }
-
-.block + .block,
-.block + .block-editor,
-.block-editor + .block { margin-top: 0.85rem; }
 
 .block-editor {
   position: relative;
-  margin: 0.85rem -0.6rem;
+  margin: 0.85rem 0;
   padding: 0;
 }
 
@@ -338,15 +329,15 @@ kbd {
 
 /* A block with no rendered output — a link reference, a footnote definition,
    a hidden comment — shown as its own raw source, in place. */
-.block-raw {
+.raw-source {
   opacity: var(--definition-opacity);
   transition: opacity 110ms ease;
 }
 
-.block-raw:hover,
-.block-raw:focus-within { opacity: 1; }
+.raw-source:hover,
+.raw-source.is-hovered { opacity: 1; }
 
-.block-raw .raw-source {
+.raw-source {
   margin: 0;
   padding: 0.2em 0 0.2em 0.7em;
   border: 0;
@@ -362,8 +353,8 @@ kbd {
   overflow-x: auto;
 }
 
-.block-raw:hover .raw-source,
-.block-raw:focus-within .raw-source { border-left-color: var(--accent); }
+.raw-source:hover,
+.raw-source.is-hovered { border-left-color: var(--accent); }
 
 /* The generated footnote list. It owns no source lines, so it is not a block
    and cannot be edited here — but each entry traces back to the definition
@@ -407,44 +398,25 @@ kbd {
 
 /* ---- gutter marker for blocks that carry a hidden comment ---------------- */
 
-/* Widen every block to the left so there is a gutter to mark in. The text
-   position does not move; only the block's own box grows. */
-.block {
-  margin-left: -1.2rem;
-  padding-left: 1.2rem;
-}
+/* The ring is a ::before on the element itself: no extra DOM node (so it never
+   enters the text for copy or read-aloud) and no layout effect. `position:
+   relative` on a paragraph or heading changes nothing visually. */
+[data-block].has-hidden-comment { position: relative; }
 
-/* The old hover rule lived in this gutter and was the same colour as the block
-   hover background, so it never showed. The gutter belongs to the marker now. */
-.block::before { content: none; }
-
-.block-hidden-marker {
+[data-block].has-hidden-comment::before {
+  content: "";
   position: absolute;
-  left: 0.3rem;
-  top: 0.72em;
-  width: 0.46rem;
-  height: 0.46rem;
-  border: 1.5px solid var(--warn);
-  border-radius: 50%;
-  background: none;
-  opacity: 0.8;
-  cursor: text;
-}
-
-.block:hover .block-hidden-marker { opacity: 1; }
-
-/* A block that IS the hidden comment already shows it; the ring would only
-   repeat what the dimmed source says. */
-.block-raw .block-hidden-marker { display: none; }
-
-/* Room for the gutter without pushing the marker against the window edge. */
-.doc-pane { padding-left: 0.9rem; }
-
-.block-hidden-marker {
+  left: -1rem;
+  top: 0.62em;
   width: 0.5rem;
   height: 0.5rem;
+  border: 1.5px solid var(--warn);
+  border-radius: 50%;
   opacity: 0.85;
 }
+
+/* Room for the ring in the margin, without moving the text. */
+.doc-pane { padding-left: 1.5rem; }
 
 /* ---- comment markers use the app's own red ------------------------------- */
 
@@ -462,6 +434,6 @@ kbd {
 
 /* Filled dot in place = a visible comment.
    Hollow ring in the margin = a hidden comment somewhere in this block. */
-.block-hidden-marker {
+[data-block].has-hidden-comment::before {
   border-color: var(--comment-red);
 }

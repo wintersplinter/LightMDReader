@@ -15,22 +15,28 @@ The app is useful for quickly previewing a single Markdown file, opening a folde
 - Refresh the current file or folder after editing files elsewhere.
 - Create a new Markdown document in the built-in editor.
 - Edit the currently loaded document with a live rendered preview.
+- Or edit block by block: only the block the cursor is in shows its Markdown, everything else stays rendered. Choose **Block editing** or **Side-by-side editing** in the top menu; the choice is remembered.
+- Undo the last ten block edits with `Ctrl`/`Cmd`+`Z`, and redo with `Ctrl`/`Cmd`+`Shift`+`Z`.
 - Save changes back to the original file when the browser grants write access.
+- Keep a file's own line endings: a document written with Windows line endings is saved back with them.
 - Save the current Markdown as a new file when the browser supports file saving.
 - Download the current Markdown text with a timestamped filename.
 - Optionally sign in with Google to encrypt Markdown files with a personal key stored in Google Drive App Data.
 - Render Markdown with headings, tables, code blocks, task lists, footnotes, definition lists, highlights, subscript, superscript, typographic replacements, and Markdown attributes.
 - Add private Markdown comments with custom `((:comment:))` and `((::hidden comment::))` syntax.
+- Show the comment syntax literally inside code blocks, so documentation of it renders as written.
 - Sanitize rendered HTML with DOMPurify before inserting it into the page.
 - Build a table of contents from the rendered document headings.
 - Read the open document aloud with a speech voice installed on your own machine. Cloud voices are never offered, so the text never leaves the computer.
 - Resolve relative local images and links when using folder mode.
 - Block remote images until the host is allowed, so opening a document does not announce it.
 - Preview images in a fullscreen viewer with zoom, pan, double-click zoom, touch pinch zoom, and Escape-to-close.
+- Work in one of three modes: block editing, read only, or the side-by-side editor.
 - Switch between dark, light, and brown themes.
 - Switch between six document styles: Signature, Refined, Editorial, Studio, Standard, and Graphite.
 - Toggle custom list marker styling.
 - Lock the top menu while scrolling.
+- Keep the sidebar and its table of contents in view on long documents.
 - Return to the top of the page with the floating button.
 - Export the rendered Markdown to PDF with browser print.
 - Choose the PDF paper size: browser default, A4, or Letter.

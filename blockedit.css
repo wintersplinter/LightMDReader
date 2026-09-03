@@ -1,0 +1,162 @@
+/* Block editing — the affordances only.
+   Loaded after the document styles, and scoped to `body.block-mode`, so a
+   reading session and a PDF export are untouched by it.
+
+   Nothing in here may change document typography or layout. Block editing
+   renders exactly the DOM the reader renders — the same elements, in the same
+   order, as siblings — so all six document styles apply unchanged. The rules
+   below only add markers and surfaces beside that DOM, never padding, margin
+   or display on a rendered element. */
+
+/* -- the editable surface -------------------------------------------------
+   A block is a run of elements, not a box, so nothing here may add padding,
+   margin or a display change. The hover cue fakes padding with a box-shadow
+   spread, which paints outside the element without occupying any space. */
+
+body.block-mode .reader [data-block] {
+  cursor: text;
+  border-radius: 2px;
+  transition: background-color 90ms ease, box-shadow 90ms ease;
+}
+
+/* Only where there is a real pointer. A touch screen fires one synthetic
+   mousemove on tap and then never another, which leaves the cue stuck on
+   whatever was last touched. */
+@media (hover: hover) and (pointer: fine) {
+  body.block-mode .reader [data-block].is-hovered {
+    background: var(--md-quote-bg);
+    box-shadow: 0 0 0 5px var(--md-quote-bg);
+  }
+}
+
+/* -- the block being edited ----------------------------------------------- */
+
+body.block-mode .reader .block-editor {
+  margin: 0.85em 0;
+}
+
+body.block-mode .reader .block-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
+  padding: 0.55em 0.65em;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--md-pre-bg);
+  color: var(--text);
+  font-family: var(--md-font-code, ui-monospace, monospace);
+  font-size: 0.92em;
+  line-height: 1.62;
+  tab-size: 2;
+  outline: none;
+}
+
+body.block-mode .reader .block-input:focus {
+  box-shadow: 0 0 0 3px var(--md-quote-bg);
+}
+
+/* iOS Safari zooms the whole page in when a focused field is under 16px, and
+   never zooms back out. Touch devices get 16px so tapping a block does not
+   throw the layout around. */
+@media (pointer: coarse) {
+  body.block-mode .reader .block-input {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+/* -- definition blocks ----------------------------------------------------
+   A link reference or a footnote definition has real source lines but no
+   rendered output at all: markdown-it moves it into its environment during the
+   parse. Showing its source in place is what makes it reachable — you can
+   click it, empty it, or move it like any other block. It is dimmed because it
+   is machinery, not prose. */
+
+body.block-mode .reader .raw-source {
+  margin: 0;
+  padding: 0.2em 0 0.2em 0.7em;
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--md-font-code, ui-monospace, monospace);
+  font-size: 0.88em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  opacity: 0.62;
+  transition: opacity 110ms ease;
+}
+
+body.block-mode .reader .raw-source:focus-within {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.block-mode .reader .raw-source:hover {
+    opacity: 1;
+  }
+}
+
+/* -- hidden comment marker ------------------------------------------------
+   A hidden comment renders to nothing, so an inline one leaves no trace and
+   there is no way to tell a block is carrying it. The ring sits in the
+   reader's own 24px padding.
+
+   It is a ::before rather than a real element, so it never enters the text for
+   copy or read-aloud, and `position: relative` on a paragraph or heading has
+   no layout effect. Filled dot in place = a visible comment; hollow ring in
+   the margin = a hidden one somewhere in this block. */
+
+body.block-mode .reader [data-block].has-hidden-comment {
+  position: relative;
+}
+
+body.block-mode .reader [data-block].has-hidden-comment::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid #e53935;
+  border-radius: 50%;
+  opacity: 0.85;
+}
+
+/* -- the generated footnote list ------------------------------------------
+   The footnote tail owns no source lines. It is synthesised from the parser's
+   environment, belongs to no block, and is therefore never editable here. */
+
+body.block-mode .reader .footnote-tail .footnote-item[data-label] {
+  border-radius: 5px;
+  padding: 0.1em 0.4em;
+  margin: 0 -0.4em;
+}
+
+/* -- printing --------------------------------------------------------------
+   None of this is part of the document. `styles.css` already drops
+   `.reader .md-comment` for print; the block-editing markers follow the same
+   rule, so a PDF exported while block mode is on is identical to one exported
+   from the reader. */
+
+@media print {
+  body.block-mode .reader .block-editor,
+  body.block-mode .reader .raw-source {
+    display: none !important;
+  }
+
+  body.block-mode .reader [data-block].has-hidden-comment::before {
+    content: none !important;
+  }
+
+  body.block-mode .reader [data-block].is-hovered {
+    background: none !important;
+    box-shadow: none !important;
+  }
+}

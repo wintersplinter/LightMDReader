@@ -10,6 +10,9 @@ import {
   splitLocalHref,
 } from "./lib/paths.js";
 
+import { createBlockModel } from "./lib/blockModel.js";
+import { createBlockRenderer } from "./lib/blockRender.js";
+
 import {
   base64ToBytes,
   buildRecoveryKeyFile,
@@ -64,6 +67,14 @@ const tocSection = document.getElementById("tocSection");
 const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
+const editorModeSelect = document.getElementById("editorModeSelect");
+const modeMenuLabel = document.getElementById("modeMenuLabel");
+
+/* Declared up here, not beside applyEditorMode further down: the top menu is
+   built during start-up and reads this, and a `let` in the temporal dead zone
+   throws rather than reading undefined. */
+let editorMode = "blocks";
+const refreshBtn = document.getElementById("refreshBtn");
 const themeSelect = document.getElementById("themeSelect");
 const documentStyleSelect = document.getElementById("documentStyleSelect");
 const pdfPaperSelect = document.getElementById("pdfPaperSelect");
@@ -799,16 +810,41 @@ async function ensureEncryptionReady() {
   await signInForEncryption();
 }
 
+/* Line endings.
+ *
+ * A <textarea> normalises CRLF to LF when its value is read back, always and
+ * silently. Everything that compares editor text against document text is
+ * therefore comparing LF against CRLF on a Windows file: the side-by-side
+ * editor rewrote every line ending the moment you opened it, and block editing
+ * committed a "change" for every block you merely clicked on.
+ *
+ * So the document is held in LF internally, and the file's own ending is put
+ * back on the way to disk. Nothing is rewritten that the user did not edit.
+ */
+let documentLineEnding = "\n";
+
+function normalizeLineEndings(text) {
+  documentLineEnding = /\r\n/.test(text) ? "\r\n" : "\n";
+
+  return String(text).replace(/\r\n?/g, "\n");
+}
+
+function withDocumentLineEndings(text) {
+  if (documentLineEnding === "\n") return text;
+
+  return String(text).replace(/\n/g, documentLineEnding);
+}
+
 async function readMarkdownDocumentText(text) {
   const encryptedPayload = parseEncryptedDocument(text);
 
   if (!encryptedPayload) {
     setEncryptedDocumentState();
-    return text;
+    return normalizeLineEndings(text);
   }
 
   setStatus("Unlocking encrypted document...");
-  const markdownText = await decryptMarkdownDocument(encryptedPayload);
+  const markdownText = normalizeLineEndings(await decryptMarkdownDocument(encryptedPayload));
 
   setEncryptedDocumentState({
     encrypted: true,
@@ -820,7 +856,9 @@ async function readMarkdownDocumentText(text) {
 }
 
 async function getCurrentStorageTextForWrite() {
-  const markdownText = getCurrentMarkdownForWrite();
+  // The file gets its own line endings back; the in-memory document stays LF,
+  // which is what savedMarkdownText and the dirty check compare against.
+  const markdownText = withDocumentLineEndings(getCurrentMarkdownForWrite());
 
   if (!encryptedDocumentState.encrypted) {
     return markdownText;
@@ -1073,6 +1111,10 @@ function populateVoiceSelect() {
   }
 
   voiceSelect.replaceChildren(...options);
+
+  // The voice menu is a view onto this select, so it is rebuilt with it.
+  buildMenuChoices("voiceChoices", "voiceSelect");
+  syncMenuChoices();
   voiceSelect.disabled = !speechVoices.length;
 
   if (preferred) {
@@ -1253,13 +1295,22 @@ function updateSpeechControls() {
     !reader.hidden && Boolean(reader.textContent.trim()) && speechVoices.length > 0;
 
   speakBtn.disabled = speechState === "idle" && !readable;
-  speakBtn.textContent =
-    speechState === "speaking" ? "Pause" : speechState === "paused" ? "Resume" : "Read aloud";
+
+  // The label is an icon now, so the state has to be carried by the title.
+  const speakLabel =
+    speechState === "speaking" ? "Pause reading" : speechState === "paused" ? "Resume reading" : "Read aloud";
+
+  speakBtn.innerHTML =
+    speechState === "speaking" ? "&#x23F8;&#xFE0E;" : "&#x25B7;&#x266A;";
+  speakBtn.title = speakLabel;
+  speakBtn.setAttribute("aria-label", speakLabel);
   speakBtn.classList.toggle("is-active", speechState !== "idle");
   stopSpeakBtn.hidden = speechState === "idle";
   voiceSelect.title = speechVoices.length
     ? "Offline voices only. Cloud voices are never listed."
     : "No offline voice is installed on this system.";
+
+  syncMenuChoices();
 }
 
 speakBtn.addEventListener("click", () => {
@@ -1292,6 +1343,174 @@ if (speechSupported) {
   updateSpeechControls();
 }
 
+
+/* ==========================================================================
+   Top menu
+
+   The menus are a view onto the hidden <select> elements, not a replacement
+   for them. Choosing an item sets the select and fires its change event, so
+   every existing listener — and every place that writes a saved preference
+   back into a select — keeps working untouched.
+   ========================================================================== */
+
+const menus = [...document.querySelectorAll("[data-menu]")].map((root) => ({
+  root,
+  trigger: root.querySelector(".menu-trigger"),
+  panel: root.querySelector(".menu-panel"),
+}));
+
+function closeMenus(except = null) {
+  menus.forEach((menu) => {
+    if (menu === except) return;
+
+    menu.panel.hidden = true;
+    menu.trigger.setAttribute("aria-expanded", "false");
+  });
+}
+
+function openMenu(menu) {
+  closeMenus(menu);
+  syncMenuChoices();
+  menu.panel.hidden = false;
+  menu.trigger.setAttribute("aria-expanded", "true");
+
+  const first = menu.panel.querySelector(".menu-item:not(:disabled)");
+  if (first) first.focus();
+}
+
+menus.forEach((menu) => {
+  menu.trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+
+    if (menu.panel.hidden) openMenu(menu);
+    else closeMenus();
+  });
+
+  // Any command inside a menu closes it. The command's own listener still
+  // runs: this is a bubble-phase listener on the panel, not a replacement.
+  menu.panel.addEventListener("click", (event) => {
+    if (event.target.closest(".menu-item")) closeMenus();
+  });
+
+  menu.panel.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+    event.preventDefault();
+
+    const items = [...menu.panel.querySelectorAll(".menu-item:not(:disabled)")];
+    const at = items.indexOf(document.activeElement);
+    const next = event.key === "ArrowDown" ? at + 1 : at - 1;
+
+    items[(next + items.length) % items.length]?.focus();
+  });
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-menu]")) closeMenus();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+
+  const open = menus.find((menu) => !menu.panel.hidden);
+  if (!open) return;
+
+  closeMenus();
+  open.trigger.focus();
+});
+
+/** Fill a menu group with one radio item per option of a hidden select. */
+function buildMenuChoices(containerId, selectId, labelFor = (option) => option.textContent) {
+  const container = document.getElementById(containerId);
+  const select = document.getElementById(selectId);
+  if (!container || !select) return;
+
+  container.replaceChildren(
+    ...[...select.options].map((option) => {
+      const item = document.createElement("button");
+
+      item.type = "button";
+      item.className = "menu-item menu-choice";
+      item.setAttribute("role", "menuitemradio");
+      item.dataset.select = selectId;
+      item.dataset.value = option.value;
+      item.textContent = labelFor(option);
+      item.disabled = select.disabled;
+
+      return item;
+    }),
+  );
+}
+
+/** Move the dot to whatever the selects currently say. */
+function syncMenuChoices() {
+  document.querySelectorAll(".menu-choice").forEach((item) => {
+    const select = document.getElementById(item.dataset.select);
+    if (!select) return;
+
+    // The mode is the one exception: changing it is asynchronous and can be
+    // refused (an unsaved side-by-side edit prompts first). Marking the
+    // select's value would show the choice as taken while the confirmation is
+    // still on screen, and leave it wrong if the user backs out. The applied
+    // mode is the honest thing to show.
+    const current = select === editorModeSelect ? editorMode : select.value;
+
+    item.setAttribute("aria-checked", current === item.dataset.value ? "true" : "false");
+    item.disabled = select.disabled;
+  });
+
+  if (modeMenuLabel) {
+    const chosen = [...editorModeSelect.options].find((option) => option.value === editorMode);
+    modeMenuLabel.textContent = chosen ? chosen.textContent : "Block editing";
+  }
+}
+
+// Delegated so items rebuilt later (the voice list) need no rewiring.
+document.addEventListener("click", (event) => {
+  const item = event.target.closest(".menu-choice");
+  if (!item) return;
+
+  const select = document.getElementById(item.dataset.select);
+  if (!select || select.value === item.dataset.value) return;
+
+  select.value = item.dataset.value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  syncMenuChoices();
+});
+
+buildMenuChoices("styleChoices", "documentStyleSelect");
+buildMenuChoices("themeChoices", "themeSelect");
+buildMenuChoices("paperChoices", "pdfPaperSelect");
+buildMenuChoices("voiceChoices", "voiceSelect");
+syncMenuChoices();
+
+/* One refresh button standing in for two.
+ *
+ * Which of them it means is already decided by what is open, and their enabled
+ * states are set from a dozen places. Watching those two rather than editing
+ * every one of them keeps this to one place. */
+function syncRefreshButton() {
+  refreshBtn.disabled = refreshFileBtn.disabled && refreshFolderBtn.disabled;
+  refreshBtn.title = refreshFolderBtn.disabled ? "Refresh this file" : "Refresh the folder";
+  refreshBtn.setAttribute("aria-label", refreshBtn.title);
+}
+
+new MutationObserver(syncRefreshButton).observe(refreshFileBtn, {
+  attributes: true,
+  attributeFilter: ["disabled"],
+});
+new MutationObserver(syncRefreshButton).observe(refreshFolderBtn, {
+  attributes: true,
+  attributeFilter: ["disabled"],
+});
+syncRefreshButton();
+
+refreshBtn.addEventListener("click", () => {
+  // A folder refresh also re-reads the open file, so it is the better answer
+  // whenever a folder is open at all.
+  if (!refreshFolderBtn.disabled) refreshCurrentFolder();
+  else if (!refreshFileBtn.disabled) refreshCurrentFile();
+});
 
 function updateTopbarOffset() {
   document.documentElement.style.setProperty("--topbar-height", `${topbar.offsetHeight}px`);
@@ -2219,6 +2438,868 @@ function scrollToDocumentFragment(fragment) {
   history.replaceState(null, "", `#${encodeURIComponent(target.id)}`);
 }
 
+/* ==========================================================================
+   Block editing (experimental, off by default)
+
+   Enable with ?blocks=1 in the URL. Read-only for now: the document renders as
+   blocks, but nothing is editable yet.
+
+   The rendered DOM is deliberately identical to the reader's — the same
+   elements, in the same order, as siblings — with a data-block attribute
+   tagging which block each element belongs to. That is what lets all six
+   document styles, PDF export, the table of contents and read-aloud keep
+   working untouched: `h1 + p` and `.markdown-body > *:first-child` still match,
+   which they would not if each block were wrapped in a div.
+   ========================================================================== */
+
+/* Which editor the reader gets, remembered across sessions like the theme and
+   the document style. `?blocks=1` and `?blocks=0` override it for one visit,
+   which is how the two can be compared without changing the stored setting. */
+const editorModeKey = "lightmdreader-editor-mode";
+const blockModeOverride = new URLSearchParams(window.location.search).get("blocks");
+
+const editorModes = new Set(["blocks", "read", "split"]);
+
+/* Three ways to work:
+ *   blocks — click any block to edit it in place (the default)
+ *   read   — no editing at all; the document is only a document
+ *   split  — the old side-by-side editor and preview
+ * `blockModeEnabled` stays as the derived flag the editing code reads. */
+let blockModeEnabled = true;
+
+function applyEditorMode(mode, { remember = true } = {}) {
+  editorMode = editorModes.has(mode) ? mode : "blocks";
+  blockModeEnabled = editorMode === "blocks";
+
+  if (remember) localStorage.setItem(editorModeKey, editorMode);
+
+  editorModeSelect.value = editorMode;
+
+  // Everything blockedit.css adds is scoped to this class, so reading, a PDF
+  // export and the side-by-side editor never see any of it.
+  document.body.classList.toggle("block-mode", blockModeEnabled);
+
+  // The Edit button only makes sense in the mode it opens. Block editing
+  // replaces it; read only has nothing for it to do.
+  editBtn.hidden = editorMode !== "split";
+
+  syncMenuChoices();
+}
+
+const storedEditorMode = localStorage.getItem(editorModeKey);
+const requestedEditorMode = new URLSearchParams(window.location.search).get("mode");
+
+applyEditorMode(
+  editorModes.has(requestedEditorMode)
+    ? requestedEditorMode
+    : blockModeOverride !== null
+      ? (blockModeOverride === "0" ? "split" : "blocks")
+      : (editorModes.has(storedEditorMode) ? storedEditorMode : "blocks"),
+  { remember: false },
+);
+
+async function changeEditorMode(mode) {
+  if (mode === editorMode) return;
+
+  // A block open for editing holds text that is not in the document yet.
+  await closeBlockEditor();
+
+  // The side-by-side editor has its own unsaved text and its own way out.
+  if (!editorShell.hidden) {
+    await returnToRead();
+
+    if (!editorShell.hidden) {
+      // The user cancelled the discard prompt, so the mode change is off too.
+      editorModeSelect.value = editorMode;
+      syncMenuChoices();
+      return;
+    }
+  }
+
+  applyEditorMode(mode);
+  clearBlockHistory();
+
+  if (currentMode === "empty") {
+    setStatus(editorModeSelect.selectedOptions[0]?.textContent || "Ready");
+    return;
+  }
+
+  // The reader is rebuilt first either way. Side-by-side takes its snapshot
+  // from the reader, and that snapshot is what "Return to read" comes back to.
+  await renderDocument(currentMarkdownText, currentRenderContext);
+
+  // The mode is named after an editor, so choosing it should put you in it
+  // rather than just revealing the button that would. editCurrentDocument
+  // sets its own status.
+  if (editorMode === "split") {
+    await editCurrentDocument();
+    return;
+  }
+
+  setStatus(editorModeSelect.selectedOptions[0]?.textContent || "Ready");
+}
+
+editorModeSelect.addEventListener("change", (event) => {
+  changeEditorMode(event.target.value).catch((error) => {
+    console.error(error);
+    setStatus(error.message || "Could not switch editing mode");
+  });
+});
+
+// The document as the block model sees it, and the block currently open for
+// editing. `blockEditing` holds the detached nodes it replaced, so leaving a
+// block without changing it can put the very same nodes back.
+let blockDocument = null;
+let blockTools = null;
+let blockEditing = null;
+let blockBusy = false;
+
+/* Undo for block editing.
+ *
+ * Every commit produces a complete document, because the partition serialises
+ * byte-for-byte, so the history is simply a ring of whole documents. No inverse
+ * operations, nothing to replay, nothing to get subtly wrong. Ten snapshots of
+ * a 100 KB document is about a megabyte.
+ *
+ * This sits on top of the browser's own undo, which still handles typing inside
+ * the open block. See onBlockUndoKeydown for how the two stay unambiguous. */
+const blockHistoryLimit = 10;
+let blockUndoHistory = [];
+let blockRedoHistory = [];
+
+function getBlockTools() {
+  if (!blockTools) {
+    const md = window.LightMDRenderer?.md;
+
+    if (!md) {
+      throw new Error("The markdown renderer did not expose its parser.");
+    }
+
+    const model = createBlockModel(md);
+    blockTools = { model, renderer: createBlockRenderer(md, model) };
+  }
+
+  return blockTools;
+}
+
+// textContent, never innerHTML: a definition block is raw source and must not
+// be interpreted as markup on its way to the page.
+function buildSourceBlock(source) {
+  const element = document.createElement("pre");
+
+  element.className = "raw-source";
+  element.textContent = source;
+
+  return element;
+}
+
+function buildFootnoteTail(rendered) {
+  // No label of its own: the footnote list is part of the document as the
+  // reader sees it, and a note explaining where it came from would be text the
+  // author never wrote. Clicking an entry jumps to its definition, which is a
+  // better way to learn what it is.
+  const wrapper = document.createElement("div");
+  wrapper.className = "footnote-tail";
+
+  wrapper.appendChild(createInertFragment(sanitizeHtml(rendered.tail)));
+
+  // Each entry keeps the label that produced it, so it can be traced back to
+  // its definition block once editing is on.
+  [...wrapper.querySelectorAll("li.footnote-item")].forEach((item, order) => {
+    const label = rendered.labels[order];
+    if (label != null) item.dataset.label = label;
+  });
+
+  return wrapper;
+}
+
+// Snapshot before appending: appendChild moves the node, which would mutate
+// the live child list underneath the loop.
+function buildBlockNodes(entry) {
+  return entry.kind === "source"
+    ? [buildSourceBlock(entry.source)]
+    : [...createInertFragment(sanitizeHtml(entry.html)).childNodes];
+}
+
+/* The key a block's DOM is reused on.
+ *
+ * It is the rendered content with every position stripped out of it. Two
+ * things move without a word changing: the block index, and data-source-line,
+ * which shifts on every block after an insertion. Keying on either would mean
+ * nothing below an edit could ever be reused, which is exactly the case this
+ * is for. Positions are stamped back on afterwards as plain attribute writes. */
+const sourceLineAttribute = / data-source-line="\d+"/g;
+
+function blockGroupKey(entry) {
+  return entry.kind === "source"
+    ? `s:${entry.hidden ? "h" : "-"}:${entry.source}`
+    : `h:${entry.hidden ? "h" : "-"}:${entry.html.replace(sourceLineAttribute, "")}`;
+}
+
+// The footnote list carries line numbers of its own, and it sits at the end of
+// the document where the tail match starts. Leaving them in meant a single
+// insertion anywhere rebuilt everything below it.
+function tailGroupKey(tail) {
+  return `t:${tail.replace(sourceLineAttribute, "")}`;
+}
+
+function stampBlockNodes(nodes, index, entry, startLine = null) {
+  let first = true;
+
+  nodes.forEach((node) => {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    node.setAttribute("data-block", String(index));
+    node.classList.toggle(
+      "has-hidden-comment",
+      Boolean(entry.hidden) && entry.kind !== "source",
+    );
+
+    // Kept in step for the block's own element. Elements nested inside a
+    // reused block keep the line they were rendered with, which is stale after
+    // an insertion above them. Nothing reads those today; if anything ever
+    // does, it has to be stamped here too rather than trusted.
+    if (first && startLine != null) {
+      node.setAttribute("data-source-line", String(startLine + 1));
+      first = false;
+    }
+  });
+}
+
+function buildBlockFragment(markdownText) {
+  // Whatever was open referred to nodes that are about to be replaced.
+  blockEditing = null;
+
+  const { model, renderer } = getBlockTools();
+  const doc = model.parseDoc(markdownText);
+  const rendered = renderer.renderBlocks(doc);
+
+  if (rendered.unmapped?.length) {
+    console.warn("Block rendering could not place source lines:", rendered.unmapped);
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  const offsets = model.blockOffsets(doc);
+
+  rendered.blocks.forEach((entry, index) => {
+    const nodes = buildBlockNodes(entry);
+
+    stampBlockNodes(nodes, index, entry, offsets[index][0]);
+    nodes.forEach((node) => {
+      node.__blockKey = blockGroupKey(entry);
+      fragment.appendChild(node);
+    });
+  });
+
+  if (rendered.tail) {
+    const tail = buildFootnoteTail(rendered);
+    tail.__blockKey = tailGroupKey(rendered.tail);
+    fragment.appendChild(tail);
+  }
+
+  blockDocument = doc;
+
+  return fragment;
+}
+
+/* --------------------------------------------------------------------------
+   Block editing
+
+   Two rules carry the whole safety story:
+
+   1. The document is a strict partition of its source lines (lib/blockModel.js),
+      so serialising is byte-identical to the file by construction.
+   2. Leaving a block compares the text in the editor with the text that went
+      in. If they match, nothing is written at all — not even a re-parse — and
+      the very same DOM nodes are put back, still holding their blob URLs.
+      Navigating through a document therefore cannot change it.
+   -------------------------------------------------------------------------- */
+
+// Every node of a block's run, including the whitespace between its elements,
+// so putting it back restores the DOM exactly.
+function blockRunNodes(index) {
+  const elements = [...reader.querySelectorAll(`[data-block="${index}"]`)];
+  if (!elements.length) return [];
+
+  const children = [...reader.childNodes];
+  const first = children.indexOf(elements[0]);
+  const last = children.indexOf(elements[elements.length - 1]);
+
+  if (first === -1 || last === -1) return elements;
+
+  return children.slice(first, last + 1);
+}
+
+function autosizeBlockInput(textarea) {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function buildBlockInput(value) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "block-editor";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "block-input";
+  textarea.spellcheck = false;
+  textarea.value = value;
+  textarea.setAttribute("aria-label", "Markdown source of this block");
+
+  textarea.addEventListener("input", () => {
+    // Marks that the browser now has undo history of its own for this block.
+    if (blockEditing) blockEditing.typed = true;
+    autosizeBlockInput(textarea);
+    updateDirtyIndicator();
+  });
+  textarea.addEventListener("keydown", onBlockInputKeydown);
+
+  wrapper.appendChild(textarea);
+
+  return { wrapper, textarea };
+}
+
+function focusBlockInput(caret) {
+  if (!blockEditing) return;
+
+  const { textarea } = blockEditing;
+
+  autosizeBlockInput(textarea);
+  textarea.focus({ preventScroll: true });
+
+  const at = caret === "end" || caret == null ? textarea.value.length : caret;
+  textarea.setSelectionRange(at, at);
+  textarea.scrollIntoView({ block: "nearest" });
+}
+
+function openBlockEditor(index, caret = "end") {
+  if (blockEditing || !blockDocument) return;
+  if (index < 0 || index >= blockDocument.blocks.length) return;
+
+  const { model } = getBlockTools();
+  const nodes = blockRunNodes(index);
+  if (!nodes.length) return;
+
+  const source = model.blockText(blockDocument, index);
+  const { wrapper, textarea } = buildBlockInput(source);
+
+  reader.insertBefore(wrapper, nodes[0]);
+  nodes.forEach((node) => node.remove());
+
+  blockEditing = { index, nodes, wrapper, textarea, original: source, isNew: false, typed: false };
+  focusBlockInput(caret);
+  setStatus("Editing block");
+}
+
+function openNewBlockEditor(at) {
+  if (blockEditing || !blockDocument) return;
+
+  const { wrapper, textarea } = buildBlockInput("");
+  const following = reader.querySelector(`[data-block="${at}"]`)
+    || reader.querySelector(".footnote-tail");
+
+  reader.insertBefore(wrapper, following);
+
+  blockEditing = { at, nodes: [], wrapper, textarea, original: "", isNew: true, typed: false };
+  focusBlockInput(0);
+  setStatus("New block");
+}
+
+// Put back exactly what was there. No re-render, no re-parse, no image reload.
+// Takes the editing record rather than reading the module-level one, which the
+// caller has already cleared by this point.
+function restoreBlockNodes(editing) {
+  editing.nodes.forEach((node) => reader.insertBefore(node, editing.wrapper));
+  editing.wrapper.remove();
+}
+
+/**
+ * Close the open editor.
+ *
+ * Returns { shiftFrom, delta } so a caller holding a block index from before
+ * the commit can correct it: a commit can split one block into several, or
+ * remove it.
+ */
+async function closeBlockEditor({ commit = true } = {}) {
+  if (!blockEditing) return { shiftFrom: 0, delta: 0 };
+
+  const editing = blockEditing;
+  const value = editing.textarea.value;
+  blockEditing = null;
+
+  if (!commit || (!editing.isNew && value === editing.original)) {
+    restoreBlockNodes(editing);
+    updateDirtyIndicator();
+    setStatus("Rendered");
+    return { shiftFrom: 0, delta: 0 };
+  }
+
+  if (editing.isNew && !value.trim()) {
+    editing.wrapper.remove();
+    setStatus("Rendered");
+    return { shiftFrom: 0, delta: 0 };
+  }
+
+  const { model } = getBlockTools();
+  let shift;
+
+  recordBlockHistory(editing.isNew ? editing.at : editing.index);
+
+  if (editing.isNew) {
+    const inserted = model.insertBlocks(blockDocument, editing.at, value);
+    shift = { shiftFrom: editing.at, delta: inserted };
+  } else {
+    const produced = model.spliceBlocks(blockDocument, editing.index, 1, value);
+    shift = { shiftFrom: editing.index + 1, delta: produced - 1 };
+  }
+
+  await commitBlockDocument();
+
+  return shift;
+}
+
+function shiftedBlockIndex(index, shift) {
+  const moved = shift.delta && index >= shift.shiftFrom ? index + shift.delta : index;
+
+  return Math.max(0, Math.min(blockDocument.blocks.length - 1, moved));
+}
+
+async function moveToBlock(index, caret) {
+  const shift = await closeBlockEditor();
+
+  if (!blockDocument?.blocks.length) return;
+
+  openBlockEditor(shiftedBlockIndex(index, shift), caret);
+}
+
+async function mergeBlocks(from, count, text, caret) {
+  const { model } = getBlockTools();
+
+  blockEditing = null;
+  recordBlockHistory(from);
+  model.spliceBlocks(blockDocument, from, count, text);
+  await commitBlockDocument();
+
+  if (blockDocument.blocks.length) openBlockEditor(Math.min(from, blockDocument.blocks.length - 1), caret);
+}
+
+function onBlockInputKeydown(event) {
+  if (!blockEditing || blockBusy) return;
+
+  const textarea = event.currentTarget;
+  const { model } = getBlockTools();
+  const value = textarea.value;
+  const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+  const atEnd = textarea.selectionStart === value.length && textarea.selectionEnd === value.length;
+  const index = blockEditing.isNew ? blockEditing.at : blockEditing.index;
+  const last = blockDocument.blocks.length - 1;
+
+  const run = (work) => {
+    event.preventDefault();
+    blockBusy = true;
+    Promise.resolve(work()).finally(() => {
+      blockBusy = false;
+    });
+  };
+
+  if (event.key === "Escape") {
+    run(() => closeBlockEditor({ commit: false }));
+    return;
+  }
+
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    run(async () => {
+      const shift = await closeBlockEditor();
+      const at = blockEditing === null && blockDocument
+        ? Math.max(0, Math.min(blockDocument.blocks.length, index + 1 + (shift.delta || 0)))
+        : index + 1;
+      openNewBlockEditor(at);
+    });
+    return;
+  }
+
+  if (blockEditing.isNew) return;
+
+  if (event.key === "ArrowUp" && atStart && index > 0) {
+    run(() => moveToBlock(index - 1, "end"));
+    return;
+  }
+
+  if (event.key === "ArrowDown" && atEnd && index < last) {
+    run(() => moveToBlock(index + 1, 0));
+    return;
+  }
+
+  // Backspace at the very start merges into the block above; Delete at the
+  // very end pulls the next one up. Both are real edits, so both are guarded
+  // by the caret being exactly at the boundary with nothing selected.
+  if (event.key === "Backspace" && atStart && index > 0) {
+    const previous = model.blockText(blockDocument, index - 1);
+    run(() => mergeBlocks(index - 1, 2, `${previous}\n${value}`, previous.length));
+    return;
+  }
+
+  if (event.key === "Delete" && atEnd && index < last) {
+    const next = model.blockText(blockDocument, index + 1);
+    run(() => mergeBlocks(index, 2, `${value}\n${next}`, value.length));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Updating the view after a commit
+
+   Re-rendering the whole document would re-read every image from disk and
+   throw away every node, which flickers and loses scroll position on anything
+   with pictures in it. Instead the rendered blocks are compared with what is
+   already on screen and only the differing ones are rebuilt.
+
+   Invalidation is DERIVED, never predicted: nothing works out which blocks an
+   edit "should" have affected. A block that renders to different HTML gets a
+   different key and is rebuilt; a block that renders the same keeps its node,
+   its blob URLs and its scroll position. A footnote definition three blocks
+   away changing every footnote number needs no special case — those blocks
+   simply render differently.
+   -------------------------------------------------------------------------- */
+
+// What the last in-place update actually reused, for the browser tests.
+let lastBlockReconcile = null;
+
+// Runs of nodes on screen, grouped by the key they were built with.
+function currentBlockRuns() {
+  const runs = [];
+  let run = null;
+
+  [...reader.childNodes].forEach((node) => {
+    const key = node.__blockKey ?? null;
+
+    if (!run || run.key !== key) {
+      run = { key, nodes: [] };
+      runs.push(run);
+    }
+
+    run.nodes.push(node);
+  });
+
+  return runs;
+}
+
+/**
+ * Update the reader in place. Returns false if it declined, in which case the
+ * caller must fall back to a full render.
+ */
+async function refreshBlocksInPlace() {
+  const { renderer } = getBlockTools();
+  const rendered = renderer.renderBlocks(blockDocument);
+
+  if (rendered.unmapped?.length) return false;
+
+  const groups = rendered.blocks.map((entry) => ({ key: blockGroupKey(entry), entry }));
+
+  if (rendered.tail) groups.push({ key: tailGroupKey(rendered.tail), tail: rendered });
+
+  const existing = currentBlockRuns();
+
+  // Match the untouched head and tail of the document, and rebuild only what
+  // lies between. Without this an inserted block would shift every run after
+  // it out of alignment and rebuild the rest of the page.
+  const limit = Math.min(groups.length, existing.length);
+  let head = 0;
+  while (head < limit && groups[head].key === existing[head].key) head += 1;
+
+  let foot = 0;
+  while (
+    foot < limit - head
+    && groups[groups.length - 1 - foot].key === existing[existing.length - 1 - foot].key
+  ) {
+    foot += 1;
+  }
+
+  lastBlockReconcile = {
+    groups: groups.length,
+    existing: existing.length,
+    head,
+    foot,
+    rebuilt: Math.max(0, groups.length - head - foot),
+  };
+
+  const staging = document.createDocumentFragment();
+  const runs = [];
+
+  groups.forEach((group, position) => {
+    if (position < head) {
+      runs.push(existing[position].nodes);
+      return;
+    }
+
+    if (position >= groups.length - foot) {
+      runs.push(existing[existing.length - (groups.length - position)].nodes);
+      return;
+    }
+
+    const nodes = group.tail ? [buildFootnoteTail(group.tail)] : buildBlockNodes(group.entry);
+
+    nodes.forEach((node) => {
+      node.__blockKey = group.key;
+      staging.appendChild(node);
+    });
+    runs.push(nodes);
+  });
+
+  if (staging.childNodes.length) {
+    await hydrateLocalImages(staging, currentRenderContext);
+
+    // Remote images need the document-wide notice recomputed, which a partial
+    // update cannot do honestly. It is rare enough to be worth a full render.
+    const remote = blockRemoteResources(staging);
+    if (remote.blocked || remote.hosts.length) return false;
+
+    wireLocalMarkdownLinks(currentRenderContext, staging);
+    wireImagePreview(staging);
+    wireMarkdownComments(staging);
+  }
+
+  // The rendered document has changed under it, so any speech in flight is
+  // reading a document that no longer exists.
+  stopReading();
+
+  const desired = runs.flat();
+  let at = 0;
+
+  desired.forEach((node) => {
+    const current = reader.childNodes[at];
+    if (current !== node) reader.insertBefore(node, current || null);
+    at += 1;
+  });
+
+  while (reader.childNodes.length > desired.length) {
+    reader.removeChild(reader.lastChild);
+  }
+
+  // Positions shift even where content did not, so they are stamped every time.
+  const offsets = getBlockTools().model.blockOffsets(blockDocument);
+
+  rendered.blocks.forEach((entry, index) =>
+    stampBlockNodes(runs[index], index, entry, offsets[index][0]));
+
+  buildTableOfContents();
+
+  return true;
+}
+
+/** Apply the current blockDocument to the view, the file size and the dirty state. */
+async function commitBlockDocument() {
+  const { model } = getBlockTools();
+  const text = model.serializeDoc(blockDocument);
+
+  currentMarkdownText = text;
+  updateFileSize(text);
+
+  if (!(await refreshBlocksInPlace())) {
+    await renderDocument(text, currentRenderContext);
+  }
+
+  updateDirtyIndicator();
+  setStatus("Rendered");
+}
+
+function blockHistoryEntry(focusIndex) {
+  const { model } = getBlockTools();
+
+  return { text: model.serializeDoc(blockDocument), focusIndex };
+}
+
+function pushBlockHistory(stack, entry) {
+  stack.push(entry);
+  if (stack.length > blockHistoryLimit) stack.shift();
+}
+
+// Called with the document as it stands BEFORE a commit is applied.
+function recordBlockHistory(focusIndex) {
+  if (!blockDocument) return;
+
+  pushBlockHistory(blockUndoHistory, blockHistoryEntry(focusIndex));
+  blockRedoHistory = [];
+}
+
+function clearBlockHistory() {
+  blockUndoHistory = [];
+  blockRedoHistory = [];
+}
+
+async function applyBlockHistory(entry) {
+  const { model } = getBlockTools();
+
+  blockEditing = null;
+  blockDocument = model.parseDoc(entry.text);
+  await commitBlockDocument();
+
+  if (entry.focusIndex != null && blockDocument?.blocks.length) {
+    openBlockEditor(Math.min(entry.focusIndex, blockDocument.blocks.length - 1), "end");
+  }
+}
+
+async function stepBlockHistory(from, to, label) {
+  if (!from.length) {
+    setStatus(`Nothing to ${label}`);
+    return;
+  }
+
+  const focusIndex = blockEditing && !blockEditing.isNew ? blockEditing.index : null;
+
+  pushBlockHistory(to, blockHistoryEntry(focusIndex));
+  await applyBlockHistory(from.pop());
+  setStatus(label === "undo" ? "Undone" : "Redone");
+}
+
+/**
+ * Two levels of undo, and the rule that keeps them apart.
+ *
+ * Inside a block that has actually been typed in, Ctrl+Z belongs to the
+ * browser: character-level undo is what anyone expects while typing. Anywhere
+ * else — between blocks, or in a block just opened and not yet touched — it
+ * undoes the last commit. Without the "not yet typed in" case, clicking into a
+ * block would make Ctrl+Z appear dead, because a fresh textarea has no history
+ * of its own.
+ */
+function onBlockUndoKeydown(event) {
+  if (!blockModeEnabled) return;
+  if (!(event.ctrlKey || event.metaKey)) return;
+
+  const key = event.key.toLowerCase();
+  if (key !== "z" && key !== "y") return;
+
+  // The side-by-side editor keeps its own undo.
+  if (event.target === markdownInput) return;
+  if (blockEditing && blockEditing.typed) return;
+  if (blockBusy) return;
+
+  const redo = key === "y" || (key === "z" && event.shiftKey);
+  event.preventDefault();
+  blockBusy = true;
+
+  const work = redo
+    ? stepBlockHistory(blockRedoHistory, blockUndoHistory, "redo")
+    : stepBlockHistory(blockUndoHistory, blockRedoHistory, "undo");
+
+  work.catch((error) => console.error(error)).finally(() => {
+    blockBusy = false;
+  });
+}
+
+async function handleBlockClick(event) {
+  if (!blockModeEnabled || blockBusy) return;
+  if (event.target.closest("textarea")) return;
+  if (event.target.closest("a[href]")) return;
+  if (event.target.closest(".md-comment")) return;
+
+  // An entry in the generated footnote list traces back to the definition
+  // block that produced it.
+  const item = event.target.closest("li.footnote-item[data-label]");
+
+  if (item) {
+    const { renderer } = getBlockTools();
+    blockBusy = true;
+
+    try {
+      const shift = await closeBlockEditor();
+      const target = renderer.definitionBlockFor(blockDocument, item.dataset.label);
+      if (target >= 0) openBlockEditor(shiftedBlockIndex(target, shift), "end");
+    } finally {
+      blockBusy = false;
+    }
+
+    return;
+  }
+
+  if (event.target.closest(".footnote-tail")) return;
+
+  const element = event.target.closest("[data-block]");
+  if (!element) return;
+
+  const index = Number(element.getAttribute("data-block"));
+  blockBusy = true;
+
+  try {
+    const shift = await closeBlockEditor();
+    openBlockEditor(shiftedBlockIndex(index, shift), "end");
+  } finally {
+    blockBusy = false;
+  }
+}
+
+async function handleBlockPointerDownOutside(event) {
+  if (!blockModeEnabled || !blockEditing || blockBusy) return;
+  if (event.target.closest(".block-editor")) return;
+  if (event.target.closest("[data-block]")) return;
+  if (event.target.closest("li.footnote-item[data-label]")) return;
+
+  blockBusy = true;
+
+  try {
+    await closeBlockEditor();
+  } finally {
+    blockBusy = false;
+  }
+}
+
+// A block is a run of elements, not a box, so the hover cue is applied to all
+// of them at once.
+let hoveredBlockIndex = null;
+
+function setHoveredBlock(index) {
+  if (index === hoveredBlockIndex) return;
+
+  reader.querySelectorAll("[data-block].is-hovered")
+    .forEach((node) => node.classList.remove("is-hovered"));
+
+  hoveredBlockIndex = index;
+
+  if (index == null) return;
+
+  reader.querySelectorAll(`[data-block="${index}"]`)
+    .forEach((node) => node.classList.add("is-hovered"));
+}
+
+{
+  // A read-only view of the block state, for debugging and for the browser
+  // tests. It exposes no way to change anything.
+  window.__blockDebug = () => ({
+    blocks: blockDocument ? blockDocument.blocks.length : 0,
+    editing: blockEditing
+      ? { index: blockEditing.index ?? blockEditing.at, isNew: blockEditing.isNew }
+      : null,
+    text: getCurrentMarkdownForWrite(),
+    committed: blockDocument ? getBlockTools().model.serializeDoc(blockDocument) : "",
+    undo: blockUndoHistory.length,
+    redo: blockRedoHistory.length,
+    reconcile: lastBlockReconcile,
+  });
+
+  // Bound once and gated at event time, because the mode is switchable.
+  document.addEventListener("keydown", onBlockUndoKeydown);
+
+  reader.addEventListener("click", (event) => {
+    handleBlockClick(event).catch((error) => console.error(error));
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    handleBlockPointerDownOutside(event).catch((error) => console.error(error));
+  });
+
+  // A touch screen fires a single synthetic mousemove on tap, so binding this
+  // there would mark a block hovered and never unmark it.
+  if (window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) {
+    reader.addEventListener("mousemove", (event) => {
+      if (!blockModeEnabled) return;
+
+      const element = event.target.closest("[data-block]");
+      setHoveredBlock(element ? element.getAttribute("data-block") : null);
+    });
+
+    reader.addEventListener("mouseleave", () => setHoveredBlock(null));
+  }
+}
+
 async function renderDocument(markdownText, context = null) {
   const generation = ++readerRenderGeneration;
 
@@ -2230,11 +3311,16 @@ async function renderDocument(markdownText, context = null) {
   if (generation !== readerRenderGeneration) return;
 
   setStatus("Rendering...");
-  const rawHtml = window.renderMarkdown(markdownText);
-  const safeHtml = sanitizeHtml(rawHtml);
 
   clearObjectUrls();
-  const fragment = createInertFragment(safeHtml);
+
+  // Both paths go through createInertFragment and hydrateLocalImages, so no
+  // image request is issued until local paths have been swapped for blob URLs
+  // and remote hosts have been checked.
+  const fragment = blockModeEnabled
+    ? buildBlockFragment(markdownText)
+    : createInertFragment(sanitizeHtml(window.renderMarkdown(markdownText)));
+
   await hydrateLocalImages(fragment, context);
 
   // Image reads are async, so a newer render may have started meanwhile. Its
@@ -2600,7 +3686,7 @@ async function handleEncryptionAction() {
     return;
   }
 
-  const markdownText = getCurrentMarkdownForWrite();
+  const markdownText = withDocumentLineEndings(getCurrentMarkdownForWrite());
   const name = getDownloadFileName().replace(/(-\d{8}-\d{6})?(\.(?:md|markdown|txt))$/i, "-decrypted$2");
 
   downloadTextFile(name, markdownText, "text/markdown;charset=utf-8");
@@ -2651,7 +3737,26 @@ function downloadCurrentMarkdown() {
 }
 
 function getCurrentMarkdownForWrite() {
+  // A block open for editing holds text that has not been committed yet.
+  // Saving, downloading, exporting or checking for unsaved changes must see
+  // it, or the edit is silently dropped.
+  if (blockEditing) return blockTextWithPendingEdit();
+
   return editorShell.hidden ? currentMarkdownText : markdownInput.value;
+}
+
+function blockTextWithPendingEdit() {
+  const { model } = getBlockTools();
+  const preview = { blocks: blockDocument.blocks.slice(), seps: blockDocument.seps.slice() };
+  const value = blockEditing.textarea.value;
+
+  if (blockEditing.isNew) {
+    if (value.trim()) model.insertBlocks(preview, blockEditing.at, value);
+  } else {
+    model.spliceBlocks(preview, blockEditing.index, 1, value);
+  }
+
+  return model.serializeDoc(preview);
 }
 
 async function ensureWritablePermission(fileHandle) {
@@ -2831,6 +3936,8 @@ async function openMarkdownFile(file, fileHandle = null, { alreadyGuarded = fals
 
   const generation = ++documentOpenGeneration;
 
+  clearBlockHistory();
+
   setSingleFileMode(file, fileHandle);
   fileNameEl.textContent = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
@@ -2954,6 +4061,8 @@ async function openFolderMarkdown(path, { fragment = "", alreadyGuarded = false 
   if (!alreadyGuarded && !(await confirmDiscardUnsavedChanges(`Opening ${entry.name}`))) return;
 
   const generation = ++documentOpenGeneration;
+
+  clearBlockHistory();
 
   currentFile = null;
   currentFileHandle = null;

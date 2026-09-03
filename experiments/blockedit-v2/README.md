@@ -4,11 +4,22 @@ Working copy of the frozen `../blockedit-poc/`. Same interaction; the rendering
 pipeline underneath it was replaced so that things which span blocks work.
 
 ```bash
-cd experiments/blockedit-v2
+cd ../..            # the repo root — this page imports ../../lib/blockModel.js
 python -m http.server 5174
 ```
 
-Also runs from `file://`.
+Then open `http://localhost:5174/experiments/blockedit-v2/`.
+
+It no longer runs from `file://`: `blockedit.js` is an ES module now, and browsers
+refuse module imports over `file://`. The app itself has the same constraint.
+
+## Where the model lives
+
+`parseDoc`, `serializeDoc`, `spliceBlocks`, `insertBlocks`, `blockText` and
+`blockOffsets` are **not** defined here. They live in `lib/blockModel.js` — pure,
+DOM-free, parser injected — and are unit tested in `tests/unit/blockModel.test.js`
+against the vendored markdown-it build the app actually ships. This page is one
+caller of them, not the place they are defined.
 
 ## What the POC got wrong
 

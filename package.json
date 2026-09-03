@@ -1,6 +1,6 @@
 {
   "name": "lightmdreader",
-  "version": "3.10.1",
+  "version": "4.0.0",
   "private": true,
   "description": "Lightweight static browser app for reading, editing, and exporting Markdown files.",
   "license": "UNLICENSED",

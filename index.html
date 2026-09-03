@@ -43,6 +43,7 @@
     <link rel="stylesheet" href="./customMarkdown.graphite.css" />
     <!-- Loaded last so print colours win over every theme stylesheet. -->
     <link rel="stylesheet" href="./customMarkdown.print.css" />
+    <link rel="stylesheet" href="./blockedit.css" />
   </head>
   <body>
     <header class="topbar">
@@ -52,6 +53,8 @@
       </div>
 
       <div class="actions">
+        <!-- View controls: they change how you look at the document, not the
+             document itself, so they sit apart from everything else. -->
         <button
           id="topbarLockBtn"
           class="btn icon-btn"
@@ -74,51 +77,198 @@
           &#x1F5C1;&#xFE0E;
         </button>
 
-        <button id="openFileBtn" class="btn" type="button">
-          Open .md
-        </button>
-        <input
-          id="fileInput"
-          type="file"
-          accept=".md,.markdown,text/markdown,text/plain"
-          aria-label="Choose a markdown file"
-          hidden
-        />
-        <input
-          id="recoveryKeyInput"
-          type="file"
-          accept=".json,application/json"
-          aria-label="Choose a recovery key file"
-          hidden
-        />
+        <span class="actions-sep" aria-hidden="true"></span>
 
-        <button id="folderBtn" class="btn" type="button">
-          Open folder
-        </button>
+        <!-- Everything that touches the file lives in one place. -->
+        <div class="menu" data-menu="file">
+          <button
+            id="fileMenuBtn"
+            class="btn menu-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+          >
+            File<span class="menu-caret" aria-hidden="true">&#x25BE;</span>
+          </button>
 
-        <button id="createBtn" class="btn" type="button">
-          Create
-        </button>
+          <div class="menu-panel" role="menu" aria-labelledby="fileMenuBtn" hidden>
+            <button id="createBtn" class="menu-item" type="button" role="menuitem">
+              Create
+            </button>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <button id="openFileBtn" class="menu-item" type="button" role="menuitem">
+              Open .md file
+            </button>
+            <button id="folderBtn" class="menu-item" type="button" role="menuitem">
+              Open folder
+            </button>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <button id="saveBtn" class="menu-item" type="button" role="menuitem" disabled>
+              Save
+            </button>
+            <button id="saveAsBtn" class="menu-item" type="button" role="menuitem" disabled>
+              Save as&hellip;
+            </button>
+            <!-- Kept because Save needs the File System Access API, which
+                 Firefox and Safari do not have. There, this is the only way
+                 out of the app. -->
+            <button id="downloadBtn" class="menu-item" type="button" role="menuitem" disabled>
+              Download a copy
+            </button>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <button id="exportBtn" class="menu-item" type="button" role="menuitem" disabled>
+              Export as PDF
+            </button>
+          </div>
+        </div>
 
         <button id="cheatsheetBtn" class="btn secondary" type="button">
           Cheatsheet
         </button>
 
+        <!-- One refresh. Which one it means depends on what is open, which is
+             something the app already knows. -->
+        <button
+          id="refreshBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-label="Refresh"
+          title="Refresh"
+          disabled
+        >
+          &#x21BB;
+        </button>
+
+        <span class="actions-sep" aria-hidden="true"></span>
+
+        <div class="menu" data-menu="mode">
+          <button
+            id="modeMenuBtn"
+            class="btn menu-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+          >
+            <span id="modeMenuLabel">Block editing</span><span class="menu-caret" aria-hidden="true">&#x25BE;</span>
+          </button>
+
+          <div class="menu-panel" role="menu" aria-labelledby="modeMenuBtn" hidden>
+            <div class="menu-heading" role="presentation">Mode</div>
+            <button
+              class="menu-item menu-choice"
+              type="button"
+              role="menuitemradio"
+              data-select="editorModeSelect"
+              data-value="blocks"
+            >
+              Block editing
+            </button>
+            <button
+              class="menu-item menu-choice"
+              type="button"
+              role="menuitemradio"
+              data-select="editorModeSelect"
+              data-value="read"
+            >
+              Read only
+            </button>
+            <button
+              class="menu-item menu-choice"
+              type="button"
+              role="menuitemradio"
+              data-select="editorModeSelect"
+              data-value="split"
+            >
+              Side-by-side editing
+            </button>
+          </div>
+        </div>
+
         <button id="editBtn" class="btn secondary" type="button" disabled>
           Edit
         </button>
 
-        <button id="saveBtn" class="btn secondary" type="button" disabled>
-          Save
-        </button>
+        <div class="menu" data-menu="style">
+          <button
+            id="styleMenuBtn"
+            class="btn menu-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+          >
+            Style<span class="menu-caret" aria-hidden="true">&#x25BE;</span>
+          </button>
 
-        <button id="saveAsBtn" class="btn secondary" type="button" disabled>
-          Save as
-        </button>
+          <div class="menu-panel" role="menu" aria-labelledby="styleMenuBtn" hidden>
+            <div class="menu-heading" role="presentation">Document style</div>
+            <div id="styleChoices" class="menu-group"></div>
 
-        <button id="downloadBtn" class="btn secondary" type="button" disabled>
-          Download
-        </button>
+            <div class="menu-sep" role="separator"></div>
+
+            <div class="menu-heading" role="presentation">Colour theme</div>
+            <div id="themeChoices" class="menu-group"></div>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <div class="menu-heading" role="presentation">PDF paper</div>
+            <div id="paperChoices" class="menu-group"></div>
+          </div>
+        </div>
+
+        <span class="actions-sep" aria-hidden="true"></span>
+
+        <!-- Two controls in one: the left half reads, the right half picks the
+             voice. -->
+        <div class="menu split" data-menu="voice">
+          <button
+            id="speakBtn"
+            class="btn split-main"
+            type="button"
+            title="Read aloud"
+            aria-label="Read aloud"
+            disabled
+          >
+            &#x25B7;&#x266A;
+          </button>
+          <button
+            id="stopSpeakBtn"
+            class="btn split-main"
+            type="button"
+            aria-label="Stop reading"
+            title="Stop reading"
+            hidden
+          >
+            &#x25A0;&#xFE0E;
+          </button>
+          <button
+            id="voiceMenuBtn"
+            class="btn split-caret menu-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-label="Choose a voice"
+            title="Choose a voice"
+          >
+            <span aria-hidden="true">&#x25BE;</span>
+          </button>
+
+          <div class="menu-panel menu-panel-right" role="menu" aria-labelledby="voiceMenuBtn" hidden>
+            <div class="menu-heading" role="presentation">Offline voice</div>
+            <div id="voiceChoices" class="menu-group"></div>
+            <p class="menu-note">
+              Offline voices only. Cloud voices are never listed, so the text
+              never leaves this computer.
+            </p>
+          </div>
+        </div>
+
+        <span class="actions-sep" aria-hidden="true"></span>
 
         <button
           id="encryptionBtn"
@@ -145,62 +295,63 @@
           Return to read
         </button>
 
-        <button id="refreshFileBtn" class="btn secondary" type="button" disabled>
-          Refresh file
-        </button>
+        <!-- Hidden inputs and the selects the menus above are a view onto.
+             Keeping the selects means every existing listener, and every place
+             that writes back a saved preference, keeps working unchanged. -->
+        <input
+          id="fileInput"
+          type="file"
+          accept=".md,.markdown,text/markdown,text/plain"
+          aria-label="Choose a markdown file"
+          hidden
+        />
+        <input
+          id="recoveryKeyInput"
+          type="file"
+          accept=".json,application/json"
+          aria-label="Choose a recovery key file"
+          hidden
+        />
 
-        <button id="refreshFolderBtn" class="btn secondary" type="button" disabled>
-          Refresh folder
-        </button>
+        <select id="editorModeSelect" class="visually-hidden" aria-label="Editing mode" tabindex="-1">
+          <option value="blocks" selected>Block editing</option>
+          <option value="read">Read only</option>
+          <option value="split">Side-by-side editing</option>
+        </select>
 
-        <select id="themeSelect" class="select" aria-label="Theme">
+        <select id="documentStyleSelect" class="visually-hidden" aria-label="Document style" tabindex="-1">
+          <option value="signature" selected>Signature</option>
+          <option value="standard">Standard</option>
+          <option value="studio">Studio</option>
+          <option value="editorial">Editorial</option>
+          <option value="refined">Refined</option>
+          <option value="graphite">Graphite</option>
+        </select>
+
+        <select id="themeSelect" class="visually-hidden" aria-label="Theme" tabindex="-1">
           <option value="dark" selected>Dark</option>
           <option value="light">Light</option>
           <option value="brown">Brown</option>
         </select>
 
-        <select id="documentStyleSelect" class="select" aria-label="Document style">
-          <option value="signature" selected>Signature style</option>
-          <option value="standard">Standard style</option>
-          <option value="studio">Studio style</option>
-          <option value="editorial">Editorial style</option>
-          <option value="refined">Refined style</option>
-          <option value="graphite">Graphite style</option>
-        </select>
-
-        <select id="voiceSelect" class="select" aria-label="Read-aloud voice" disabled>
-          <option value="">No offline voice</option>
-        </select>
-
-        <button id="speakBtn" class="btn secondary" type="button" disabled>
-          Read aloud
-        </button>
-
-        <button
-          id="stopSpeakBtn"
-          class="btn secondary icon-btn"
-          type="button"
-          aria-label="Stop reading"
-          title="Stop reading"
-          hidden
-        >
-          &#x25A0;&#xFE0E;
-        </button>
-
-        <select id="pdfPaperSelect" class="select" aria-label="PDF paper size">
-          <option value="browser">Browser paper</option>
+        <select id="pdfPaperSelect" class="visually-hidden" aria-label="PDF paper size" tabindex="-1">
+          <option value="browser">Browser default</option>
           <option value="a4">A4</option>
           <option value="letter">Letter</option>
         </select>
 
-        <button id="exportBtn" class="btn secondary" disabled>
-          Export PDF
-        </button>
+        <select id="voiceSelect" class="visually-hidden" aria-label="Read-aloud voice" tabindex="-1" disabled>
+          <option value="">No offline voice</option>
+        </select>
+
+        <button id="refreshFileBtn" type="button" class="visually-hidden" tabindex="-1" disabled></button>
+        <button id="refreshFolderBtn" type="button" class="visually-hidden" tabindex="-1" disabled></button>
       </div>
     </header>
 
     <main class="layout">
       <aside class="sidebar">
+        <div class="sidebar-inner">
         <h2>Document</h2>
         <div class="meta">
           <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
@@ -226,6 +377,7 @@
           <li>PDF export uses your browser print dialog.</li>
           <li>You can also drop a markdown file into the reader.</li>
         </ul>
+        </div>
       </aside>
 
       <section class="content">
