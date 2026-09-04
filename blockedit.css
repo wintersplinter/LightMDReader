@@ -167,15 +167,21 @@ body.block-mode .reader .footnote-tail .footnote-item[data-label] {
    itself, which means the click that starts writing lands on the reader and
    is handled by the same listener as every other block click — there is no
    extra node for the reconciler to trip over, and it disappears by itself the
-   moment a block exists. */
+   moment a block exists.
 
-body.block-mode .reader:empty {
-  display: block;
+   `:not([hidden])` is load-bearing, not defensive. With no file open at all
+   the reader is empty AND hidden, and a `display` value here would outrank
+   the user agent's rule for [hidden] — the first version of this block set
+   `display: block` and put the hint on the start screen, where clicking it
+   did nothing because there is no document to add a block to. Same trap as
+   `.remote-notice[hidden]` in styles.css. */
+
+body.block-mode .reader:not([hidden]):empty {
   min-height: 40vh;
   cursor: text;
 }
 
-body.block-mode .reader:empty::after {
+body.block-mode .reader:not([hidden]):empty::after {
   content: "Click anywhere to start writing";
   display: block;
   padding: 1.2em 0;

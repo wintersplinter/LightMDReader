@@ -3221,7 +3221,7 @@ async function handleBlockClick(event) {
   // An empty document renders no blocks, so there is nothing to click and
   // Ctrl+Enter — which only works from inside an open block — cannot reach it
   // either. A click anywhere in the empty reader starts the first block.
-  if (blockDocument && !blockDocument.blocks.length) {
+  if (currentMode !== "empty" && blockDocument && !blockDocument.blocks.length) {
     openNewBlockEditor(0);
     return;
   }
