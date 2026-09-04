@@ -128,6 +128,21 @@
           </div>
         </div>
 
+        <!-- Save is the one file action worth a click of its own: the copy in
+             the File menu stays, this is the shortcut to it. Same handler,
+             same disabled state, and the unsaved dot comes from
+             body.has-unsaved-changes in CSS. -->
+        <button
+          id="quickSaveBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-label="Save to the original file"
+          title="Save to the original file"
+          disabled
+        >
+          <span class="save-glyph" aria-hidden="true">&#x291E;</span>
+        </button>
+
         <button id="cheatsheetBtn" class="btn secondary" type="button">
           Cheatsheet
         </button>

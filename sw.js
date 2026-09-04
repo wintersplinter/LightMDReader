@@ -1,4 +1,4 @@
-const VERSION = "v4-0-0";
+const VERSION = "v4-1-0";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;

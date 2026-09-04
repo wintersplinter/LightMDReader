@@ -40,6 +40,7 @@ const editBtn = document.getElementById("editBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const saveBtn = document.getElementById("saveBtn");
 const saveAsBtn = document.getElementById("saveAsBtn");
+const quickSaveBtn = document.getElementById("quickSaveBtn");
 const encryptionBtn = document.getElementById("encryptionBtn");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
 const revealBtn = document.getElementById("revealBtn");
@@ -909,6 +910,8 @@ function updateDirtyIndicator() {
   saveBtn.textContent = dirty ? "Save •" : "Save";
   saveBtn.title = dirty ? "Save unsaved changes to the original file" : "Save to the original file";
   saveBtn.setAttribute("aria-label", saveBtn.title);
+  quickSaveBtn.title = saveBtn.title;
+  quickSaveBtn.setAttribute("aria-label", saveBtn.title);
 }
 
 function updateSaveControls() {
@@ -916,6 +919,7 @@ function updateSaveControls() {
 
   saveBtn.disabled = !canSaveOriginal();
   saveAsBtn.disabled = !hasDocument || !window.showSaveFilePicker;
+  quickSaveBtn.disabled = saveBtn.disabled;
   updateDirtyIndicator();
   updateEncryptionControls();
   updateRevealControl();
@@ -1683,6 +1687,7 @@ function showError(message) {
   updateSaveControls();
   saveBtn.disabled = true;
   saveAsBtn.disabled = true;
+  quickSaveBtn.disabled = true;
   updateEncryptionControls();
 }
 
@@ -4257,7 +4262,7 @@ googleSignInBtn.addEventListener("click", () => {
   });
 });
 
-saveBtn.addEventListener("click", () => {
+function handleSaveClick() {
   if (saveBtn.disabled) return;
 
   saveCurrentMarkdownToOriginal().catch((error) => {
@@ -4269,7 +4274,10 @@ saveBtn.addEventListener("click", () => {
     console.error(error);
     setStatus(error.message || "Could not save this file");
   });
-});
+}
+
+saveBtn.addEventListener("click", handleSaveClick);
+quickSaveBtn.addEventListener("click", handleSaveClick);
 
 saveAsBtn.addEventListener("click", () => {
   saveCurrentMarkdownAs().catch((error) => {

@@ -194,6 +194,29 @@ body.topbar-locked .layout {
   padding: 8px 0;
   line-height: 1;
 }
+/* The quick Save button. The glyph is a right-pointing arrow turned a quarter
+   turn clockwise so it points down — into the file. */
+#quickSaveBtn {
+  position: relative;
+}
+#quickSaveBtn .save-glyph {
+  display: inline-block;
+  transform: rotate(90deg);
+  font-size: 1.05em;
+  line-height: 1;
+}
+/* Same signal the File menu gives with "Save •", without the room for a word. */
+body.has-unsaved-changes #quickSaveBtn::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 .profile-btn {
   max-width: 180px;
   overflow: hidden;
