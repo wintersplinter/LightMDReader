@@ -3218,6 +3218,14 @@ async function handleBlockClick(event) {
 
   if (event.target.closest(".footnote-tail")) return;
 
+  // An empty document renders no blocks, so there is nothing to click and
+  // Ctrl+Enter — which only works from inside an open block — cannot reach it
+  // either. A click anywhere in the empty reader starts the first block.
+  if (blockDocument && !blockDocument.blocks.length) {
+    openNewBlockEditor(0);
+    return;
+  }
+
   const element = event.target.closest("[data-block]");
   if (!element) return;
 
@@ -3659,9 +3667,22 @@ async function createDocument() {
   // A brand new document has nothing on disk yet, but the untouched template
   // is not work worth protecting either.
   markDocumentSaved(currentMarkdownText);
-  showEditor(currentMarkdownText);
-  await renderEditorPreview();
-  placeEditorCursorAtStart();
+
+  // A new document opens in whatever mode the menu says. This used to always
+  // open the side-by-side editor, which left the Mode menu reading "Block
+  // editing" while the split editor was on screen.
+  if (editorMode === "split") {
+    showEditor(currentMarkdownText);
+    await renderEditorPreview();
+    placeEditorCursorAtStart();
+    return;
+  }
+
+  await renderDocument(currentMarkdownText);
+
+  // Straight into the title, so a new document can be typed in without
+  // hunting for something to click.
+  if (blockModeEnabled) openBlockEditor(0, "end");
 }
 
 async function editCurrentDocument() {

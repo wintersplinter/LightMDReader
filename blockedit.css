@@ -160,3 +160,26 @@ body.block-mode .reader .footnote-tail .footnote-item[data-label] {
     box-shadow: none !important;
   }
 }
+
+/* -- the empty document ---------------------------------------------------
+   With no blocks there is nothing to click and nothing to see, so the reader
+   looks broken rather than empty. The hint is a pseudo-element on the reader
+   itself, which means the click that starts writing lands on the reader and
+   is handled by the same listener as every other block click — there is no
+   extra node for the reconciler to trip over, and it disappears by itself the
+   moment a block exists. */
+
+body.block-mode .reader:empty {
+  display: block;
+  min-height: 40vh;
+  cursor: text;
+}
+
+body.block-mode .reader:empty::after {
+  content: "Click anywhere to start writing";
+  display: block;
+  padding: 1.2em 0;
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.75;
+}
