@@ -32,6 +32,7 @@
     <link rel="icon" href="./icons/icon-32.png" sizes="32x32" type="image/png" />
     <link rel="icon" href="./icons/icon-16.png" sizes="16x16" type="image/png" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./vendor/Temml-Local.css" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./customMarkdown.css" />
     <link rel="stylesheet" href="./customMarkdown.light.css" />
@@ -66,14 +67,7 @@
           &#x1F513;&#xFE0E;
         </button>
 
-        <button
-          id="revealBtn"
-          class="btn icon-btn"
-          type="button"
-          aria-label="Show folder"
-          title="Show folder"
-          disabled
-        >
+        <button id="revealBtn" class="btn icon-btn" type="button" aria-label="Show folder" title="Show folder" disabled>
           &#x1F5C1;&#xFE0E;
         </button>
 
@@ -81,50 +75,30 @@
 
         <!-- Everything that touches the file lives in one place. -->
         <div class="menu" data-menu="file">
-          <button
-            id="fileMenuBtn"
-            class="btn menu-trigger"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-          >
+          <button id="fileMenuBtn" class="btn menu-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
             File<span class="menu-caret" aria-hidden="true">&#x25BE;</span>
           </button>
 
           <div class="menu-panel" role="menu" aria-labelledby="fileMenuBtn" hidden>
-            <button id="createBtn" class="menu-item" type="button" role="menuitem">
-              Create
-            </button>
+            <button id="createBtn" class="menu-item" type="button" role="menuitem">Create</button>
 
             <div class="menu-sep" role="separator"></div>
 
-            <button id="openFileBtn" class="menu-item" type="button" role="menuitem">
-              Open .md file
-            </button>
-            <button id="folderBtn" class="menu-item" type="button" role="menuitem">
-              Open folder
-            </button>
+            <button id="openFileBtn" class="menu-item" type="button" role="menuitem">Open .md file</button>
+            <button id="folderBtn" class="menu-item" type="button" role="menuitem">Open folder</button>
 
             <div class="menu-sep" role="separator"></div>
 
-            <button id="saveBtn" class="menu-item" type="button" role="menuitem" disabled>
-              Save
-            </button>
-            <button id="saveAsBtn" class="menu-item" type="button" role="menuitem" disabled>
-              Save as&hellip;
-            </button>
+            <button id="saveBtn" class="menu-item" type="button" role="menuitem" disabled>Save</button>
+            <button id="saveAsBtn" class="menu-item" type="button" role="menuitem" disabled>Save as&hellip;</button>
             <!-- Kept because Save needs the File System Access API, which
                  Firefox and Safari do not have. There, this is the only way
                  out of the app. -->
-            <button id="downloadBtn" class="menu-item" type="button" role="menuitem" disabled>
-              Download a copy
-            </button>
+            <button id="downloadBtn" class="menu-item" type="button" role="menuitem" disabled>Download a copy</button>
 
             <div class="menu-sep" role="separator"></div>
 
-            <button id="exportBtn" class="menu-item" type="button" role="menuitem" disabled>
-              Export as PDF
-            </button>
+            <button id="exportBtn" class="menu-item" type="button" role="menuitem" disabled>Export as PDF</button>
           </div>
         </div>
 
@@ -140,36 +114,21 @@
           title="Save to the original file"
           disabled
         >
-          <span class="save-glyph" aria-hidden="true">&#x291E;</span>
+          <span class="save-glyph" aria-hidden="true">&#x1F4BE;&#xFE0E;</span>
         </button>
 
-        <button id="cheatsheetBtn" class="btn secondary" type="button">
-          Cheatsheet
-        </button>
+        <button id="cheatsheetBtn" class="btn secondary" type="button">Cheatsheet</button>
 
         <!-- One refresh. Which one it means depends on what is open, which is
              something the app already knows. -->
-        <button
-          id="refreshBtn"
-          class="btn icon-btn"
-          type="button"
-          aria-label="Refresh"
-          title="Refresh"
-          disabled
-        >
+        <button id="refreshBtn" class="btn icon-btn" type="button" aria-label="Refresh" title="Refresh" disabled>
           &#x21BB;
         </button>
 
         <span class="actions-sep" aria-hidden="true"></span>
 
         <div class="menu" data-menu="mode">
-          <button
-            id="modeMenuBtn"
-            class="btn menu-trigger"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-          >
+          <button id="modeMenuBtn" class="btn menu-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
             <span id="modeMenuLabel">Block editing</span><span class="menu-caret" aria-hidden="true">&#x25BE;</span>
           </button>
 
@@ -205,18 +164,10 @@
           </div>
         </div>
 
-        <button id="editBtn" class="btn secondary" type="button" disabled>
-          Edit
-        </button>
+        <button id="editBtn" class="btn secondary" type="button" disabled>Edit</button>
 
         <div class="menu" data-menu="style">
-          <button
-            id="styleMenuBtn"
-            class="btn menu-trigger"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-          >
+          <button id="styleMenuBtn" class="btn menu-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
             Style<span class="menu-caret" aria-hidden="true">&#x25BE;</span>
           </button>
 
@@ -277,8 +228,7 @@
             <div class="menu-heading" role="presentation">Offline voice</div>
             <div id="voiceChoices" class="menu-group"></div>
             <p class="menu-note">
-              Offline voices only. Cloud voices are never listed, so the text
-              never leaves this computer.
+              Offline voices only. Cloud voices are never listed, so the text never leaves this computer.
             </p>
           </div>
         </div>
@@ -296,17 +246,9 @@
           &#x1F5DD;&#xFE0E;
         </button>
 
-        <button id="googleSignInBtn" class="btn secondary profile-btn" type="button">
-          Sign in
-        </button>
+        <button id="googleSignInBtn" class="btn secondary profile-btn" type="button">Sign in</button>
 
-        <button
-          id="returnToReadBtn"
-          class="btn secondary return-read-btn"
-          type="button"
-          title="Discard changes"
-          hidden
-        >
+        <button id="returnToReadBtn" class="btn secondary return-read-btn" type="button" title="Discard changes" hidden>
           Return to read
         </button>
 
@@ -367,31 +309,31 @@
     <main class="layout">
       <aside class="sidebar">
         <div class="sidebar-inner">
-        <h2>Document</h2>
-        <div class="meta">
-          <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
-          <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
-          <div>
-            <span class="k">Status:</span>
-            <span id="statusText" role="status" aria-live="polite">Ready</span>
+          <h2>Document</h2>
+          <div class="meta">
+            <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
+            <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
+            <div>
+              <span class="k">Status:</span>
+              <span id="statusText" role="status" aria-live="polite">Ready</span>
+            </div>
           </div>
-        </div>
 
-        <div id="tocSection" hidden>
-          <h2>Inhoud</h2>
-          <nav id="tocNav" class="toc-nav" aria-label="Document contents"></nav>
-        </div>
+          <div id="tocSection" hidden>
+            <h2>Inhoud</h2>
+            <nav id="tocNav" class="toc-nav" aria-label="Document contents"></nav>
+          </div>
 
-        <div id="folderSection" hidden>
-          <h2>Folder</h2>
-          <div id="folderNav" class="folder-nav"></div>
-        </div>
+          <div id="folderSection" hidden>
+            <h2>Folder</h2>
+            <div id="folderNav" class="folder-nav"></div>
+          </div>
 
-        <h2>Tips</h2>
-        <ul class="tips">
-          <li>PDF export uses your browser print dialog.</li>
-          <li>You can also drop a markdown file into the reader.</li>
-        </ul>
+          <h2>Tips</h2>
+          <ul class="tips">
+            <li>PDF export uses your browser print dialog.</li>
+            <li>You can also drop a markdown file into the reader.</li>
+          </ul>
         </div>
       </aside>
 
@@ -400,20 +342,14 @@
           <div id="remoteContentNotice" class="remote-notice" role="status" hidden>
             <span id="remoteContentNoticeText" class="remote-notice-text"></span>
             <span class="remote-notice-actions">
-              <button id="remoteContentLoadBtn" class="btn secondary" type="button">
-                Load once
-              </button>
-              <button id="remoteContentAllowBtn" class="btn secondary" type="button">
-                Always allow
-              </button>
+              <button id="remoteContentLoadBtn" class="btn secondary" type="button">Load once</button>
+              <button id="remoteContentAllowBtn" class="btn secondary" type="button">Always allow</button>
             </span>
           </div>
 
           <div id="emptyState" class="empty">
             <h1>Open a Markdown file</h1>
-            <p>
-              Choose a <code>.md</code> file to preview it. Then export it to PDF.
-            </p>
+            <p>Choose a <code>.md</code> file to preview it. Then export it to PDF.</p>
           </div>
 
           <div id="errorState" class="empty error" hidden>
@@ -468,14 +404,7 @@
       </section>
     </div>
 
-    <div
-      id="imagePreview"
-      class="image-preview"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Image preview"
-      hidden
-    >
+    <div id="imagePreview" class="image-preview" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
       <button id="imagePreviewClose" class="image-preview-close" type="button" aria-label="Close image preview">
         Close
       </button>
@@ -499,9 +428,7 @@
             <h2 id="cheatsheetTitle">Markdown cheatsheet</h2>
             <p id="cheatsheetDescription">Rendered with the app's markdown rules.</p>
           </div>
-          <button id="cheatsheetClose" class="btn secondary" type="button">
-            Close
-          </button>
+          <button id="cheatsheetClose" class="btn secondary" type="button">Close</button>
         </header>
         <article id="cheatsheetContent" class="reader markdown-body cheatsheet-content"></article>
       </section>
@@ -512,6 +439,7 @@
       vendor/VERSIONS.json and refreshed with "npm run vendor".
     -->
     <script src="./vendor/purify.min.js"></script>
+    <script src="./vendor/temml.min.js"></script>
     <script src="./vendor/markdown-it.min.js"></script>
     <script src="./vendor/markdown-it-footnote.min.js"></script>
     <script src="./vendor/markdown-it-deflist.min.js"></script>

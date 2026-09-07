@@ -45,6 +45,27 @@
       "package": "dompurify",
       "version": "3.4.12",
       "integrity": "sha256-xFupOXZVdPlsvzXum22J9zdWoXkhgUQl50uC98VGA84="
+    },
+    "temml.min.js": {
+      "package": "temml",
+      "version": "0.13.5",
+      "integrity": "sha256-GrGRSK/g28g2t6dPNEBxs/OnCnqCWa5ASedolPzfjZU="
+    },
+    "Temml-Local.css": {
+      "package": "temml",
+      "version": "0.13.5",
+      "integrity": "sha256-VE9OP+5MNvRWjk8UX6Ym3JVzxfTJbFI6rcxDPDmJojk="
+    },
+    "Temml.woff2": {
+      "package": "temml",
+      "version": "0.13.5",
+      "integrity": "sha256-/HBQE1WubTj/C4D4Ja8VNVfV8vR0GY1rm33S06KRoMw="
+    },
+    "mermaid/": {
+      "package": "mermaid",
+      "version": "11.17.2",
+      "files": 104,
+      "bytes": 3522090
     }
   }
 }

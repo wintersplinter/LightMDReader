@@ -42,6 +42,7 @@ beforeAll(() => {
     "markdown-it-mark.min.js",
     "markdown-it-attrs.browser.js",
     "markdown-it-task-lists.min.js",
+    "temml.min.js",
   ].forEach((name) => load(`../../vendor/${name}`));
 
   load("../../MDrender.js");

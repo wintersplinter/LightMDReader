@@ -1,4 +1,4 @@
-const VERSION = "v4-3-0";
+const VERSION = "v4-4-0";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;
@@ -31,6 +31,13 @@ const ASSETS = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./vendor/purify.min.js",
+  // Temml is small enough to belong with the app; Mermaid is not, and is
+  // deliberately absent from this list. It is fetched only when a document
+  // contains a diagram and then kept by the runtime cache, so an install
+  // never pays 3 MB for a feature most documents do not use.
+  "./vendor/temml.min.js",
+  "./vendor/Temml-Local.css",
+  "./vendor/Temml.woff2",
   "./vendor/markdown-it.min.js",
   "./vendor/markdown-it-footnote.min.js",
   "./vendor/markdown-it-deflist.min.js",
@@ -81,12 +88,24 @@ function shouldUseNetworkFirst(request) {
 // Keep the runtime cache from growing without bound. Entries are evicted in
 // insertion order, which is a good enough approximation of least-recently-added
 // for the handful of same-origin extras this app fetches.
+//
+// Vendored library code is exempt. Mermaid arrives here rather than in the
+// precache because it is too large to load eagerly, but it is still part of
+// the app: evicting a chunk would leave diagrams broken offline, with nothing
+// to refetch from. Only genuine extras are subject to the limit.
+function isEvictable(request) {
+  return !new URL(request.url).pathname.includes("/vendor/");
+}
+
 async function trimRuntimeCache(cache) {
   const keys = await cache.keys();
+  const evictable = keys.filter(isEvictable);
 
-  if (keys.length <= RUNTIME_CACHE_LIMIT) return;
+  if (evictable.length <= RUNTIME_CACHE_LIMIT) return;
 
-  await Promise.all(keys.slice(0, keys.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)));
+  await Promise.all(
+    evictable.slice(0, evictable.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)),
+  );
 }
 
 async function fetchAndCache(request) {

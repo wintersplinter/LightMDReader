@@ -2031,6 +2031,298 @@ function hideMarkdownComments(root = document) {
   });
 }
 
+/* ===========================================================================
+ * Diagrams
+ *
+ * A ```mermaid fence becomes a drawing. Three things make this safe and cheap
+ * enough to belong in a light reader:
+ *
+ *   Nothing loads until it is needed. Mermaid is by far the largest thing the
+ *   app can pull in, so it is fetched only once a document actually contains a
+ *   fence, and then once per session. A document without diagrams costs zero.
+ *
+ *   The drawing is sanitized like everything else. Mermaid builds SVG at
+ *   runtime, after the document sanitizer has already run, which would be a
+ *   hole in the rule that nothing reaches the page unchecked. `render()`
+ *   hands back a string rather than touching the DOM, so that string goes
+ *   through DOMPurify on the way in and the rule holds.
+ *
+ *   A diagram that fails stays readable. The fence is left as code with the
+ *   error beside it, because a broken diagram in someone else's document
+ *   should not cost you the rest of the page.
+ * ======================================================================== */
+
+let mermaidLoader = null;
+let mermaidRenderCount = 0;
+
+function documentStyleColors() {
+  const styles = window.getComputedStyle(document.body);
+  const read = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+
+  return {
+    bg: read("--bg", "#171514"),
+    panel: read("--panel", "#1e1b19"),
+    text: read("--text", "#eaeaea"),
+    muted: read("--muted", "#a6a6a6"),
+    line: read("--line", "#312c29"),
+    accent: read("--accent", "#9ad3ff"),
+  };
+}
+
+async function loadMermaid() {
+  if (!mermaidLoader) {
+    mermaidLoader = import("./vendor/mermaid/mermaid.esm.min.mjs")
+      .then((module) => module.default || module)
+      .catch((error) => {
+        // A failed load must not be cached as a permanent failure: the next
+        // document gets to try again.
+        mermaidLoader = null;
+        throw error;
+      });
+  }
+
+  return mermaidLoader;
+}
+
+/**
+ * Mermaid's own palette would look foreign in a document, so it is given the
+ * theme's tokens. Read fresh each time because the theme can change between
+ * renders.
+ */
+function mermaidThemeVariables() {
+  const c = documentStyleColors();
+
+  return {
+    background: c.bg,
+    primaryColor: c.panel,
+    primaryTextColor: c.text,
+    primaryBorderColor: c.line,
+    secondaryColor: c.panel,
+    tertiaryColor: c.bg,
+    lineColor: c.muted,
+    textColor: c.text,
+    mainBkg: c.panel,
+    nodeBorder: c.accent,
+    clusterBkg: c.bg,
+    titleColor: c.text,
+    edgeLabelBackground: c.bg,
+    actorBkg: c.panel,
+    actorBorder: c.accent,
+    actorTextColor: c.text,
+    actorLineColor: c.muted,
+    signalColor: c.text,
+    signalTextColor: c.text,
+    labelBoxBkgColor: c.panel,
+    labelBoxBorderColor: c.accent,
+    labelTextColor: c.text,
+    loopTextColor: c.text,
+    noteBkgColor: c.panel,
+    noteTextColor: c.text,
+    noteBorderColor: c.line,
+    sectionBkgColor: c.panel,
+    altSectionBkgColor: c.bg,
+    sectionBkgColor2: c.panel,
+    taskBkgColor: c.accent,
+    taskTextColor: c.bg,
+    taskTextOutsideColor: c.text,
+    taskTextLightColor: c.bg,
+    taskTextDarkColor: c.bg,
+    activeTaskBkgColor: c.accent,
+    activeTaskBorderColor: c.accent,
+    gridColor: c.line,
+    doneTaskBkgColor: c.muted,
+    doneTaskBorderColor: c.line,
+    critBorderColor: c.accent,
+    critBkgColor: c.accent,
+    todayLineColor: c.accent,
+  };
+}
+
+/**
+ * Strip every way a stylesheet can fetch something.
+ *
+ * Mermaid puts all of a diagram's colours in a <style> block inside the SVG,
+ * so that block has to survive — without it every shape falls back to black
+ * on black. But `style` is on the forbidden list for a reason: CSS can fetch,
+ * and a fetch is how opening a document would announce that you opened it.
+ *
+ * Mermaid's own CSS only ever points at same-document fragments —
+ * `url(#arrowhead)` for the marker on a line — so keeping those and dropping
+ * everything else costs the diagram nothing and closes the hole. `@import`
+ * goes too: it can name a URL without using `url()` at all.
+ *
+ * This is not hypothetical. Mermaid's `classDef` has been an injection route
+ * into exactly this stylesheet as recently as CVE-2026-41149.
+ */
+function hardenDiagramCss(css) {
+  return String(css)
+    .replace(/@import[^;]*;?/gi, "")
+    .replace(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi, (match, quote, target) =>
+      target.startsWith("#") ? match : "none");
+}
+
+/**
+ * A narrower sanitizer than the document one: this input is SVG that Mermaid
+ * just built, so SVG is allowed here and nowhere else.
+ *
+ * `foreignObject` stays forbidden. It is a way to put arbitrary HTML inside an
+ * SVG and has a long history of getting past sanitizers, so rather than allow
+ * it and lean on the HTML profile, Mermaid is configured with
+ * `htmlLabels: false` and draws its labels as real SVG text instead. Removing
+ * it here without that setting silently deletes every label in the diagram.
+ */
+function sanitizeDiagramSvg(svg) {
+  installSanitizerHooks();
+
+  const hardened = String(svg).replace(
+    /(<style[^>]*>)([\s\S]*?)(<\/style>)/gi,
+    (match, open, css, close) => open + hardenDiagramCss(css) + close,
+  );
+
+  const fragment = DOMPurify.sanitize(hardened, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    // `style` is deliberately absent from this list, unlike everywhere else in
+    // the app: see hardenDiagramCss above for what pays for that.
+    // `image` and `feImage` exist only to load a picture from somewhere, which
+    // is the one thing a diagram must never do.
+    FORBID_TAGS: [
+      ...forbiddenContentTags.filter((tag) => tag !== "style"),
+      "foreignObject",
+      "image",
+      "feImage",
+    ],
+    FORBID_ATTR: forbiddenContentAttributes,
+    RETURN_DOM_FRAGMENT: true,
+  });
+
+  // DOMPurify removes scripts and event handlers but keeps an href pointing
+  // anywhere, and several SVG elements fetch theirs the moment they render.
+  // A diagram only ever needs to point at itself — `href="#arrowhead"` for a
+  // marker — so anything that is not a same-document fragment is dropped.
+  // Without this, a crafted diagram could announce that a document was
+  // opened, which is the one thing opening a document must not do.
+  fragment.querySelectorAll("[href], [xlink\\:href]").forEach((node) => {
+    ["href", "xlink:href"].forEach((name) => {
+      const value = node.getAttribute(name);
+
+      if (value !== null && !value.startsWith("#")) node.removeAttribute(name);
+    });
+  });
+
+  return fragment;
+}
+
+/**
+ * Say what actually went wrong, in the reader's terms.
+ *
+ * Mermaid does not arrive in one piece: a shared core plus one chunk per kind
+ * of diagram, each fetched the first time that kind is drawn. So the runtime
+ * cache holds the kinds you have already opened and nothing else, and the
+ * first sequence diagram you meet while offline fails even though flowcharts
+ * have been working all week. That is a confusing thing to be told with a
+ * module URL, which is what the browser offers.
+ */
+function describeDiagramFailure(error) {
+  const message = error?.message || "";
+  const isMissingChunk = /dynamically imported module|Failed to fetch|NetworkError|Importing a module script failed/i.test(message);
+
+  if (!isMissingChunk) {
+    // A parse error is the useful case: it names what is wrong with the
+    // diagram, and the source is shown underneath it.
+    return message || "This diagram could not be drawn.";
+  }
+
+  if (!navigator.onLine) {
+    return "This kind of diagram has not been downloaded yet, and you are offline. Open a document with one while connected, once, and it will work offline from then on.";
+  }
+
+  return "Could not download what this kind of diagram needs. Check your connection and re-open the document.";
+}
+
+/** The fences in a rendered tree that have not been drawn yet. */
+function findMermaidFences(root) {
+  return [...root.querySelectorAll("pre > code.language-mermaid")]
+    .filter((code) => !code.closest("[data-mermaid]"));
+}
+
+function replaceFenceWithDiagram(pre, code, html, failed) {
+  const figure = document.createElement("div");
+
+  figure.className = failed ? "md-diagram md-diagram-failed" : "md-diagram";
+  // Line alignment and the caret both read this, so it has to survive the
+  // swap from <pre> to <div>.
+  figure.dataset.mermaid = "";
+  if (code.dataset.sourceLine) figure.dataset.sourceLine = code.dataset.sourceLine;
+
+  if (failed) {
+    const notice = document.createElement("p");
+
+    notice.className = "md-diagram-error";
+    notice.textContent = html;
+    figure.append(notice, pre.cloneNode(true));
+  } else {
+    // Already a sanitized fragment, so it is appended rather than round-tripped
+    // back through innerHTML.
+    figure.append(html);
+  }
+
+  pre.replaceWith(figure);
+}
+
+/**
+ * Draw every mermaid fence in a tree. Safe to call on any rendered output;
+ * trees without a fence return before anything is loaded.
+ */
+async function renderDiagrams(root = reader) {
+  const fences = findMermaidFences(root);
+
+  if (!fences.length) return;
+
+  let mermaid;
+
+  try {
+    mermaid = await loadMermaid();
+  } catch (error) {
+    console.error(error);
+    fences.forEach((code) =>
+      replaceFenceWithDiagram(code.parentElement, code, describeDiagramFailure(error), true));
+    return;
+  }
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: "base",
+    fontFamily: window.getComputedStyle(document.body).fontFamily,
+    themeVariables: mermaidThemeVariables(),
+    // Labels as SVG text rather than HTML in a foreignObject, so the
+    // sanitizer above can keep refusing foreignObject entirely.
+    htmlLabels: false,
+    flowchart: { htmlLabels: false, useMaxWidth: true },
+  });
+
+  for (const code of fences) {
+    const pre = code.parentElement;
+
+    if (!pre || !pre.isConnected) continue;
+
+    mermaidRenderCount += 1;
+
+    try {
+      const { svg } = await mermaid.render(`md-diagram-${mermaidRenderCount}`, code.textContent || "");
+
+      replaceFenceWithDiagram(pre, code, sanitizeDiagramSvg(svg), false);
+    } catch (error) {
+      console.error(error);
+      replaceFenceWithDiagram(pre, code, describeDiagramFailure(error), true);
+    }
+  }
+
+  // Mermaid measures text by attaching a scratch element to the body; it
+  // usually cleans up after itself, but a failed render can leave one behind.
+  document.querySelectorAll("body > [id^='dmermaid-'], body > [id^='md-diagram-']").forEach((stray) => stray.remove());
+}
+
 function wireMarkdownComments(root = reader) {
   [...root.querySelectorAll(".md-comment")].forEach((comment) => {
     comment.addEventListener("mouseenter", () => positionMarkdownComment(comment));
@@ -2102,7 +2394,12 @@ function sanitizeHtml(html) {
   installSanitizerHooks();
 
   return DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
+    // MathML is added because Temml renders maths into it. It is inert markup
+    // with no script vectors, so this widens what a document may contain by
+    // very little. SVG is deliberately NOT here: the only SVG the app shows is
+    // what Mermaid draws, and that gets its own narrower pass in
+    // sanitizeDiagramSvg() rather than being allowed document-wide.
+    USE_PROFILES: { html: true, mathMl: true },
     ADD_ATTR: ["target", "rel", "data-source-line", "data-doc-pos", "tabindex", "aria-label", "aria-hidden"],
     FORBID_TAGS: forbiddenContentTags,
     FORBID_ATTR: forbiddenContentAttributes,
@@ -3060,6 +3357,9 @@ async function refreshBlocksInPlace() {
     wireLocalMarkdownLinks(currentRenderContext, staging);
     wireImagePreview(staging);
     wireMarkdownComments(staging);
+    // Only the blocks that actually changed are in `staging`; blocks already
+    // on screen keep the diagram they were given.
+    await renderDiagrams(staging);
   }
 
   // The rendered document has changed under it, so any speech in flight is
@@ -3346,6 +3646,9 @@ async function renderDocument(markdownText, context = null) {
   wireLocalMarkdownLinks(context);
   wireImagePreview();
   wireMarkdownComments();
+  // Diagrams are drawn after the document is on screen: the render is async
+  // and needs layout, and the page should not wait on it to become readable.
+  renderDiagrams().catch((error) => console.error(error));
   setStatus("Rendered");
 }
 
@@ -3376,6 +3679,12 @@ async function renderEditorPreview() {
   wireLocalMarkdownLinks(currentRenderContext, editorPreview);
   wireImagePreview(editorPreview);
   wireMarkdownComments(editorPreview);
+  // The position index compares its own text against the preview's, and a
+  // drawn diagram no longer holds the fence's text — so the index is dropped
+  // and rebuilt against the settled preview rather than the transient one.
+  renderDiagrams(editorPreview)
+    .then(() => { positionIndex = null; positionIndexText = null; })
+    .catch((error) => console.error(error));
   alignPreviewToEditorCaret();
   setStatus("Editing");
 }
@@ -3841,11 +4150,19 @@ function getPositionIndex() {
 
     root.innerHTML = sanitizeHtml(window.renderMarkdown(markdownInput.value, { emitPositions: true }));
 
-    // The index is only meaningful if it is the same text the reader sees. A
-    // render step that changes the preview's text without changing this would
-    // silently shift every offset, so the two are compared rather than
-    // assumed equal.
-    if (root.textContent !== editorPreview.textContent) return null;
+    // A drawn diagram replaces its fence, so the index still holds the
+    // Mermaid source where the preview holds SVG labels. Neither text is
+    // clickable, so both sides drop those subtrees and the offsets on either
+    // side of a diagram still line up.
+    root.querySelectorAll("pre > code.language-mermaid").forEach((code) => {
+      code.parentElement.dataset.mermaid = "";
+    });
+
+    // The index is only meaningful if it counts the same text the reader
+    // shows. A render step that changes the preview's text without changing
+    // this would silently shift every offset, so the two are compared rather
+    // than assumed equal.
+    if (countableText(root) !== countableText(editorPreview)) return null;
 
     positionIndex = root;
     positionIndexText = markdownInput.value;
@@ -3857,19 +4174,39 @@ function getPositionIndex() {
   }
 }
 
-/** How much rendered text precedes a point, counted over the whole preview. */
-function getRenderedOffsetBefore(node, offset) {
-  const range = document.createRange();
+/**
+ * A tree's text with diagram subtrees left out, which is the text both sides
+ * of the position index agree on.
+ */
+function walkCountableText(root, stopNode = null, stopOffset = 0) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement?.closest("[data-mermaid]")
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  });
+  let total = 0;
+  let node = walker.nextNode();
 
-  range.selectNodeContents(editorPreview);
+  while (node) {
+    if (node === stopNode) return total + stopOffset;
 
-  try {
-    range.setEnd(node, offset);
-  } catch (error) {
-    return null;
+    total += (node.nodeValue || "").length;
+    node = walker.nextNode();
   }
 
-  return range.toString().length;
+  return stopNode ? null : total;
+}
+
+function countableText(root) {
+  return walkCountableText(root);
+}
+
+/** How much countable text precedes a point, over the whole preview. */
+function getRenderedOffsetBefore(node, offset) {
+  if (node.parentElement?.closest("[data-mermaid]")) return null;
+
+  return walkCountableText(editorPreview, node, offset);
 }
 
 /** The exact source offset a click landed on, or null if it cannot be trusted. */
@@ -3885,7 +4222,12 @@ function resolveClickedSourceOffset(caret) {
   if (!root) return null;
 
   // Walk the index to the same rendered offset and see which run it lands in.
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement?.closest("[data-mermaid]")
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  });
   let seen = 0;
   let node = walker.nextNode();
 

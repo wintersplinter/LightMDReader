@@ -1299,3 +1299,58 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   Math and diagrams
+
+   Both are wide content that a document has no other way to constrain, so
+   each scrolls inside its own box rather than pushing the page sideways.
+   ========================================================================== */
+.md-math-block {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 0;
+  margin: 18px 0;
+  text-align: center;
+}
+
+/* MathML inherits colour, so it follows the theme and every document style
+   without either of them knowing it exists. */
+.reader math {
+  color: inherit;
+  font-size: 1.06em;
+}
+
+.md-diagram {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.md-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.md-diagram-failed {
+  display: block;
+  border-left: 2px solid var(--danger);
+  padding-left: 14px;
+}
+
+.md-diagram-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+/* A diagram is a picture: splitting one across two printed pages makes it
+   unreadable in a way a paragraph is not. */
+@media print {
+  .md-diagram,
+  .md-math-block {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

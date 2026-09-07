@@ -321,6 +321,154 @@
     return md;
   }
 
+  /* =========================================================================
+   * Math
+   *
+   * `$x$` inline and `$$x$$` as its own block, rendered by Temml into MathML,
+   * which every current browser lays out itself. That is the whole reason for
+   * choosing Temml over KaTeX: 164 KB and one font file against 268 KB and 60,
+   * because the browser already knows how to set an integral sign.
+   *
+   * The delimiters are the risk, not the maths. A document that mentions a
+   * price is far commoner than one that does inline algebra, so the inline
+   * rule refuses anything that looks like money or arithmetic on plain
+   * numbers: no whitespace directly inside the delimiters, no digit
+   * immediately after the closing one, and no newline in between. `$5 and $7`
+   * therefore stays text, and `$5$` is left alone as well.
+   * ====================================================================== */
+  function renderMath(latex, displayMode) {
+    if (!window.temml) return null;
+
+    try {
+      return window.temml.renderToString(latex, {
+        displayMode,
+        throwOnError: false,
+        // A malformed formula should show up as a marked-up formula, not stop
+        // the document rendering.
+        errorColor: "currentColor",
+      });
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+
+  function mathPlugin(md) {
+    md.inline.ruler.before("escape", "math_inline", (state, silent) => {
+      const start = state.pos;
+
+      if (state.src.charCodeAt(start) !== 0x24) return false;      // $
+      // `$$` inline is left to the block rule.
+      if (state.src.charCodeAt(start + 1) === 0x24) return false;
+      // An escaped \$ never opens maths.
+      if (start > 0 && state.src.charCodeAt(start - 1) === 0x5c) return false;
+
+      const after = state.src[start + 1];
+      if (after === undefined || /\s/.test(after)) return false;
+
+      let end = start + 1;
+
+      while (end < state.posMax) {
+        const code = state.src.charCodeAt(end);
+
+        if (code === 0x0a) return false;                            // newline
+        if (code === 0x24 && state.src.charCodeAt(end - 1) !== 0x5c) break;
+
+        end += 1;
+      }
+
+      if (end >= state.posMax) return false;
+      if (/\s/.test(state.src[end - 1])) return false;
+      // "$12 and $15" — a digit right after the closer means this was money.
+      if (/[0-9]/.test(state.src[end + 1] || "")) return false;
+
+      const latex = state.src.slice(start + 1, end);
+
+      if (!latex.trim()) return false;
+
+      if (!silent) {
+        const token = state.push("math_inline", "", 0);
+
+        token.content = latex;
+        token.markup = "$";
+      }
+
+      state.pos = end + 1;
+      return true;
+    });
+
+    md.block.ruler.before("fence", "math_block", (state, startLine, endLine, silent) => {
+      const begin = state.bMarks[startLine] + state.tShift[startLine];
+      const max = state.eMarks[startLine];
+
+      if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+      if (state.src.slice(begin, begin + 2) !== "$$") return false;
+
+      const firstLine = state.src.slice(begin + 2, max);
+      let lastLine = null;
+      let line = startLine;
+      let found = false;
+
+      // `$$x$$` all on one line closes immediately.
+      if (firstLine.trim().endsWith("$$")) {
+        found = true;
+        lastLine = firstLine.trim().slice(0, -2);
+      }
+
+      while (!found) {
+        line += 1;
+        if (line >= endLine) break;
+
+        const nextBegin = state.bMarks[line] + state.tShift[line];
+        const nextMax = state.eMarks[line];
+
+        if (nextBegin < nextMax && state.sCount[line] < state.blkIndent) break;
+
+        if (state.src.slice(nextBegin, nextMax).trim().endsWith("$$")) {
+          const text = state.src.slice(nextBegin, nextMax).trim();
+
+          lastLine = text.slice(0, -2);
+          found = true;
+        }
+      }
+
+      if (!found) return false;
+      if (silent) return true;
+
+      const middle = line > startLine
+        ? state.getLines(startLine + 1, line, state.tShift[startLine], false)
+        : "";
+      const latex = `${line > startLine ? firstLine : ""}\n${middle}\n${lastLine || ""}`.trim();
+
+      state.line = line + 1;
+
+      const token = state.push("math_block", "", 0);
+
+      token.block = true;
+      token.content = latex;
+      token.markup = "$$";
+      // The line map is what block editing and the split editor's alignment
+      // read, so display maths behaves like any other block.
+      token.map = [startLine, state.line];
+
+      return true;
+    });
+
+    md.renderer.rules.math_inline = (tokens, index) => {
+      const html = renderMath(tokens[index].content, false);
+
+      return html || `<code>${escapeHtml(`$${tokens[index].content}$`)}</code>`;
+    };
+
+    md.renderer.rules.math_block = (tokens, index) => {
+      const html = renderMath(tokens[index].content, true);
+
+      return html
+        ? `<div class="md-math-block">${html}</div>\n`
+        : `<pre><code>${escapeHtml(tokens[index].content)}</code></pre>\n`;
+    };
+  }
+
   function missingLibraries() {
     return [
       ["markdown-it", window.markdownit],
@@ -331,6 +479,7 @@
       ["markdown-it-mark", window.markdownitMark],
       ["markdown-it-attrs", window.markdownItAttrs],
       ["markdown-it-task-lists", window.markdownitTaskLists],
+      ["temml", window.temml],
     ]
       .filter(([, library]) => !library)
       .map(([name]) => name);
@@ -362,6 +511,7 @@
         labelAfter: true,
       })
       .use(customComments)
+      .use(mathPlugin)
       .use(withInlinePositions)
       .use(absolutePositions)
       .use(positionSpans);
