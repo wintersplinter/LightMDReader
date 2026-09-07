@@ -142,7 +142,6 @@ let currentDownloadName = "document.md";
 let currentRenderContext = null;
 let editorPreviewTimer = null;
 let editorScrollTimer = null;
-let suppressPreviewCursorSyncUntil = 0;
 let readingSnapshot = null;
 // The last content and encryption intent known to be on disk. Everything that
 // could replace the open document compares against these.
@@ -3377,7 +3376,7 @@ async function renderEditorPreview() {
   wireLocalMarkdownLinks(currentRenderContext, editorPreview);
   wireImagePreview(editorPreview);
   wireMarkdownComments(editorPreview);
-  syncPreviewToCursor();
+  alignPreviewToEditorCaret();
   setStatus("Editing");
 }
 
@@ -3453,41 +3452,98 @@ function findPreviewElementForLine(lineNumber) {
   return bestElement;
 }
 
-function syncPreviewToCursor() {
-  if (editorShell.hidden) return;
+/* ===========================================================================
+ * Side-by-side (split) editor: keeping the two panels beside each other
+ *
+ * One rule, one anchor, both directions: the source line you are working in
+ * is drawn at the same height on screen in both panels. The panel you touched
+ * is the anchor and never moves; only the other one scrolls to meet it.
+ *
+ * Each panel owns exactly one handler and reads only its own side. Nothing
+ * here is bound to the document, so a click anywhere else in the app is never
+ * considered, and the two directions cannot call into each other. That mutual
+ * call was the loop the old timestamp guard was suppressing: moving the caret
+ * from a preview click focused the textarea, the textarea's focus handler
+ * scrolled the preview back, and the click undid itself.
+ *
+ * Only the split editor is wired this way. Block editing has its own click
+ * handling on the reader and shares none of this.
+ * ======================================================================== */
 
-  const target = findPreviewElementForLine(getCursorLine());
-  if (!target) return;
+/* --- Shared: measuring a source line in each panel --------------------- */
 
-  const previewRect = editorPreview.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  const nextTop = editorPreview.scrollTop + targetRect.top - previewRect.top - editorPreview.clientHeight * 0.15;
+/**
+ * Where the top of `lineNumber` sits in the textarea's own scroll
+ * coordinates, in which 0 is the top of the padding box.
+ */
+function getEditorLineTop(lineNumber) {
+  const computedStyle = window.getComputedStyle(markdownInput);
+  const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+  const measuredTop = getEditorCursorTop(getLineStartIndex(lineNumber));
 
-  editorPreview.scrollTo({
-    top: Math.max(0, nextTop),
-    behavior: "auto",
-  });
+  return Number.isFinite(measuredTop)
+    ? measuredTop
+    : paddingTop + (Math.max(1, lineNumber) - 1) * getEditorLineHeight();
 }
 
-function schedulePreviewCursorSync() {
-  if (performance.now() < suppressPreviewCursorSyncUntil) return;
+function getEditorContentInset() {
+  const borderTop = Number.parseFloat(window.getComputedStyle(markdownInput).borderTopWidth) || 0;
 
+  return markdownInput.getBoundingClientRect().top + borderTop;
+}
+
+/** The same measurement in viewport coordinates, so both panels can compare. */
+function getEditorLineViewportTop(lineNumber) {
+  return getEditorContentInset() + getEditorLineTop(lineNumber) - markdownInput.scrollTop;
+}
+
+/**
+ * The block element a source line renders into, plus how far into that block
+ * the line sits. A block covers a run of source lines and the render carries
+ * a line number only for the block, so the offset is walked out in the text.
+ */
+function getPreviewLineViewportTop(sourceLine) {
+  const element = findPreviewElementForLine(sourceLine);
+
+  if (!element) return null;
+
+  const rect = getRectAfterLineBreaks(element, sourceLine - getPreviewBlockBaseLine(element));
+
+  return (rect || element.getBoundingClientRect()).top;
+}
+
+/**
+ * Scroll a panel so that something currently drawn at `currentTop` ends up at
+ * `anchorY`. The anchor is clamped into the panel: side by side the two
+ * panels share a vertical band and the clamp never bites, but the narrow
+ * layout stacks them, where an unclamped anchor would scroll the target
+ * clean out of its own panel.
+ */
+function scrollPaneToAnchor(pane, currentTop, anchorY) {
+  const paneRect = pane.getBoundingClientRect();
+  const wantedY = Math.min(Math.max(anchorY, paneRect.top), paneRect.bottom);
+
+  pane.scrollTo({ top: Math.max(0, pane.scrollTop + currentTop - wantedY), behavior: "auto" });
+}
+
+/* --- Left panel: the caret is the anchor, the preview follows ---------- */
+
+function alignPreviewToEditorCaret() {
+  if (editorShell.hidden || editorMode !== "split") return;
+
+  const sourceLine = getCursorLine();
+  const previewTop = getPreviewLineViewportTop(sourceLine);
+
+  if (previewTop === null) return;
+
+  scrollPaneToAnchor(editorPreview, previewTop, getEditorLineViewportTop(sourceLine));
+}
+
+/* A tick of delay lets the browser finish placing the caret and settling the
+ * textarea's own scroll before anything is measured. */
+function scheduleAlignPreviewToEditorCaret() {
   window.clearTimeout(editorScrollTimer);
-  editorScrollTimer = window.setTimeout(syncPreviewToCursor, 0);
-}
-
-function moveEditorCursorToLine(lineNumber, { syncPreview = true } = {}) {
-  const cursorIndex = getLineStartIndex(lineNumber);
-
-  markdownInput.focus({ preventScroll: true });
-  markdownInput.setSelectionRange(cursorIndex, cursorIndex);
-  scrollEditorToLine(lineNumber, cursorIndex);
-
-  if (syncPreview) {
-    schedulePreviewCursorSync();
-  } else {
-    window.clearTimeout(editorScrollTimer);
-  }
+  editorScrollTimer = window.setTimeout(alignPreviewToEditorCaret, 0);
 }
 
 function getEditorLineHeight() {
@@ -3553,32 +3609,199 @@ function getEditorCursorTop(cursorIndex) {
   return cursorTop;
 }
 
-function scrollEditorToLine(lineNumber, cursorIndex = getLineStartIndex(lineNumber)) {
-  const computedStyle = window.getComputedStyle(markdownInput);
-  const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
-  const measuredTop = getEditorCursorTop(cursorIndex);
-  const lineTop = Number.isFinite(measuredTop)
-    ? measuredTop
-    : paddingTop + (Math.max(1, lineNumber) - 1) * getEditorLineHeight();
-  const nextTop = lineTop - markdownInput.clientHeight * 0.15;
+/* --- Right panel: the clicked line is the anchor, the editor follows --- */
 
-  markdownInput.scrollTop = Math.max(0, nextTop);
+function getSourceLineText(lineNumber) {
+  const start = getLineStartIndex(lineNumber);
+  const end = markdownInput.value.indexOf("\n", start);
+
+  return markdownInput.value.slice(start, end === -1 ? undefined : end);
 }
 
-function getPreviewSourceLineFromClick(target) {
-  const sourceElement = target.closest("[data-source-line]");
-  const sourceLine = Number(sourceElement?.dataset.sourceLine);
+/**
+ * The source line the first rendered character of a block belongs to.
+ *
+ * It is the block's own line for everything except a fenced code block, whose
+ * line number is the fence itself — a line that renders nothing, so the text
+ * inside starts one line lower. An indented code block has no fence and needs
+ * no correction.
+ *
+ * markdown-it hangs the line number on the <code>, not the <pre> around it,
+ * so this asks whether the element is in a <pre> rather than whether it is
+ * one. Getting that wrong is invisible: every line of every fenced block
+ * silently resolves to the fence.
+ */
+function getPreviewBlockBaseLine(element) {
+  const blockLine = Number(element.dataset.sourceLine) || 1;
+  const isFenced = !!element.closest("pre")
+    && /^\s{0,3}(?:```|~~~)/.test(getSourceLineText(blockLine));
 
-  return sourceLine || null;
+  return isFenced ? blockLine + 1 : blockLine;
 }
 
-function moveEditorCursorToPreviewTarget(target) {
-  const sourceLine = getPreviewSourceLineFromClick(target);
+/** The last source line still inside a block, so an offset cannot run past it. */
+function getPreviewBlockLastLine(element) {
+  const blockLine = Number(element.dataset.sourceLine) || 1;
+  let nextLine = Infinity;
 
-  if (!sourceLine) return;
+  editorPreview.querySelectorAll("[data-source-line]").forEach((other) => {
+    // A block's own descendants are inside it, so they do not end it.
+    if (other === element || element.contains(other)) return;
 
-  suppressPreviewCursorSyncUntil = performance.now() + 150;
-  moveEditorCursorToLine(sourceLine, { syncPreview: false });
+    const line = Number(other.dataset.sourceLine) || 0;
+
+    if (line > blockLine && line < nextLine) nextLine = line;
+  });
+
+  return nextLine === Infinity
+    ? markdownInput.value.split("\n").length
+    : nextLine - 1;
+}
+
+/**
+ * A collapsed range has no box of its own in every browser, so measure the
+ * character that follows the offset instead.
+ */
+function getRectAtTextOffset(node, offset) {
+  const range = document.createRange();
+  const length = node.nodeValue?.length ?? 0;
+
+  range.setStart(node, Math.min(offset, length));
+
+  if (offset < length) {
+    range.setEnd(node, offset + 1);
+  } else {
+    range.collapse(true);
+  }
+
+  const rect = range.getClientRects()[0] || range.getBoundingClientRect();
+
+  return rect && rect.height ? rect : null;
+}
+
+/**
+ * Where the text just past the nth line break inside a block is drawn, and for
+ * n = 0 where the block's own first character is.
+ *
+ * Both cases go through the same measurement on purpose. The element's box and
+ * a character's box do not start at the same height — half the leading sits
+ * above the glyphs — so measuring the first line off the element and every
+ * other line off a character would make the same paragraph align differently
+ * depending on which of its lines you touched.
+ */
+function getRectAfterLineBreaks(element, breakCount) {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let remaining = Math.max(0, breakCount);
+  let node = walker.nextNode();
+
+  while (node) {
+    const text = node.nodeValue || "";
+    let index = -1;
+
+    while (remaining > 0) {
+      const found = text.indexOf("\n", index + 1);
+
+      if (found === -1) break;
+
+      index = found;
+      remaining -= 1;
+    }
+
+    if (remaining === 0) {
+      return getRectAtTextOffset(node, index + 1);
+    }
+
+    node = walker.nextNode();
+  }
+
+  return null;
+}
+
+function getCaretPositionFromPoint(x, y) {
+  const position = document.caretPositionFromPoint?.(x, y);
+
+  if (position?.offsetNode?.nodeType === Node.TEXT_NODE) {
+    return { node: position.offsetNode, offset: position.offset };
+  }
+
+  const range = document.caretRangeFromPoint?.(x, y);
+
+  if (range?.startContainer?.nodeType === Node.TEXT_NODE) {
+    return { node: range.startContainer, offset: range.startOffset };
+  }
+
+  return null;
+}
+
+/**
+ * Which source line was clicked, not just which block.
+ *
+ * markdown-it runs with `breaks: false`, so a soft line break in the source
+ * survives into the rendered text as a literal newline, and a code fence
+ * renders its source verbatim. Counting the newlines before the click is
+ * therefore a real line map inside a block — exact wherever the source's line
+ * breaks reach the render, and falling back to the block's first line where
+ * they do not.
+ */
+function resolvePreviewSourceLine(element, caret) {
+  const baseLine = getPreviewBlockBaseLine(element);
+
+  if (!caret) return baseLine;
+
+  const range = document.createRange();
+
+  range.selectNodeContents(element);
+
+  try {
+    range.setEnd(caret.node, caret.offset);
+  } catch (error) {
+    return baseLine;
+  }
+
+  const breaksBefore = (range.toString().match(/\n/g) || []).length;
+
+  return Math.min(baseLine + breaksBefore, getPreviewBlockLastLine(element));
+}
+
+function handlePreviewPanelClick(event) {
+  if (editorShell.hidden || editorMode !== "split") return;
+
+  // Links and images do their own thing; a click on one is not a placement.
+  if (event.target.closest("a, img")) return;
+
+  const caret = getCaretPositionFromPoint(event.clientX, event.clientY);
+
+  // A click can land on a wrapper that carries no line of its own — the
+  // padding of a <pre> around the <code> that does, a list around its items.
+  // The caret still knows which text was nearest, so it decides those.
+  const element = event.target.closest("[data-source-line]")
+    || caret?.node.parentElement?.closest("[data-source-line]");
+
+  if (!element) return;
+
+  const caretInBlock = caret && element.contains(caret.node) ? caret : null;
+  const sourceLine = resolvePreviewSourceLine(element, caretInBlock);
+  const clickedRect = caretInBlock
+    ? getRectAtTextOffset(caretInBlock.node, caretInBlock.offset)
+    : null;
+  const anchorY = (clickedRect || element.getBoundingClientRect()).top;
+
+  // The left panel is the one that moves here, so nothing may schedule a
+  // scroll of the right panel on top of it.
+  window.clearTimeout(editorScrollTimer);
+
+  const cursorIndex = getLineStartIndex(sourceLine);
+
+  markdownInput.focus({ preventScroll: true });
+  markdownInput.setSelectionRange(cursorIndex, cursorIndex);
+
+  // setSelectionRange may have scrolled the caret into view, so the panel is
+  // positioned last.
+  const inset = getEditorContentInset();
+  const rect = markdownInput.getBoundingClientRect();
+  const wantedY = Math.min(Math.max(anchorY, rect.top), rect.bottom);
+
+  markdownInput.scrollTop = Math.max(0, getEditorLineTop(sourceLine) - (wantedY - inset));
 }
 
 function placeEditorCursorAtStart() {
@@ -3586,7 +3809,6 @@ function placeEditorCursorAtStart() {
   markdownInput.setSelectionRange(0, 0);
   markdownInput.scrollTop = 0;
   editorPreview.scrollTop = 0;
-  schedulePreviewCursorSync();
 }
 
 function updateFileSize(markdownText) {
@@ -4337,15 +4559,17 @@ markdownInput.addEventListener("input", () => {
   scheduleEditorPreview();
 });
 
-["click", "keyup", "select", "focus"].forEach((eventName) => {
-  markdownInput.addEventListener(eventName, schedulePreviewCursorSync);
-});
+/* The split editor's two panels, one listener each and nothing above them.
+ * Neither handler looks outside its own panel.
+ *
+ * The left panel listens for the two things that move the caret by hand. It
+ * deliberately does not listen for `focus` or `select`: both also fire when
+ * the right panel moves the caret programmatically, which would make a click
+ * in the preview immediately scroll the preview away again. */
+markdownInput.addEventListener("click", scheduleAlignPreviewToEditorCaret);
+markdownInput.addEventListener("keyup", scheduleAlignPreviewToEditorCaret);
 
-editorPreview.addEventListener("click", (event) => {
-  if (event.target.closest("a, img")) return;
-
-  moveEditorCursorToPreviewTarget(event.target);
-});
+editorPreview.addEventListener("click", handlePreviewPanelClick);
 
 topbarLockBtn.addEventListener("click", () => {
   setTopbarLocked(!document.body.classList.contains("topbar-locked"));
