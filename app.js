@@ -2103,7 +2103,7 @@ function sanitizeHtml(html) {
 
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ["target", "rel", "data-source-line", "tabindex", "aria-label", "aria-hidden"],
+    ADD_ATTR: ["target", "rel", "data-source-line", "data-doc-pos", "tabindex", "aria-label", "aria-hidden"],
     FORBID_TAGS: forbiddenContentTags,
     FORBID_ATTR: forbiddenContentAttributes,
   });
@@ -3763,6 +3763,173 @@ function resolvePreviewSourceLine(element, caret) {
   return Math.min(baseLine + breaksBefore, getPreviewBlockLastLine(element));
 }
 
+/* --- Right panel: resolving a click to an exact source offset ----------
+ *
+ * The render carries a document offset on every clickable run of text (see
+ * MDrender.js). What it cannot carry is the offset of a character INSIDE such
+ * a run, because the rendered text and the source text are not the same
+ * string: the typographer rewrites `--` to an en dash and `'` to a curly
+ * quote, an escape drops its backslash, an entity collapses to one character,
+ * and a code span's text starts after its backticks.
+ *
+ * So the run's start is known exactly and the rest is walked: step through the
+ * rendered text and the source together, and wherever they disagree, skip
+ * forward in the source until they line up again. Every divergence above is
+ * short and local, which is what makes a resync the right tool rather than a
+ * table of every substitution markdown-it might make.
+ *
+ * The result is checked before it is used. If the source at the computed
+ * offset does not actually begin with the text that was clicked, the offset
+ * is discarded and the caret falls back to the start of the line — the
+ * behaviour before any of this existed. Being coarse is fine; being confident
+ * and wrong is not.
+ */
+
+const resyncLimit = 32;
+
+function mapRenderedOffsetToSource(rendered, source, sourceStart, renderedOffset) {
+  let index = 0;
+  let cursor = sourceStart;
+
+  while (cursor < source.length) {
+    if (rendered[index] !== source[cursor]) {
+      let skip = 1;
+
+      while (skip <= resyncLimit && cursor + skip < source.length && source[cursor + skip] !== rendered[index]) {
+        skip += 1;
+      }
+
+      if (skip <= resyncLimit && cursor + skip < source.length) {
+        cursor += skip;
+      } else if (index >= renderedOffset) {
+        break;
+      } else {
+        // A rendered character with no source counterpart at all.
+        index += 1;
+        continue;
+      }
+    }
+
+    if (index >= renderedOffset) break;
+
+    index += 1;
+    cursor += 1;
+  }
+
+  return cursor;
+}
+
+/* A second, detached render of the whole document carrying the position
+ * spans. It is never inserted anywhere: it exists only to be measured, which
+ * is what keeps the spans out of what the reader and the block editor see.
+ * Built at most once per version of the text. */
+let positionIndex = null;
+let positionIndexText = null;
+
+function getPositionIndex() {
+  if (positionIndex && positionIndexText === markdownInput.value) return positionIndex;
+  if (!window.renderMarkdown) return null;
+
+  // Offsets are counted against a LF document, which is what a textarea holds
+  // and what markdown-it normalises to. A stray CR would shift every offset
+  // after it by one per line — plausibly enough to pass verification — so the
+  // index is simply not built. See project memory on line endings.
+  if (markdownInput.value.includes("\r")) return null;
+
+  try {
+    const root = document.createElement("div");
+
+    root.innerHTML = sanitizeHtml(window.renderMarkdown(markdownInput.value, { emitPositions: true }));
+
+    // The index is only meaningful if it is the same text the reader sees. A
+    // render step that changes the preview's text without changing this would
+    // silently shift every offset, so the two are compared rather than
+    // assumed equal.
+    if (root.textContent !== editorPreview.textContent) return null;
+
+    positionIndex = root;
+    positionIndexText = markdownInput.value;
+
+    return positionIndex;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+/** How much rendered text precedes a point, counted over the whole preview. */
+function getRenderedOffsetBefore(node, offset) {
+  const range = document.createRange();
+
+  range.selectNodeContents(editorPreview);
+
+  try {
+    range.setEnd(node, offset);
+  } catch (error) {
+    return null;
+  }
+
+  return range.toString().length;
+}
+
+/** The exact source offset a click landed on, or null if it cannot be trusted. */
+function resolveClickedSourceOffset(caret) {
+  if (!caret) return null;
+
+  const renderedOffset = getRenderedOffsetBefore(caret.node, caret.offset);
+
+  if (renderedOffset === null) return null;
+
+  const root = getPositionIndex();
+
+  if (!root) return null;
+
+  // Walk the index to the same rendered offset and see which run it lands in.
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let seen = 0;
+  let node = walker.nextNode();
+
+  while (node) {
+    const length = (node.nodeValue || "").length;
+
+    if (seen + length >= renderedOffset) {
+      const span = node.parentElement?.closest("[data-doc-pos]");
+
+      if (!span) return null;
+
+      const docPos = Number(span.dataset.docPos);
+
+      if (!Number.isFinite(docPos)) return null;
+
+      // Where the click sits inside this run.
+      const runRange = document.createRange();
+
+      runRange.selectNodeContents(span);
+      runRange.setEnd(node, renderedOffset - seen);
+
+      const withinRun = runRange.toString().length;
+      const runText = span.textContent || "";
+      const offset = mapRenderedOffsetToSource(runText, markdownInput.value, docPos, withinRun);
+
+      // Verify before trusting: the source at the computed offset must
+      // actually begin with the text that was clicked. The probe is the
+      // leading run of plain characters, which the typographer cannot have
+      // rewritten, so a mismatch means a real miss rather than a smart quote.
+      // Bare URLs and link titles are the known cases that land here.
+      const probe = /^[A-Za-z0-9]{2,8}/.exec(runText.slice(withinRun))?.[0];
+
+      if (probe && !markdownInput.value.startsWith(probe, offset)) return null;
+
+      return offset;
+    }
+
+    seen += length;
+    node = walker.nextNode();
+  }
+
+  return null;
+}
+
 function handlePreviewPanelClick(event) {
   if (editorShell.hidden || editorMode !== "split") return;
 
@@ -3790,7 +3957,10 @@ function handlePreviewPanelClick(event) {
   // scroll of the right panel on top of it.
   window.clearTimeout(editorScrollTimer);
 
-  const cursorIndex = getLineStartIndex(sourceLine);
+  // The exact character where possible, the start of the line when not.
+  const exactIndex = resolveClickedSourceOffset(caretInBlock);
+  const lineStartIndex = getLineStartIndex(sourceLine);
+  const cursorIndex = exactIndex === null ? lineStartIndex : exactIndex;
 
   markdownInput.focus({ preventScroll: true });
   markdownInput.setSelectionRange(cursorIndex, cursorIndex);
@@ -3801,6 +3971,8 @@ function handlePreviewPanelClick(event) {
   const rect = markdownInput.getBoundingClientRect();
   const wantedY = Math.min(Math.max(anchorY, rect.top), rect.bottom);
 
+  // Alignment stays line-based: the caret may now sit mid-line, but what is
+  // lined up between the panels is still the top of the line it is on.
   markdownInput.scrollTop = Math.max(0, getEditorLineTop(sourceLine) - (wantedY - inset));
 }
 
