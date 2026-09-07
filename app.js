@@ -68,6 +68,7 @@ const tocSection = document.getElementById("tocSection");
 const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
+const folderHeading = document.getElementById("folderHeading");
 const editorModeSelect = document.getElementById("editorModeSelect");
 const modeMenuLabel = document.getElementById("modeMenuLabel");
 
@@ -129,8 +130,13 @@ const maxFolderEntries = 5000;
 const maxFolderDepth = 12;
 const maxHydratedImages = 300;
 
+// Folder mode is lazy: only the folder you opened, plus the folders you have
+// since expanded, are ever read. `folderFiles` is therefore a cache of the
+// handles we happen to have resolved, never a complete index of the tree.
 let folderFiles = new Map();
 let markdownFiles = [];
+let folderTree = null;
+let expandedFolders = new Set();
 let objectUrls = [];
 let currentFile = null;
 let currentFileHandle = null;
@@ -2547,7 +2553,7 @@ function resetRemoteContentPolicy() {
 }
 
 async function hydrateLocalImages(root, context) {
-  if (!context?.path || !folderFiles.size) return;
+  if (!context?.path || !currentDirectoryHandle) return;
 
   const images = [...root.querySelectorAll("img[src]")];
 
@@ -2562,9 +2568,12 @@ async function hydrateLocalImages(root, context) {
       if (!src || externalUrlPattern.test(src)) return;
 
       const imagePath = resolveRelativePath(context.path, src);
-      const handle = folderFiles.get(imagePath);
 
-      if (!handle || !imageFilePattern.test(imagePath)) return;
+      if (!imageFilePattern.test(imagePath)) return;
+
+      const handle = await resolveHandleByPath(imagePath);
+
+      if (!handle) return;
 
       try {
         const file = await handle.getFile();
@@ -2699,7 +2708,7 @@ window.addEventListener("afterprint", () => {
 });
 
 function wireLocalMarkdownLinks(context, root = reader) {
-  if (!context?.path || !markdownFiles.length) return;
+  if (!context?.path || !currentDirectoryHandle) return;
 
   [...root.querySelectorAll("a[href]")].forEach((link) => {
     const href = link.getAttribute("href");
@@ -2707,9 +2716,12 @@ function wireLocalMarkdownLinks(context, root = reader) {
     if (!href || externalUrlPattern.test(href)) return;
 
     const targetPath = resolveRelativePath(context.path, href);
-    const targetExists = markdownFiles.some((entry) => entry.path === targetPath);
 
-    if (!targetExists) return;
+    // The tree is lazy, so we cannot know whether the target exists without
+    // touching the disk. Wiring the link and letting the open report a miss
+    // beats leaving a valid link dead because its folder happens to be
+    // collapsed.
+    if (!markdownFilePattern.test(targetPath)) return;
 
     const { fragment } = splitLocalHref(href);
 
@@ -4661,6 +4673,8 @@ function clearFolderMode() {
   currentFolderPath = "";
   folderFiles = new Map();
   markdownFiles = [];
+  folderTree = null;
+  expandedFolders = new Set();
   folderNav.innerHTML = "";
   folderSection.hidden = true;
   refreshFolderBtn.disabled = true;
@@ -4764,61 +4778,281 @@ async function openFile() {
   }
 }
 
-async function scanDirectory(directoryHandle, basePath = "", depth = 0) {
-  if (depth > maxFolderDepth) {
-    console.warn(`Skipping "${basePath}": deeper than ${maxFolderDepth} levels.`);
-    return;
-  }
+/**
+ * Reads ONE level of a folder: its subfolders and the markdown files sitting
+ * directly inside it.
+ *
+ * Deliberately not recursive. The old scan walked the whole tree up front,
+ * counted every file it met - images, node_modules, everything - against one
+ * shared budget, and did it depth-first. A single large subfolder could
+ * therefore exhaust the budget before the scan came back to the markdown in
+ * the folder you actually opened. Reading one level at a time removes both
+ * problems: what you opened is listed in full and immediately, and nothing
+ * deeper is touched until you expand it.
+ */
+async function loadFolderNode(node) {
+  if (node.kind !== "dir" || node.loaded) return;
 
-  for await (const [name, handle] of directoryHandle.entries()) {
-    if (folderFiles.size >= maxFolderEntries) {
-      setStatus(`Folder listing stopped at ${maxFolderEntries} files`);
-      return;
+  const directories = [];
+  const files = [];
+  let seen = 0;
+  let truncated = false;
+
+  for await (const [name, handle] of node.handle.entries()) {
+    if (++seen > maxFolderEntries) {
+      truncated = true;
+      break;
     }
 
-    const path = basePath ? `${basePath}/${name}` : name;
+    const path = normalizePath(node.path ? `${node.path}/${name}` : name);
 
     if (handle.kind === "directory") {
-      await scanDirectory(handle, path, depth + 1);
+      directories.push({
+        name,
+        path,
+        handle,
+        kind: "dir",
+        depth: node.depth + 1,
+        children: null,
+        loaded: false,
+        truncated: false,
+      });
       continue;
     }
 
     if (handle.kind !== "file") continue;
 
-    const normalizedPath = normalizePath(path);
-    folderFiles.set(normalizedPath, handle);
+    folderFiles.set(path, handle);
 
-    if (markdownFilePattern.test(name)) {
-      markdownFiles.push({ name, path: normalizedPath, handle });
+    if (!markdownFilePattern.test(name)) continue;
+
+    files.push({ name, path, handle, kind: "file", depth: node.depth + 1 });
+
+    if (!markdownFiles.some((entry) => entry.path === path)) {
+      markdownFiles.push({ name, path, handle });
     }
   }
+
+  const byName = (a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+
+  files.sort(byName);
+  directories.sort(byName);
+
+  // Files before folders: the folder you opened is the one you meant, so what
+  // is directly in it must never sit below a list of subfolders to scroll past.
+  node.children = [...files, ...directories];
+  node.loaded = true;
+  node.truncated = truncated;
+
+  if (truncated) {
+    setStatus(`"${node.name}" listing stopped at ${maxFolderEntries} entries`);
+  }
+}
+
+/**
+ * Walks the open folder to find a file the tree has not listed yet.
+ *
+ * With a lazy tree there is no complete index to look a path up in, so a
+ * relative image, or a link into a folder that was never expanded, is resolved
+ * against the disk on demand and then cached. A miss is a normal outcome here,
+ * not an error.
+ */
+async function resolveHandleByPath(path) {
+  const normalized = normalizePath(path);
+
+  if (!normalized || !currentDirectoryHandle) return null;
+
+  const cached = folderFiles.get(normalized);
+  if (cached) return cached;
+
+  const segments = normalized.split("/");
+  const fileName = segments.pop();
+  let directory = currentDirectoryHandle;
+
+  try {
+    for (const segment of segments) {
+      directory = await directory.getDirectoryHandle(segment);
+    }
+
+    const handle = await directory.getFileHandle(fileName);
+    folderFiles.set(normalized, handle);
+    return handle;
+  } catch {
+    return null;
+  }
+}
+
+/** Loads and expands every folder along `dirPath`, returning the deepest node. */
+async function expandFolderPath(dirPath) {
+  if (!folderTree) return null;
+
+  const segments = normalizePath(dirPath).split("/").filter(Boolean);
+  let node = folderTree;
+
+  for (const segment of segments) {
+    if (!node.loaded) await loadFolderNode(node);
+
+    const next = (node.children || []).find(
+      (child) => child.kind === "dir" && child.name === segment,
+    );
+
+    if (!next) return null;
+
+    expandedFolders.add(next.path);
+    node = next;
+  }
+
+  if (!node.loaded) await loadFolderNode(node);
+
+  return node;
+}
+
+async function toggleFolderNode(entry) {
+  if (expandedFolders.has(entry.path)) {
+    expandedFolders.delete(entry.path);
+    renderFolderNav();
+    setActiveFolderItem(currentFolderPath);
+    return;
+  }
+
+  if (entry.depth > maxFolderDepth) {
+    setStatus(`Folders deeper than ${maxFolderDepth} levels are not listed`);
+    return;
+  }
+
+  if (!entry.loaded) {
+    setStatus(`Reading "${entry.name}"...`);
+    await loadFolderNode(entry);
+    if (!entry.truncated) setStatus("Ready");
+  }
+
+  expandedFolders.add(entry.path);
+  renderFolderNav();
+  setActiveFolderItem(currentFolderPath);
 }
 
 function renderFolderNav() {
   folderNav.innerHTML = "";
 
-  markdownFiles.forEach((entry) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "folder-item";
-    button.textContent = entry.path;
-    button.dataset.path = entry.path;
-    button.addEventListener("click", () => openFolderMarkdown(entry.path));
-    folderNav.appendChild(button);
+  if (!folderTree) {
+    folderSection.hidden = true;
+    folderHeading.textContent = "Folder";
+    return;
+  }
+
+  folderSection.hidden = false;
+  // The heading names the folder you opened. Once a file is open the File line
+  // shows its path, so without this the folder's own name is nowhere on screen.
+  folderHeading.textContent = folderTree.name || "Folder";
+  folderNav.appendChild(renderFolderChildren(folderTree));
+}
+
+function renderFolderChildren(node) {
+  const list = document.createElement("div");
+  list.className = "folder-children";
+  list.setAttribute("role", "group");
+
+  (node.children || []).forEach((child) => {
+    list.appendChild(
+      child.kind === "dir" ? renderFolderDirectory(child) : renderFolderFile(child),
+    );
   });
 
-  folderSection.hidden = markdownFiles.length === 0;
+  if (node.loaded && !(node.children || []).length) {
+    const empty = document.createElement("p");
+    empty.className = "folder-empty";
+    empty.style.setProperty("--depth", String(node.depth + 1));
+    empty.textContent = "No markdown files";
+    list.appendChild(empty);
+  }
+
+  return list;
+}
+
+/** The fixed-width gutter that keeps labels aligned whether or not there is a triangle. */
+function folderTwisty(glyph) {
+  const twisty = document.createElement("span");
+  twisty.className = "folder-twisty";
+  twisty.setAttribute("aria-hidden", "true");
+  twisty.textContent = glyph;
+  return twisty;
+}
+
+function folderLabel(text) {
+  const label = document.createElement("span");
+  label.className = "folder-label";
+  label.textContent = text;
+  return label;
+}
+
+function renderFolderFile(entry) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "folder-item folder-file";
+  button.setAttribute("role", "treeitem");
+  button.style.setProperty("--depth", String(entry.depth));
+  button.dataset.path = entry.path;
+  button.title = entry.path;
+  button.append(folderTwisty(""), folderLabel(entry.name));
+  button.addEventListener("click", () => {
+    openFolderMarkdown(entry.path);
+  });
+  return button;
+}
+
+function renderFolderDirectory(entry) {
+  const group = document.createElement("div");
+  group.className = "folder-group";
+
+  const expanded = expandedFolders.has(entry.path);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "folder-item folder-dir";
+  button.setAttribute("role", "treeitem");
+  button.setAttribute("aria-expanded", expanded ? "true" : "false");
+  button.style.setProperty("--depth", String(entry.depth));
+  button.dataset.folder = entry.path;
+  button.title = entry.path;
+  button.append(folderTwisty("\u25B8"), folderLabel(entry.name));
+  button.addEventListener("click", () => {
+    toggleFolderNode(entry).catch((error) => {
+      console.error(error);
+      setStatus(`Could not read "${entry.name}"`);
+    });
+  });
+
+  group.appendChild(button);
+
+  if (expanded) group.appendChild(renderFolderChildren(entry));
+
+  return group;
 }
 
 function setActiveFolderItem(path) {
-  [...folderNav.querySelectorAll(".folder-item")].forEach((button) => {
+  [...folderNav.querySelectorAll(".folder-file")].forEach((button) => {
     button.classList.toggle("is-active", button.dataset.path === path);
   });
 }
 
 async function openFolderMarkdown(path, { fragment = "", alreadyGuarded = false } = {}) {
-  const entry = markdownFiles.find((file) => file.path === path);
-  if (!entry) return;
+  const normalized = normalizePath(path);
+  let entry = markdownFiles.find((file) => file.path === normalized);
+
+  // A miss means "not listed yet", not "not there": the target may sit in a
+  // folder nobody has expanded.
+  if (!entry) {
+    const handle = await resolveHandleByPath(normalized);
+
+    if (!handle) {
+      setStatus(`Not found in this folder: ${normalized}`);
+      return;
+    }
+
+    entry = { name: normalized.split("/").pop(), path: normalized, handle };
+    markdownFiles.push(entry);
+  }
 
   if (!alreadyGuarded && !(await confirmDiscardUnsavedChanges(`Opening ${entry.name}`))) return;
 
@@ -4828,12 +5062,14 @@ async function openFolderMarkdown(path, { fragment = "", alreadyGuarded = false 
 
   currentFile = null;
   currentFileHandle = null;
-  currentFolderPath = path;
+  currentFolderPath = normalized;
   currentMode = "folder";
   currentDownloadName = entry.name;
   setEncryptedDocumentState();
   resetRemoteContentPolicy();
-  setActiveFolderItem(path);
+  await expandFolderPath(dirname(normalized));
+  renderFolderNav();
+  setActiveFolderItem(normalized);
   setStatus("Reading...");
 
   try {
@@ -4861,6 +5097,19 @@ async function openFolderMarkdown(path, { fragment = "", alreadyGuarded = false 
   }
 }
 
+function createFolderTree(directoryHandle) {
+  return {
+    name: directoryHandle.name,
+    path: "",
+    handle: directoryHandle,
+    kind: "dir",
+    depth: 0,
+    children: null,
+    loaded: false,
+    truncated: false,
+  };
+}
+
 async function openFolder() {
   if (!(await confirmDiscardUnsavedChanges("Opening another folder"))) return;
 
@@ -4882,27 +5131,41 @@ async function openFolder() {
     currentMode = "folder";
     folderFiles = new Map();
     markdownFiles = [];
+    expandedFolders = new Set();
+    folderTree = createFolderTree(directoryHandle);
     refreshFileBtn.disabled = true;
     refreshFolderBtn.disabled = true;
     fileNameEl.textContent = directoryHandle.name;
     fileSizeEl.textContent = "Folder";
-    setStatus("Scanning folder...");
+    setStatus("Reading folder...");
 
-    await scanDirectory(directoryHandle);
-    markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
+    await loadFolderNode(folderTree);
     renderFolderNav();
     refreshFolderBtn.disabled = false;
     updateRevealControl();
 
-    if (!markdownFiles.length) {
+    const firstFile = (folderTree.children || []).find((child) => child.kind === "file");
+
+    if (!firstFile) {
       currentFolderPath = "";
       refreshFileBtn.disabled = true;
-      showError("This folder does not contain markdown files.");
-      setStatus("No markdown files");
+
+      // Not an error any more. With a lazy tree "no markdown" is a statement
+      // about this one folder, and its subfolders are sitting in the sidebar
+      // waiting to be opened.
+      if ((folderTree.children || []).length) {
+        showEmpty();
+        currentMode = "folder";
+        setStatus("No markdown here - open a subfolder");
+        return;
+      }
+
+      showError("This folder is empty.");
+      setStatus("Empty folder");
       return;
     }
 
-    await openFolderMarkdown(markdownFiles[0].path, { alreadyGuarded: true });
+    await openFolderMarkdown(firstFile.path, { alreadyGuarded: true });
   } catch (error) {
     if (error.name === "AbortError") {
       setStatus("Ready");
@@ -4942,31 +5205,46 @@ async function refreshCurrentFolder() {
   if (!(await confirmDiscardUnsavedChanges("Rescanning the folder"))) return;
 
   const pathToReopen = currentFolderPath;
+  const wasExpanded = [...expandedFolders];
   setStatus("Refreshing folder...");
 
   try {
     clearObjectUrls();
     folderFiles = new Map();
     markdownFiles = [];
+    expandedFolders = new Set();
     folderNav.innerHTML = "";
+    folderTree = createFolderTree(currentDirectoryHandle);
 
-    await scanDirectory(currentDirectoryHandle);
-    markdownFiles.sort((a, b) => a.path.localeCompare(b.path));
+    await loadFolderNode(folderTree);
+
+    // Re-read exactly the folders that were open before, shallowest first, so
+    // a refresh does not silently collapse the tree back to its root. A folder
+    // that has since been deleted simply fails to re-expand.
+    wasExpanded.sort((a, b) => a.split("/").length - b.split("/").length);
+
+    for (const path of wasExpanded) {
+      await expandFolderPath(path);
+    }
+
     renderFolderNav();
     refreshFolderBtn.disabled = false;
 
-    if (!markdownFiles.length) {
-      currentFolderPath = "";
-      refreshFileBtn.disabled = true;
-      showError("This folder does not contain markdown files.");
-      setStatus("No markdown files");
+    if (pathToReopen && (await resolveHandleByPath(pathToReopen))) {
+      await openFolderMarkdown(pathToReopen, { alreadyGuarded: true });
       return;
     }
 
-    const nextPath = markdownFiles.some((entry) => entry.path === pathToReopen)
-      ? pathToReopen
-      : markdownFiles[0].path;
-    await openFolderMarkdown(nextPath, { alreadyGuarded: true });
+    const firstFile = (folderTree.children || []).find((child) => child.kind === "file");
+
+    if (!firstFile) {
+      currentFolderPath = "";
+      refreshFileBtn.disabled = true;
+      setStatus("No markdown here - open a subfolder");
+      return;
+    }
+
+    await openFolderMarkdown(firstFile.path, { alreadyGuarded: true });
   } catch (error) {
     console.error(error);
     showError(error.message || "Could not refresh this folder.");

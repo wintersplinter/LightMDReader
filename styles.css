@@ -201,7 +201,7 @@ body.topbar-locked .layout {
 }
 #quickSaveBtn .save-glyph {
   display: inline-block;
-  transform: rotate(00deg);
+  /* transform: rotate(00deg); */
   font-size: 1.05em;
   line-height: 1;
 }
@@ -364,36 +364,92 @@ body.topbar-locked .sidebar-inner {
   font-size: 12px;
 }
 
+/* The folder tree. Depth is carried by a `--depth` custom property set on
+   each row rather than by nesting padding on the containers, so a row's
+   indentation does not depend on how the wrappers around it are built. */
 .folder-nav {
-  display: grid;
-  gap: 4px;
+  display: block;
   margin-bottom: 16px;
 }
 
+.folder-children {
+  display: grid;
+  gap: 2px;
+}
+
 .folder-item {
+  --depth: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   width: 100%;
   min-width: 0;
-  padding: 7px 8px;
-  border: 1px solid transparent;
+  padding: 5px 7px;
+  padding-left: calc(7px + var(--depth) * 12px);
+  border: 0;
+  border-left: 2px solid transparent;
   border-radius: 0;
   background: transparent;
   color: var(--text);
   cursor: pointer;
   font: inherit;
+  font-size: 13px;
+  line-height: 1.25;
   text-align: left;
-  overflow-wrap: anywhere;
 }
 
 .folder-item:hover,
 .folder-item:focus {
-  border-color: var(--line);
+  border-left-color: var(--accent);
   background: var(--btn2);
+  color: var(--accent);
   outline: none;
 }
 
-.folder-item.is-active {
-  border-color: var(--accent);
+.folder-dir {
+  color: var(--muted);
+}
+
+/* A fixed-width gutter, empty on files, so a file and the folder beside it
+   sit at the same indent instead of the triangle shunting folders right. */
+.folder-twisty {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+  transition: transform 0.12s ease;
+}
+
+.folder-dir[aria-expanded="true"] .folder-twisty {
+  transform: rotate(90deg);
+}
+
+.folder-item:hover .folder-twisty,
+.folder-item:focus .folder-twisty {
   color: var(--accent);
+}
+
+.folder-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-file.is-active {
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+
+.folder-empty {
+  --depth: 0;
+  margin: 2px 0;
+  padding: 5px 7px;
+  padding-left: calc(7px + var(--depth) * 12px + 14px);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .content {
