@@ -71,6 +71,21 @@
           &#x1F5C1;&#xFE0E;
         </button>
 
+        <!-- Save is the one file action worth a click of its own: the copy in
+             the File menu stays, this is the shortcut to it. Same handler,
+             same disabled state, and the unsaved dot comes from
+             body.has-unsaved-changes in CSS. -->
+        <button
+          id="quickSaveBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-label="Save to the original file"
+          title="Save to the original file"
+          disabled
+        >
+          <span class="save-glyph" aria-hidden="true">&#x1F4BE;&#xFE0E;</span>
+        </button>
+
         <span class="actions-sep" aria-hidden="true"></span>
 
         <!-- Everything that touches the file lives in one place. -->
@@ -101,21 +116,6 @@
             <button id="exportBtn" class="menu-item" type="button" role="menuitem" disabled>Export as PDF</button>
           </div>
         </div>
-
-        <!-- Save is the one file action worth a click of its own: the copy in
-             the File menu stays, this is the shortcut to it. Same handler,
-             same disabled state, and the unsaved dot comes from
-             body.has-unsaved-changes in CSS. -->
-        <button
-          id="quickSaveBtn"
-          class="btn icon-btn"
-          type="button"
-          aria-label="Save to the original file"
-          title="Save to the original file"
-          disabled
-        >
-          <span class="save-glyph" aria-hidden="true">&#x1F4BE;&#xFE0E;</span>
-        </button>
 
         <button id="cheatsheetBtn" class="btn secondary" type="button">Cheatsheet</button>
 

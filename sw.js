@@ -1,4 +1,4 @@
-const VERSION = "v4-4-0";
+const VERSION = "v4-4-1";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;
@@ -103,9 +103,7 @@ async function trimRuntimeCache(cache) {
 
   if (evictable.length <= RUNTIME_CACHE_LIMIT) return;
 
-  await Promise.all(
-    evictable.slice(0, evictable.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)),
-  );
+  await Promise.all(evictable.slice(0, evictable.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)));
 }
 
 async function fetchAndCache(request) {
