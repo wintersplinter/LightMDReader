@@ -44,6 +44,12 @@ const quickSaveBtn = document.getElementById("quickSaveBtn");
 const encryptionBtn = document.getElementById("encryptionBtn");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
 const revealBtn = document.getElementById("revealBtn");
+const revealLabel = document.getElementById("revealLabel");
+const sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
+const sidebar = document.getElementById("sidebar");
+const sidebarResizer = document.getElementById("sidebarResizer");
+const recentSection = document.getElementById("recentSection");
+const recentList = document.getElementById("recentList");
 const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
@@ -931,46 +937,36 @@ function updateSaveControls() {
 }
 
 /**
- * Opens the operating system's file dialog already sitting in the folder the
- * open document came from.
+ * The folder button does two jobs with one click, because they turned out to
+ * be the same job.
  *
- * This is as close to "show in Explorer" as a web page can get. A page cannot
- * launch Explorer, and the File System Access API deliberately never exposes an
- * absolute path: a handle knows its own name and nothing about the drive or the
- * directories above it. What the API does offer is `startIn`, which accepts a
- * handle and opens the picker there, so one click lands the user in the right
- * folder with the OS's own copy-path and open-location commands to hand.
- *
- * The picker is opened read-only and its result is discarded on purpose. This
- * button navigates; it never changes which document is open.
+ * It *says* where you are: the button carries the name of the open folder.
+ * That name is the whole of what a page may know about its location — the
+ * File System Access API deliberately never exposes an absolute path, and a
+ * handle knows what it is called and nothing about the drive or the
+ * directories above it. Showing the name alone was read as decoration, so the
+ * button now also *goes* there: it opens the folder picker with `startIn` set
+ * to the current handle, which lands the user in the right directory with the
+ * OS's own copy-path and open-location commands to hand — and, unlike before,
+ * a folder they pick is actually opened.
  */
-async function revealCurrentLocation() {
-  const startIn = currentDirectoryHandle || currentFileHandle;
-
-  if (!startIn || !window.showOpenFilePicker) return;
-
-  try {
-    await window.showOpenFilePicker({ startIn, multiple: false });
-    setStatus("Ready");
-  } catch (error) {
-    // Dismissing the dialog is the normal way to use this button.
-    if (error.name === "AbortError") {
-      setStatus("Ready");
-      return;
-    }
-
-    console.error(error);
-    setStatus(error.message || "Could not open the folder");
-  }
-}
-
 function updateRevealControl() {
-  const target = currentDirectoryHandle || currentFileHandle;
-  const isFolder = Boolean(currentDirectoryHandle);
+  const supported = Boolean(window.showDirectoryPicker);
+  const folderName = currentDirectoryHandle ? currentDirectoryHandle.name : "";
 
-  revealBtn.disabled = !target || !window.showOpenFilePicker;
-  revealBtn.setAttribute("aria-label", isFolder ? "Show folder" : "Show file location");
-  revealBtn.title = isFolder ? "Show folder" : "Show file location";
+  revealBtn.disabled = !supported;
+
+  // In folder mode the button names where you are. In single-file mode nothing
+  // above the file is knowable, so it falls back to naming its own action
+  // rather than inventing a location.
+  revealLabel.textContent = folderName || "Open folder";
+
+  revealBtn.title = !supported
+    ? "Opening a folder needs a Chromium-based browser"
+    : folderName
+      ? `Open a folder \u2014 currently in ${folderName}`
+      : "Open a folder";
+  revealBtn.setAttribute("aria-label", revealBtn.title);
 }
 
 /**
@@ -1539,6 +1535,135 @@ setTopbarLocked(localStorage.getItem("lightmdreader-topbar-locked") === "true");
 
 window.addEventListener("resize", updateTopbarOffset);
 window.addEventListener("load", updateTopbarOffset);
+
+/* --------------------------------------------------------------------------
+   Sidebar width and visibility
+
+   The panel used to be a hard 280px column. It now has a drag handle and a
+   toggle, both remembered, because how much room a table of contents deserves
+   depends on the document: a flat README wants none, a 121-heading spec wants
+   a third of the screen.
+
+   The width lives in a CSS variable on <html> rather than an inline style on
+   the grid, so the whole cascade can read it and nothing has to know which
+   element the layout happens to be.
+   -------------------------------------------------------------------------- */
+
+const SIDEBAR_WIDTH_KEY = "lightmdreader-sidebar-width";
+const SIDEBAR_HIDDEN_KEY = "lightmdreader-sidebar-hidden";
+const SIDEBAR_DEFAULT_WIDTH = 280;
+
+/* Below the minimum the folder tree stops being readable and the panel is
+   worse than hidden; above the maximum the document is the guest. Both are
+   also the resizer's announced aria-valuemin/max in index.html. */
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 560;
+
+/* A drag may not squeeze the document to nothing on a small screen, so the
+   real ceiling is whichever is smaller: the fixed maximum, or half the window. */
+function sidebarMaxWidth() {
+  return Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, Math.round(window.innerWidth / 2)));
+}
+
+function clampSidebarWidth(width) {
+  if (!Number.isFinite(width)) return SIDEBAR_DEFAULT_WIDTH;
+
+  return Math.round(Math.min(Math.max(width, SIDEBAR_MIN_WIDTH), sidebarMaxWidth()));
+}
+
+function setSidebarWidth(width, { remember = true } = {}) {
+  const next = clampSidebarWidth(width);
+
+  document.documentElement.style.setProperty("--sidebar-width", `${next}px`);
+  sidebarResizer.setAttribute("aria-valuenow", String(next));
+
+  if (remember) localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next));
+
+  return next;
+}
+
+function currentSidebarWidth() {
+  return Number(sidebarResizer.getAttribute("aria-valuenow")) || SIDEBAR_DEFAULT_WIDTH;
+}
+
+function setSidebarHidden(isHidden) {
+  document.body.classList.toggle("sidebar-hidden", isHidden);
+  localStorage.setItem(SIDEBAR_HIDDEN_KEY, isHidden ? "true" : "false");
+
+  sidebarToggleBtn.innerHTML = isHidden ? "&#x25E8;&#xFE0E;" : "&#x25E7;&#xFE0E;";
+  sidebarToggleBtn.setAttribute("aria-pressed", String(isHidden));
+  sidebarToggleBtn.title = isHidden ? "Show sidebar" : "Hide sidebar";
+  sidebarToggleBtn.setAttribute("aria-label", sidebarToggleBtn.title);
+}
+
+sidebarToggleBtn.addEventListener("click", () => {
+  setSidebarHidden(!document.body.classList.contains("sidebar-hidden"));
+});
+
+/* Pointer events rather than mouse events: one code path covers a mouse, a
+   trackpad and a pen, and setPointerCapture keeps the drag alive when the
+   pointer runs ahead of the handle or leaves the window entirely. */
+sidebarResizer.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return;
+
+  event.preventDefault();
+  sidebarResizer.setPointerCapture(event.pointerId);
+  document.body.classList.add("sidebar-resizing");
+
+  const startX = event.clientX;
+  const startWidth = currentSidebarWidth();
+
+  const onMove = (moveEvent) => {
+    setSidebarWidth(startWidth + (moveEvent.clientX - startX), { remember: false });
+  };
+
+  const onEnd = () => {
+    sidebarResizer.removeEventListener("pointermove", onMove);
+    document.body.classList.remove("sidebar-resizing");
+
+    // Written once, at the end. Persisting on every pointermove would put a
+    // few hundred writes through localStorage for one drag.
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(currentSidebarWidth()));
+  };
+
+  sidebarResizer.addEventListener("pointermove", onMove);
+  sidebarResizer.addEventListener("pointerup", onEnd, { once: true });
+  sidebarResizer.addEventListener("pointercancel", onEnd, { once: true });
+});
+
+/* Double-click resets, the same gesture that resets a split in most editors. */
+sidebarResizer.addEventListener("dblclick", () => {
+  setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+});
+
+sidebarResizer.addEventListener("keydown", (event) => {
+  const step = event.shiftKey ? 40 : 10;
+  const width = currentSidebarWidth();
+
+  if (event.key === "ArrowLeft") setSidebarWidth(width - step);
+  else if (event.key === "ArrowRight") setSidebarWidth(width + step);
+  else if (event.key === "Home") setSidebarWidth(SIDEBAR_MIN_WIDTH);
+  else if (event.key === "End") setSidebarWidth(sidebarMaxWidth());
+  else if (event.key === "Enter" || event.key === " ") setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+  else return;
+
+  event.preventDefault();
+});
+
+/* A window narrowed since the width was stored can leave the sidebar taking
+   more than half the screen, so the ceiling is re-applied on resize. The
+   stored preference is left alone: widening the window restores it. */
+window.addEventListener("resize", () => {
+  const width = currentSidebarWidth();
+  const max = sidebarMaxWidth();
+
+  if (width > max) setSidebarWidth(max, { remember: false });
+});
+
+setSidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT_WIDTH, {
+  remember: false,
+});
+setSidebarHidden(localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "true");
 /**
  * A new service worker version activating reloads the page, which would throw
  * away whatever is in the editor. Updates therefore wait until the document is
@@ -1648,6 +1773,229 @@ function waitForMarkdownRenderer() {
   });
 }
 
+/* --------------------------------------------------------------------------
+   Recent files and folders
+
+   The empty state used to be a dead end: whatever you had open before the tab
+   closed, you had to find again in the picker. It now lists the last five.
+
+   The handles themselves are stored, not paths, because a page never learns a
+   path. FileSystemHandles are structured-clonable, so IndexedDB can hold them
+   across sessions — localStorage cannot, it is strings only.
+
+   Two consequences worth knowing before changing any of this:
+
+   - A stored handle keeps its identity but not its permission. Reading it
+     again needs requestPermission(), which needs a user gesture, which is why
+     every entry is a button. Nothing here can restore a document on load, and
+     that is a browser rule, not a decision that can be revisited.
+   - Only handles are rememberable. A file that arrived by drag-and-drop or
+     through the <input type="file"> fallback has no handle behind it, so it
+     cannot appear here. Chromium's DataTransferItem.getAsFileSystemHandle()
+     would fix that for drops, if it ever seems worth it.
+   -------------------------------------------------------------------------- */
+
+const RECENT_DB_NAME = "lightmdreader-recents";
+const RECENT_STORE = "handles";
+const RECENT_LIMIT = 5;
+
+let recentDbPromise = null;
+
+function openRecentDb() {
+  if (recentDbPromise) return recentDbPromise;
+
+  recentDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(RECENT_DB_NAME, 1);
+
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(RECENT_STORE)) {
+        request.result.createObjectStore(RECENT_STORE, { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  return recentDbPromise;
+}
+
+function readRecents() {
+  return openRecentDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const request = db.transaction(RECENT_STORE, "readonly").objectStore(RECENT_STORE).getAll();
+
+        request.onsuccess = () => resolve((request.result || []).sort((a, b) => b.openedAt - a.openedAt));
+        request.onerror = () => reject(request.error);
+      }),
+  );
+}
+
+/* The whole list is five rows, so it is rewritten wholesale rather than
+   maintained in place. One transaction, no ordering to keep straight. */
+function writeRecents(entries) {
+  return openRecentDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(RECENT_STORE, "readwrite");
+        const store = tx.objectStore(RECENT_STORE);
+
+        store.clear();
+        entries.forEach((entry) => store.put(entry));
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      }),
+  );
+}
+
+/**
+ * Moves a handle to the top of the list.
+ *
+ * Duplicates are found with isSameEntry, the only honest comparison there is:
+ * two handles with the same name can be different folders, and one folder can
+ * be held by two handles that are not the same object.
+ */
+async function rememberRecent(handle, kind) {
+  if (!handle || !window.indexedDB) return;
+
+  try {
+    const existing = await readRecents();
+    const kept = [];
+
+    for (const entry of existing) {
+      if (entry.kind === kind) {
+        const same = await handle.isSameEntry(entry.handle).catch(() => false);
+        if (same) continue;
+      }
+
+      kept.push(entry);
+    }
+
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      name: handle.name,
+      kind,
+      handle,
+      openedAt: Date.now(),
+    };
+
+    await writeRecents([entry, ...kept].slice(0, RECENT_LIMIT));
+  } catch (error) {
+    // A private window can refuse IndexedDB outright. The list is a
+    // convenience; nothing else in the app should notice it is missing.
+    console.warn("Could not record this in the recent list.", error);
+  }
+}
+
+async function forgetRecent(id) {
+  try {
+    const entries = await readRecents();
+    await writeRecents(entries.filter((entry) => entry.id !== id));
+  } catch (error) {
+    console.warn("Could not update the recent list.", error);
+  }
+}
+
+async function openRecent(entry, button) {
+  const permissionMode = { mode: "read" };
+
+  button.setAttribute("aria-busy", "true");
+  setStatus(`Opening ${entry.name}...`);
+
+  try {
+    let permission = await entry.handle.queryPermission(permissionMode);
+
+    // The click is the gesture the prompt needs. Chrome grants for the session,
+    // so this is usually one prompt per entry per browser start.
+    if (permission !== "granted") {
+      permission = await entry.handle.requestPermission(permissionMode);
+    }
+
+    if (permission !== "granted") {
+      setStatus("Permission to read that was not given");
+      return;
+    }
+
+    if (entry.kind === "folder") {
+      await openRecentFolder(entry.handle);
+      return;
+    }
+
+    const file = await entry.handle.getFile();
+
+    await rememberRecent(entry.handle, "file");
+    await openMarkdownFile(file, entry.handle);
+  } catch (error) {
+    console.error(error);
+
+    // Moved, renamed, deleted, or on a drive that is not mounted. Nothing can
+    // bring it back, so it stops being offered.
+    if (error.name === "NotFoundError") {
+      await forgetRecent(entry.id);
+      await renderRecents();
+      setStatus(`${entry.name} is no longer there`);
+      return;
+    }
+
+    setStatus(error.message || "Could not open that");
+  } finally {
+    button.removeAttribute("aria-busy");
+  }
+}
+
+function recentRow(entry) {
+  const item = document.createElement("li");
+  const button = document.createElement("button");
+
+  button.type = "button";
+  button.className = "recent-item";
+
+  const icon = document.createElement("span");
+  icon.className = "recent-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = entry.kind === "folder" ? "\u{1F5C1}︎" : "\u{1F5CE}︎";
+
+  const name = document.createElement("span");
+  name.className = "recent-name";
+  name.textContent = entry.name;
+
+  const kind = document.createElement("span");
+  kind.className = "recent-kind";
+  kind.textContent = entry.kind === "folder" ? "Folder" : "File";
+
+  button.append(icon, name, kind);
+  button.title = `Open ${entry.name}`;
+  button.addEventListener("click", () => {
+    openRecent(entry, button);
+  });
+
+  item.appendChild(button);
+  return item;
+}
+
+async function renderRecents() {
+  // Nothing to list in a browser that never hands out a handle to remember.
+  if (!window.indexedDB || !(window.showOpenFilePicker || window.showDirectoryPicker)) {
+    recentSection.hidden = true;
+    return;
+  }
+
+  let entries = [];
+
+  try {
+    entries = await readRecents();
+  } catch (error) {
+    console.warn("Could not read the recent list.", error);
+  }
+
+  recentList.innerHTML = "";
+  recentSection.hidden = entries.length === 0;
+  entries.forEach((entry) => recentList.appendChild(recentRow(entry)));
+}
+
 function showEmpty() {
   clearObjectUrls();
   clearTableOfContents();
@@ -1672,6 +2020,10 @@ function showEmpty() {
   returnToReadBtn.hidden = true;
   refreshFileBtn.disabled = true;
   updateSaveControls();
+
+  // Not awaited: the empty state is already correct without it, and the list
+  // fills in a moment later.
+  renderRecents();
 }
 
 function showError(message) {
@@ -4765,6 +5117,8 @@ async function openFile() {
     });
 
     const file = await fileHandle.getFile();
+
+    await rememberRecent(fileHandle, "file");
     await openMarkdownFile(file, fileHandle, { alreadyGuarded: true });
   } catch (error) {
     if (error.name === "AbortError") {
@@ -5110,19 +5464,36 @@ function createFolderTree(directoryHandle) {
   };
 }
 
-async function openFolder() {
-  if (!(await confirmDiscardUnsavedChanges("Opening another folder"))) return;
-
-  if (!window.showDirectoryPicker) {
-    showError("Folder opening is not supported in this browser. Use a Chromium-based browser, or open a single markdown file.");
-    setStatus("Folder unsupported");
-    return;
-  }
-
-  setStatus("Choosing folder...");
+/**
+ * Opens the folder picker, starting it where the open document lives when
+ * there is somewhere to start.
+ *
+ * A handle that no longer resolves — the folder was moved, renamed or is on a
+ * drive that is not mounted — makes Chrome reject the whole call rather than
+ * ignoring the hint, so a failed hint is retried once without it. Landing in
+ * the default folder beats not opening a picker at all.
+ */
+async function pickDirectory(startIn) {
+  if (!startIn) return window.showDirectoryPicker({ mode: "read" });
 
   try {
-    const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
+    return await window.showDirectoryPicker({ mode: "read", startIn });
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+
+    console.warn("Could not start the folder picker at the current location.", error);
+    return window.showDirectoryPicker({ mode: "read" });
+  }
+}
+
+/**
+ * Takes a directory handle and makes it the open folder.
+ *
+ * Split out of openFolder so the recent list can hand in a handle it already
+ * holds, without a picker in front of it.
+ */
+async function useDirectoryHandle(directoryHandle) {
+  try {
     clearObjectUrls();
     currentFile = null;
     currentFileHandle = null;
@@ -5167,6 +5538,30 @@ async function openFolder() {
 
     await openFolderMarkdown(firstFile.path, { alreadyGuarded: true });
   } catch (error) {
+    console.error(error);
+    showError(error.message || "Could not open this folder.");
+    setStatus("Error");
+  }
+}
+
+async function openFolder({ startIn = null } = {}) {
+  if (!(await confirmDiscardUnsavedChanges("Opening another folder"))) return;
+
+  if (!window.showDirectoryPicker) {
+    showError("Folder opening is not supported in this browser. Use a Chromium-based browser, or open a single markdown file.");
+    setStatus("Folder unsupported");
+    return;
+  }
+
+  setStatus("Choosing folder...");
+
+  try {
+    const directoryHandle = await pickDirectory(startIn);
+
+    await rememberRecent(directoryHandle, "folder");
+    await useDirectoryHandle(directoryHandle);
+  } catch (error) {
+    // Dismissing the picker is a normal way to use this button.
     if (error.name === "AbortError") {
       setStatus("Ready");
       return;
@@ -5176,6 +5571,15 @@ async function openFolder() {
     showError(error.message || "Could not open this folder.");
     setStatus("Error");
   }
+}
+
+/** The recent list already holds the handle, so there is nothing to pick. */
+async function openRecentFolder(directoryHandle) {
+  if (!(await confirmDiscardUnsavedChanges("Opening another folder"))) return;
+
+  setStatus("Reading folder...");
+  await rememberRecent(directoryHandle, "folder");
+  await useDirectoryHandle(directoryHandle);
 }
 
 async function refreshCurrentFile() {
@@ -5368,7 +5772,9 @@ topbarLockBtn.addEventListener("click", () => {
 });
 
 revealBtn.addEventListener("click", () => {
-  revealCurrentLocation();
+  // Start the picker where the document lives, so the first thing shown is the
+  // folder the user is asking about.
+  openFolder({ startIn: currentDirectoryHandle || currentFileHandle });
 });
 
 fileInput.addEventListener("change", (e) => {

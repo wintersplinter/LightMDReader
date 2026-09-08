@@ -194,6 +194,32 @@ body.topbar-locked .layout {
   padding: 8px 0;
   line-height: 1;
 }
+
+/* The folder button carries the name of the folder you are in. That name is
+   the only piece of location the File System Access API will give a page — a
+   handle knows what it is called and nothing about the drive or the
+   directories above it — so it is also the most the button can honestly say.
+   With no folder open it names its own action instead. */
+.folder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 190px;
+}
+
+.folder-glyph {
+  flex: none;
+  line-height: 1;
+}
+
+/* Named apart from the folder tree's own .folder-label, which is a different
+   element with a different job. */
+.folder-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The quick Save button. The glyph is a right-pointing arrow turned a quarter
    turn clockwise so it points down — into the file. */
 #quickSaveBtn {
@@ -231,18 +257,23 @@ body.has-unsaved-changes #quickSaveBtn::after {
   cursor: not-allowed;
 }
 
+/* The column width is a variable so the drag handle has one number to write
+   to. --sidebar-width is set on <html> by app.js from localStorage; the
+   fallback here is what a first visit gets. */
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--sidebar-width, 280px) 1fr;
   min-height: calc(100vh - 57px);
 }
 
-body.editor-active .layout {
+body.editor-active .layout,
+body.sidebar-hidden .layout {
   grid-template-columns: 1fr;
 }
 
 body.editor-active .sidebar,
-body.editor-active .return-top-btn {
+body.editor-active .return-top-btn,
+body.sidebar-hidden .sidebar {
   display: none;
 }
 
@@ -251,8 +282,59 @@ body.editor-active .return-top-btn {
    itself sticky would need `align-self: start`, which stops the grid
    stretching it — and takes the panel and the border with it. */
 .sidebar {
+  position: relative;
   border-right: 1px solid var(--line);
   background: var(--panel);
+}
+
+/* Sits on the divider, half in the panel and half in the document, so the
+   col-resize cursor appears exactly where the eye already sees an edge. It is
+   a child of the full-height <aside>, so it is grabbable at any scroll
+   position without being sticky itself. */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  z-index: 5;
+  width: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  /* Or the browser scrolls the page instead of handing over the drag. */
+  touch-action: none;
+}
+
+/* The divider brightens rather than thickens: a handle that changes width on
+   hover nudges the layout under the cursor that is about to grab it. */
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+body.sidebar-resizing .sidebar-resizer::after {
+  opacity: 1;
+}
+
+.sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+/* While dragging, the pointer belongs to the drag: no text selection, and one
+   cursor for the whole page so it does not flicker as it crosses the document. */
+body.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 /* On a long document the table of contents is the thing you reach for most,
@@ -493,6 +575,86 @@ body.topbar-locked .sidebar-inner {
   background: rgba(255, 255, 255, 0.08);
   padding: 2px 6px;
   border-radius: 8px;
+}
+
+/* ==========================================================================
+   Recent files and folders
+   Shown only on the empty state, and only where the browser hands out handles
+   worth remembering. Each entry is a button, not a link: opening one needs a
+   permission prompt, and a prompt needs the click that starts it.
+   ========================================================================== */
+
+.recent {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.recent-heading {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-item:hover,
+.recent-item:focus-visible {
+  border-color: var(--line);
+  background: var(--btn);
+}
+
+.recent-item[aria-busy="true"] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.recent-icon {
+  flex: none;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+/* The name is what you scan for, so it gets the room. The kind trails it as a
+   whisper — parked against the right edge it read as a column of its own,
+   competing with the names instead of annotating them. */
+.recent-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-kind {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.8em;
 }
 
 .reader {
@@ -1121,6 +1283,17 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  /* The layout is a single block here, so there is no column to drag. */
+  .sidebar-resizer {
+    display: none;
+  }
+
+  /* The topbar buttons stretch to fill the row at this width; capping the
+     folder button would leave it short of its neighbours. */
+  .folder-btn {
+    max-width: none;
   }
 
   .content {

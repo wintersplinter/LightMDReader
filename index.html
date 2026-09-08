@@ -67,8 +67,27 @@
           &#x1F513;&#xFE0E;
         </button>
 
-        <button id="revealBtn" class="btn icon-btn" type="button" aria-label="Show folder" title="Show folder" disabled>
-          &#x1F5C1;&#xFE0E;
+        <!-- The sidebar is chrome. On a wide screen it earns its column; on a
+             narrow one, or when the document is the only thing you want to
+             look at, it should be possible to put it away. -->
+        <button
+          id="sidebarToggleBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-pressed="false"
+          aria-controls="sidebar"
+          aria-label="Hide sidebar"
+          title="Hide sidebar"
+        >
+          &#x25E7;&#xFE0E;
+        </button>
+
+        <!-- Both jobs in one control. It names the folder you are in, because
+             that name is the only piece of location a page is allowed to know,
+             and clicking it opens the folder picker already sitting there. -->
+        <button id="revealBtn" class="btn folder-btn" type="button" aria-label="Open folder" title="Open folder">
+          <span class="folder-glyph" aria-hidden="true">&#x1F5C1;&#xFE0E;</span>
+          <span id="revealLabel" class="folder-btn-label">Open folder</span>
         </button>
 
         <!-- Save is the one file action worth a click of its own: the copy in
@@ -307,7 +326,23 @@
     </header>
 
     <main class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
+        <!-- Sits on the divider itself, half in the panel and half in the
+             document, and spans the whole column so it is grabbable wherever
+             the page happens to be scrolled. role="separator" with a value is
+             the window-splitter pattern: arrow keys resize it too. -->
+        <div
+          id="sidebarResizer"
+          class="sidebar-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          aria-valuemin="180"
+          aria-valuemax="560"
+          aria-valuenow="280"
+          tabindex="0"
+        ></div>
+
         <div class="sidebar-inner">
           <h2>Document</h2>
           <div class="meta">
@@ -350,6 +385,13 @@
           <div id="emptyState" class="empty">
             <h1>Open a Markdown file</h1>
             <p>Choose a <code>.md</code> file to preview it. Then export it to PDF.</p>
+
+            <!-- Hidden until there is something to list, and permanently in
+                 browsers that never hand out handles to remember. -->
+            <section id="recentSection" class="recent" hidden>
+              <h2 class="recent-heading">Recent</h2>
+              <ul id="recentList" class="recent-list"></ul>
+            </section>
           </div>
 
           <div id="errorState" class="empty error" hidden>
