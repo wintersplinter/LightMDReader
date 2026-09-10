@@ -204,6 +204,20 @@
     margin: 0;
   }
 
+  /* The standfirst travels onto the title page with its h1 (buildTitlePages in
+     app.js). Held to a narrower measure than the body text: a centred line
+     running the full width of a page is hard to read, and the lede is the one
+     paragraph guaranteed to be centred here whatever the style normally does.
+     A style that already sets its own measure keeps it - this only sets one
+     where none was given. */
+  html[data-theme] .markdown-body .pdf-title-page p.standfirst {
+    max-width: 34em;
+    margin: 1.4em auto 0;
+    text-align: center;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   html[data-theme] .markdown-body .pdf-title-page h3,
   html[data-theme] .markdown-body .pdf-title-page h4,
   html[data-theme] .markdown-body .pdf-title-page h5,

@@ -217,6 +217,25 @@
   margin-top: 0.6em;
 }
 
+/* The standfirst: the paragraph that opens a section.
+   MDrender marks it, so this styles a class rather than guessing at
+   "the paragraph next to an h1" - see the note in MDrender.js.
+
+   Scoped to Signature rather than written bare, because this file is the
+   shared base: a bare rule here would hand every style the same lede.
+   Signature's title is 5em, centred and flanked by dots, so its lede is
+   centred too, and it takes the title's brown rather than the body's grey -
+   the pair reads as one unit that way. margin-top is 0, not the 0.6em this
+   file gives every other heading-then-paragraph pair, or the lede floats
+   away from the title it belongs to. */
+html[data-document-style="signature"] .markdown-body .standfirst {
+  margin-top: 0;
+  color: var(--md-brown-light);
+  font-size: 1.15em;
+  line-height: 1.6;
+  text-align: center;
+}
+
 /* Optional heading anchors, if your renderer adds them later. */
 .markdown-body .anchor {
   color: inherit;

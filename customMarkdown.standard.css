@@ -99,6 +99,11 @@ html[data-document-style="standard"] .markdown-body h6 + p {
   margin-top: 0;
 }
 
+/* Standard has no standfirst of its own, deliberately. The class is on the
+   paragraph in every style; this one declines to do anything with it, which
+   is what "the plainest style" means. Do not read the absence as an
+   oversight and fill it in. */
+
 /* Restrained inline treatments. */
 html[data-document-style="standard"] .markdown-body strong,
 html[data-document-style="standard"] .markdown-body b {

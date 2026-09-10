@@ -75,6 +75,7 @@ const tocNav = document.getElementById("tocNav");
 const folderSection = document.getElementById("folderSection");
 const folderNav = document.getElementById("folderNav");
 const folderHeading = document.getElementById("folderHeading");
+const standfirstToggle = document.getElementById("standfirstToggle");
 const editorModeSelect = document.getElementById("editorModeSelect");
 const modeMenuLabel = document.getElementById("modeMenuLabel");
 
@@ -1054,6 +1055,64 @@ function setPdfPaperSize(size) {
 }
 
 setPdfPaperSize(localStorage.getItem("lightmdreader-pdf-paper") || "browser");
+
+/* --------------------------------------------------------------------------
+   Standfirst
+
+   Whether the paragraph that opens a section is set as a lede. On by default,
+   because that is what every version before the switch existed did.
+
+   MDrender decides which paragraph it is and writes the class; this only says
+   whether it should write one at all. Off therefore means the class is absent
+   rather than merely unstyled, which is why changing it re-renders instead of
+   flipping an attribute: the alternative was wrapping every `.standfirst` rule
+   in all five styles in a `:not()`, and the whole point of moving the decision
+   out of CSS was to stop the styles carrying conditions they should not know
+   about.
+   -------------------------------------------------------------------------- */
+
+const standfirstKey = "lightmdreader-standfirst";
+let standfirstEnabled = localStorage.getItem(standfirstKey) !== "false";
+
+function applyStandfirst(enabled, { remember = true, rerender = true } = {}) {
+  standfirstEnabled = enabled !== false;
+
+  window.LightMDRenderer?.setStandfirstEnabled?.(standfirstEnabled);
+
+  if (remember) localStorage.setItem(standfirstKey, standfirstEnabled ? "true" : "false");
+
+  standfirstToggle.setAttribute("aria-checked", String(standfirstEnabled));
+  standfirstToggle.title = standfirstEnabled
+    ? "Stop setting the opening paragraph as a standfirst"
+    : "Set the opening paragraph of a section as a standfirst";
+  standfirstToggle.setAttribute("aria-label", standfirstToggle.title);
+
+  if (rerender) rerenderForStandfirst();
+}
+
+/* Same shape as the remote-content path: whichever view is on screen is the
+   one that has to be rebuilt, and an empty document has nothing to rebuild. */
+function rerenderForStandfirst() {
+  if (currentMode === "empty" || !currentMarkdownText) return;
+
+  const rerender = editorShell.hidden
+    ? renderDocument(currentMarkdownText, currentRenderContext)
+    : renderEditorPreview();
+
+  rerender.catch((error) => {
+    console.error(error);
+    setStatus(error.message || "Could not re-render the document");
+  });
+}
+
+standfirstToggle.addEventListener("click", () => {
+  applyStandfirst(!standfirstEnabled);
+  closeMenus();
+});
+
+// No re-render at start-up: nothing is open yet, and the first render has not
+// happened. The flag only has to be in place before it does.
+applyStandfirst(standfirstEnabled, { remember: false, rerender: false });
 
 /**
  * Read aloud.
@@ -2994,6 +3053,42 @@ function awaitImages(root, timeoutMs = 5000) {
 const titlePageClass = "pdf-title-page";
 const titlePageSubheadings = new Set(["H3", "H4", "H5", "H6"]);
 
+/**
+ * A paragraph holding nothing but comments.
+ *
+ * It can sit between a title and its standfirst — MDrender steps over one when
+ * deciding which paragraph is the lede — so the title page has to step over it
+ * too, or the lede is left behind on the next page for the very case this was
+ * meant to fix.
+ */
+function isCommentOnlyParagraph(node) {
+  if (node.tagName !== "P" || !node.children.length) return false;
+
+  const onlyComments = [...node.children].every((child) => child.classList.contains("md-comment"));
+  const looseText = [...node.childNodes].some(
+    (child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim(),
+  );
+
+  return onlyComments && !looseText;
+}
+
+/**
+ * What travels onto the title page with its h1.
+ *
+ * The standfirst belongs with the title it opens — it is the one line that
+ * explains what the section is, and printing it alone at the top of the next
+ * page separated the two. It carries the class MDrender gave it, so when the
+ * standfirst preference is off nothing here matches and the old behaviour
+ * returns without a second switch to read.
+ */
+function belongsOnTitlePage(node) {
+  if (node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (titlePageSubheadings.has(node.tagName)) return true;
+  if (isCommentOnlyParagraph(node)) return true;
+
+  return node.tagName === "P" && node.classList.contains("standfirst");
+}
+
 function buildTitlePages(root) {
   [...root.querySelectorAll("h1")].forEach((heading) => {
     const parent = heading.parentElement;
@@ -3008,6 +3103,14 @@ function buildTitlePages(root) {
     // rendered, and repeated exports would keep shifting it.
     const group = [heading];
     const whitespace = [];
+
+    // Comment-only paragraphs are held here rather than taken. They are worth
+    // moving only as a bridge to a standfirst on the other side of them; with
+    // no lede to reach, nothing is taken and the title page is exactly what it
+    // was before the standfirst existed. That is also what makes the standfirst
+    // preference need no second switch here: with it off no paragraph carries
+    // the class, so nothing is ever flushed.
+    const pending = [];
     let node = heading.nextSibling;
 
     while (node) {
@@ -3017,7 +3120,27 @@ function buildTitlePages(root) {
         continue;
       }
 
-      if (node.nodeType !== Node.ELEMENT_NODE || !titlePageSubheadings.has(node.tagName)) break;
+      if (!belongsOnTitlePage(node)) break;
+
+      if (node.tagName === "P" && node.classList.contains("standfirst")) {
+        group.push(...pending, ...whitespace, node);
+        pending.length = 0;
+        whitespace.length = 0;
+        // The lede closes the title page. What follows is the section itself.
+        break;
+      }
+
+      if (isCommentOnlyParagraph(node)) {
+        pending.push(...whitespace, node);
+        whitespace.length = 0;
+        node = node.nextSibling;
+        continue;
+      }
+
+      // A subheading reached with comments still held means those comments sat
+      // between the title and it, which is where the old code stopped. Stop in
+      // the same place rather than quietly moving more than it used to.
+      if (pending.length) break;
 
       group.push(...whitespace, node);
       whitespace.length = 0;

@@ -469,6 +469,140 @@
     };
   }
 
+  /**
+   * Marks the paragraph that opens a section as its standfirst.
+   *
+   * This replaces a `h1 + p` rule that each style used to carry. That rule was
+   * a *proxy* for "the paragraph that opens this section", and it was wrong
+   * whenever a document did not open the way the styles assumed: it matched an
+   * image (markdown-it wraps a lone image in a paragraph), it matched a
+   * paragraph holding only a visible comment, it was defeated by anything at
+   * all sitting in between, and in block editing it broke a second way, because
+   * a block that renders to nothing is shown as its own source and that <pre>
+   * lands between the heading and the paragraph. Deciding here instead means
+   * the answer is computed once, from the document, and travels with the
+   * paragraph rather than depending on what happens to sit next to it.
+   *
+   * It runs as a core rule, so BOTH render paths get it from one place: block
+   * editing parses the whole document with this same instance and renders
+   * slices of that one token stream (lib/blockRender.js), so the class is
+   * already on the token before any slicing happens.
+   *
+   * What counts, deliberately:
+   *
+   *   - Every top-level h1, not only the first. A section opens the same way
+   *     wherever it sits, and this is also what the old `h1 + p` did.
+   *   - An h1 inside a blockquote or a list item is not a section title, the
+   *     same test buildTitlePages() makes for PDF title pages.
+   *   - A paragraph holding only a comment is stepped over rather than marked
+   *     or treated as a wall. It is not the lede, but nothing about it is
+   *     visible in the document either, so it is not a reason for the section
+   *     to have none.
+   *   - Everything a reader can actually see ends the search: a list, a
+   *     quotation, a code block, a rule, a table, an image, any heading. A
+   *     section that opens with one of those has no standfirst, and should not
+   *     — an image is content, and content is not a lede.
+   *
+   * That is the whole rule: only what is invisible in the rendered document is
+   * stepped over. It also keeps the search in step with buildTitlePages() in
+   * app.js, which has to carry the same things onto a PDF title page — a
+   * standfirst the title page cannot reach is stranded on the next page, which
+   * is the bug this whole change exists to fix.
+   *
+   * Hidden comments and link or footnote definitions need no handling: they
+   * leave no tokens by the time this runs, which is why it is registered after
+   * `custom_comments`.
+   */
+  const standfirstClass = "standfirst";
+
+  /* The feature can be switched off. It is a flag here rather than a CSS
+     toggle so that "off" means the class is never written: the markup stays
+     honest, and the styles stay a plain `.standfirst` rule with no `:not()`
+     wrapped round every one of them. Changing it needs a re-render, which is
+     what app.js does. */
+  let standfirstEnabled = true;
+
+  /**
+   * A paragraph holding nothing but a rendered comment.
+   *
+   * Tested on the inline token's content rather than its children, because a
+   * comment is raw HTML by the time it gets here and its tooltip text is a
+   * child of its own — "only a comment" is not visible from the child list.
+   */
+  function isCommentOnlyParagraph(inline) {
+    const content = String((inline && inline.content) || "");
+
+    if (content.indexOf('class="md-comment"') === -1) return false;
+
+    return content.replace(/<span class="md-comment"[\s\S]*?<\/span><\/span>/g, "").trim() === "";
+  }
+
+  /**
+   * A paragraph holding nothing but images.
+   *
+   * markdown-it wraps a lone image in a paragraph, so without this test an
+   * image would be marked as the lede simply for being paragraph-shaped. It
+   * ends the search rather than being stepped over: an image is content, and a
+   * section that opens with one has no standfirst, exactly as one opening with
+   * a list has none.
+   *
+   * A paragraph mixing an image with text is a real paragraph and is marked
+   * normally — only an image on its own counts here.
+   */
+  function isImageOnlyParagraph(inline) {
+    const children = (inline && inline.children) || [];
+    const meaningful = children.filter(
+      (child) => child.type !== "softbreak" && !(child.type === "text" && !child.content.trim()),
+    );
+
+    return meaningful.length > 0 && meaningful.every((child) => child.type === "image");
+  }
+
+  function standfirst(md) {
+    md.core.ruler.push(standfirstClass, (state) => {
+      if (!standfirstEnabled) return;
+
+      const tokens = state.tokens;
+      let depth = 0;
+
+      for (let index = 0; index < tokens.length; index += 1) {
+        const token = tokens[index];
+
+        // The depth this token opens AT, before its own nesting is applied —
+        // a heading_open is itself nesting +1, so reading depth after the fact
+        // would make every heading look nested.
+        const openedAt = depth;
+
+        depth += token.nesting;
+        if (depth < 0) depth = 0;
+
+        if (openedAt !== 0 || token.type !== "heading_open" || token.tag !== "h1") continue;
+
+        // Walk the top-level siblings that follow the heading.
+        let cursor = index + 1;
+
+        while (cursor < tokens.length && tokens[cursor].type !== "heading_close") cursor += 1;
+        cursor += 1;
+
+        while (cursor < tokens.length && tokens[cursor].type === "paragraph_open") {
+          const inline = tokens[cursor + 1];
+
+          // Invisible: step over it. paragraph_open, inline, paragraph_close.
+          if (isCommentOnlyParagraph(inline)) {
+            cursor += 3;
+            continue;
+          }
+
+          // Visible content that happens to be paragraph-shaped: stop.
+          if (isImageOnlyParagraph(inline)) break;
+
+          tokens[cursor].attrJoin("class", standfirstClass);
+          break;
+        }
+      }
+    });
+  }
+
   function missingLibraries() {
     return [
       ["markdown-it", window.markdownit],
@@ -511,6 +645,9 @@
         labelAfter: true,
       })
       .use(customComments)
+      // After customComments, so an emptied comment paragraph is already gone
+      // from the token stream rather than standing between a title and its lede.
+      .use(standfirst)
       .use(mathPlugin)
       .use(withInlinePositions)
       .use(absolutePositions)
@@ -556,5 +693,12 @@
 
   // `md` is exposed so block editing can parse once and render token slices
   // against the same instance. Nothing else should reach for it.
-  window.LightMDRenderer = { ready, md: instance };
+  window.LightMDRenderer = {
+    ready,
+    md: instance,
+    /** Off means the standfirst class is not written at all. Re-render after. */
+    setStandfirstEnabled(enabled) {
+      standfirstEnabled = enabled !== false;
+    },
+  };
 })();

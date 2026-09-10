@@ -18,6 +18,10 @@ __pycache__/
 # Staging folder for files pending deletion. Never publish this.
 /_to_delete/
 
+# Files an assistant delivered into the chat and wrote to disk here. Working
+# material, never part of the app.
+/Claude outputs/
+
 # Node tooling (development only, the shipped app is plain static files)
 /node_modules/
 /test-results/

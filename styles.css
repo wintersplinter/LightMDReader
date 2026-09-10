@@ -1449,6 +1449,27 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   background: var(--line);
 }
 
+/* A switch, so a tick rather than the dot. Same fixed gutter as .menu-choice,
+   so a toggle and a choice line up in the same menu. */
+.menu-toggle::before {
+  content: "\2713";
+  width: 14px;
+  margin-right: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+  visibility: hidden;
+}
+
+.menu-toggle[aria-checked="true"]::before {
+  visibility: visible;
+}
+
+.menu-toggle[aria-checked="true"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* A dot rather than a checkbox: these are one-of-a-set choices, and the dot
    sits in a fixed gutter so the labels stay aligned whether marked or not. */
 .menu-choice::before {

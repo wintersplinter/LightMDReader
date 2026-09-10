@@ -156,8 +156,10 @@ html[data-document-style="refined"] .markdown-body h6 + p {
 }
 
 /* The standfirst stays centred under the centred title, then the document
-   settles into ordinary left-aligned reading. */
-html[data-document-style="refined"] .markdown-body h1 + p {
+   settles into ordinary left-aligned reading. MDrender marks the paragraph;
+   this no longer guesses from what sits next to the heading. */
+html[data-document-style="refined"] .markdown-body .standfirst {
+  margin-top: 0;
   max-width: 46em;
   margin-right: auto;
   margin-left: auto;

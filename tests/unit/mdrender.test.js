@@ -135,3 +135,116 @@ describe("data-source-line", () => {
     expect(lineOf(html, "after")).toBe(6);
   });
 });
+
+/**
+ * The standfirst.
+ *
+ * These pin the decision that used to live in five stylesheets as `h1 + p`.
+ * The point of moving it here is that the answer no longer depends on what
+ * happens to sit next to the heading in the DOM, so the cases worth protecting
+ * are the ones where something does.
+ *
+ * Assertions match the class without assuming attribute order:
+ * `source_line_attrs` stamps data-source-line onto paragraph_open first, so the
+ * tag renders as `<p data-source-line="3" class="standfirst">`. An
+ * order-dependent check passes vacuously and reports nothing.
+ */
+describe("standfirst", () => {
+  const leads = (markdown) => (renderMarkdown(markdown).match(/<p[^>]*class="[^"]*standfirst/g) || []).length;
+  const leadText = (markdown) => {
+    const match = renderMarkdown(markdown).match(/<p[^>]*class="[^"]*standfirst[^>]*>([\s\S]*?)<\/p>/);
+    return match ? match[1].replace(/<[^>]*>/g, "").trim() : null;
+  };
+
+  it("marks the paragraph that opens a section", () => {
+    expect(leadText("# Title\n\nThe lede.\n\nBody text.\n")).toBe("The lede.");
+  });
+
+  it("marks only the first paragraph", () => {
+    expect(leads("# Title\n\nThe lede.\n\nBody text.\n")).toBe(1);
+  });
+
+  it("marks every h1, not only the first", () => {
+    expect(leads("# A\n\nLede A.\n\n# B\n\nLede B.\n\n# C\n\nLede C.\n")).toBe(3);
+  });
+
+  it("steps over a hidden comment", () => {
+    expect(leadText("# Title\n\n((::note::))\n\nThe lede.\n")).toBe("The lede.");
+  });
+
+  it("steps over a visible comment instead of marking it", () => {
+    expect(leadText("# Title\n\n((:note:))\n\nThe lede.\n")).toBe("The lede.");
+  });
+
+  it("steps over several comments in a row", () => {
+    expect(leadText("# Title\n\n((:a:))\n\n((:b:))\n\nThe lede.\n")).toBe("The lede.");
+  });
+
+  it("stops at a lone image rather than marking the picture", () => {
+    expect(leads("# Title\n\n![alt](x.png)\n\nThe lede.\n")).toBe(0);
+  });
+
+  it("steps over a link reference definition", () => {
+    expect(leadText("# Title\n\n[x]: http://example.com\n\nThe lede.\n")).toBe("The lede.");
+  });
+
+  it("keeps a comment written inside the lede", () => {
+    expect(leads("# Title\n\nThe ((:note:)) lede.\n")).toBe(1);
+  });
+
+  it.each([
+    ["a list", "# Title\n\n- one\n\nNot a lede.\n"],
+    ["a blockquote", "# Title\n\n> quoted\n\nNot a lede.\n"],
+    ["a code fence", "# Title\n\n```js\nx\n```\n\nNot a lede.\n"],
+    ["a rule", "# Title\n\n---\n\nNot a lede.\n"],
+    ["an h2", "# Title\n\n## Section\n\nNot a lede.\n"],
+    ["an h3", "# Title\n\n### Subtitle\n\nNot a lede.\n"],
+    ["a table", "# Title\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\nNot a lede.\n"],
+    ["an image", "# Title\n\n![alt](x.png)\n\nNot a lede.\n"],
+  ])("marks nothing when a section opens with %s", (_label, markdown) => {
+    expect(leads(markdown)).toBe(0);
+  });
+
+  /*
+   * The rule that keeps this honest: only what a reader cannot see is stepped
+   * over. Anything visible is content, and content is not a lede.
+   *
+   * It matters beyond tidiness. buildTitlePages() in app.js has to carry the
+   * same things onto a PDF title page; if the two lists ever disagree, a
+   * standfirst can exist that its title page cannot reach, and it prints
+   * stranded on the following page. An earlier version stepped over images
+   * here but not there, and did exactly that.
+   */
+  it("steps over only what is invisible in the rendered document", () => {
+    const invisible = [
+      "# Title\n\n((::hidden::))\n\nThe lede.\n",
+      "# Title\n\n((:visible dot:))\n\nThe lede.\n",
+      "# Title\n\n[ref]: http://example.com\n\nThe lede.\n",
+    ];
+    const visible = [
+      "# Title\n\n![alt](x.png)\n\nThe lede.\n",
+      "# Title\n\n- item\n\nThe lede.\n",
+      "# Title\n\n> quoted\n\nThe lede.\n",
+      "# Title\n\n---\n\nThe lede.\n",
+    ];
+
+    invisible.forEach((markdown) => expect(leadText(markdown)).toBe("The lede."));
+    visible.forEach((markdown) => expect(leads(markdown)).toBe(0));
+  });
+
+  it("ignores an h1 nested in a blockquote", () => {
+    expect(leads("> # Quoted\n>\n> Not a lede.\n")).toBe(0);
+  });
+
+  it("ignores an h1 nested in a list item", () => {
+    expect(leads("- # Quoted\n\n  Not a lede.\n")).toBe(0);
+  });
+
+  it("marks nothing for a title with no body", () => {
+    expect(leads("# Title\n")).toBe(0);
+  });
+
+  it("leaves paragraphs before the first h1 alone", () => {
+    expect(leadText("Intro.\n\n# Title\n\nThe lede.\n")).toBe("The lede.");
+  });
+});

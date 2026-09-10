@@ -167,7 +167,7 @@ html[data-document-style="graphite"] .markdown-body h1::after {
    step lighter and a shade back, so the eye is walked into the text instead
    of dropped at it. Costs no ornament and is the single clearest signal that
    a page was art-directed rather than merely styled. */
-html[data-document-style="graphite"] .markdown-body h1 + p {
+html[data-document-style="graphite"] .markdown-body .standfirst {
   margin-top: 0;
   margin-bottom: 1.6em;
   color: var(--md-graphite-quiet);
@@ -533,7 +533,7 @@ html[data-document-style="graphite"] .reader {
     font-size: 1.12em;
   }
 
-  html[data-document-style="graphite"] .markdown-body h1 + p {
+  html[data-document-style="graphite"] .markdown-body .standfirst {
     font-size: 1.06em;
   }
 

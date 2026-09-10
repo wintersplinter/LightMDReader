@@ -156,8 +156,10 @@ html[data-document-style="studio"] .markdown-body h6 + p {
   margin-top: 0;
 }
 
-/* The paragraph straight after the title acts as a standfirst. */
-html[data-document-style="studio"] .markdown-body h1 + p {
+/* The paragraph that opens a section acts as a standfirst. MDrender marks
+   it; this no longer guesses from what sits next to the heading. */
+html[data-document-style="studio"] .markdown-body .standfirst {
+  margin-top: 0;
   color: var(--md-text-muted);
   font-size: 1.1em;
   line-height: 1.6;
