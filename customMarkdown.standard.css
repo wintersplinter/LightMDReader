@@ -2,13 +2,140 @@
    Loaded after the Signature style so it can be selected independently
    from the dark, light, and brown color themes. */
 
+/* -- kept from the old shared base ----------------------------------------
+   These were Signature's, sitting in customMarkdown.css because that file was
+   both the base and a style. Most styles overrode them; this one did not, so
+   it was inheriting them by accident rather than by choice.
+
+   They sit above this style's own rules deliberately: the base set shorthands
+   that the rules below override with longhands, and reversing that order would
+   wipe them out. The :where() scope keeps the specificity they had.
+
+   Whether this style WANTS any of them is a design question, not a structural
+   one. Deciding that changes pixels, so it was left alone here.
+   -------------------------------------------------------------------------- */
+
+
+/* -- the type scale --------------------------------------------------------
+   The rules live in customMarkdown.css, once, and read these. Change a size
+   here and both the desktop and the mobile rule follow, because there is only
+   one rule. It used to mean editing two copies in this file, and the copy in
+   the media block was easy to miss.
+   -------------------------------------------------------------------------- */
+/* -- heading colour, weight, tracking and alignment ------------------------
+   Same contract as the type scale: the foundation carries the rule, this file
+   carries the values. Nothing here is a shorthand, so nothing can be split
+   from a longhand it argues with.
+   -------------------------------------------------------------------------- */
+html[data-document-style="standard"] .markdown-body {
+  --md-h1-colour: var(--md-text);
+  --md-h1-weight: 700;
+  --md-h1-tracking: -0.015em;
+  --md-h1-align: left;
+  --md-h2-colour: var(--md-text);
+  --md-h2-weight: 650;
+  --md-h2-tracking: -0.015em;
+  --md-h2-align: left;
+  --md-h3-colour: var(--md-text);
+  --md-h3-weight: 650;
+  --md-h4-colour: var(--md-text);
+  --md-h4-weight: 650;
+  --md-h5-colour: var(--md-text-muted);
+  --md-h5-weight: 650;
+  --md-h6-colour: var(--md-text-muted);
+  --md-h6-weight: 650;
+}
+
+html[data-document-style="standard"] .markdown-body {
+  --md-body-family: var(--md-font-main);
+  --md-body-size: 15px;
+  --md-body-leading: 1.58;
+  --md-display-family: var(--md-font-main);
+  --md-h1-size: 2.15em;
+  --md-h1-leading: 1.25;
+  --md-h2-size: 1.55em;
+  --md-h2-leading: 1.25;
+  --md-h3-size: 1.26em;
+  --md-h3-leading: 1.25;
+  --md-h4-size: 1.08em;
+  --md-h4-leading: 1.25;
+  --md-h5-size: 1em;
+  --md-h5-leading: 1.25;
+  --md-h6-size: 0.86em;
+  --md-h6-leading: 1.25;
+}
+
+/* Below 700px, only these numbers change. */
+@media (max-width: 700px) {
+html[data-document-style="standard"] .markdown-body {
+    --md-body-size: 13px;
+    --md-h1-size: 1.85em;
+    --md-h2-size: 1.42em;
+    --md-h3-size: 1.18em;
+  }
+}
+
+:where(html[data-document-style="standard"]) .markdown-body p {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body blockquote {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body pre {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body table {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body details {
+  margin-top: 0;
+  border: 1px solid var(--md-border);
+}
+
+:where(html[data-document-style="standard"]) .markdown-body figure {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body h3 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body h4 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body pre code {
+  font-family: var(--md-font-code);
+}
+
+:where(html[data-document-style="standard"]) .markdown-body hr {
+  border: none;
+  margin-top: 5em;
+  margin-bottom: 5em;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body figcaption {
+  color: var(--md-text-dim);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+:where(html[data-document-style="standard"]) .markdown-body .footnotes {
+  border-top: 1px solid var(--md-border);
+}
+
 html[data-document-style="standard"] .markdown-body {
   --md-standard-accent: var(--md-blue);
   --md-standard-accent-soft: var(--md-blue-soft);
   --md-standard-surface: color-mix(in srgb, var(--md-text) 4%, transparent);
-
-  font-size: 15px;
-  line-height: 1.58;
 }
 
 /* Tighter, consistent document rhythm. */
@@ -25,18 +152,19 @@ html[data-document-style="standard"] .markdown-body figure {
 
 /* Familiar headings with enough detail to feel intentionally designed. */
 html[data-document-style="standard"] .markdown-body h1,
-html[data-document-style="standard"] .markdown-body h2,
+html[data-document-style="standard"] .markdown-body h2 {
+  display: block;
+  padding: 0;
+  text-decoration: none;
+}
 html[data-document-style="standard"] .markdown-body h3,
 html[data-document-style="standard"] .markdown-body h4,
 html[data-document-style="standard"] .markdown-body h5,
 html[data-document-style="standard"] .markdown-body h6 {
   display: block;
   padding: 0;
-  color: var(--md-text);
   font-family: var(--md-font-main);
-  font-weight: 650;
   letter-spacing: -0.015em;
-  line-height: 1.25;
   text-align: left;
   text-decoration: none;
 }
@@ -45,8 +173,6 @@ html[data-document-style="standard"] .markdown-body h1 {
   margin: 0 0 0.7em;
   padding-bottom: 0.32em;
   border-bottom: 1px solid var(--md-border);
-  font-size: 2.15em;
-  font-weight: 700;
 }
 
 html[data-document-style="standard"] .markdown-body h1::before,
@@ -59,33 +185,23 @@ html[data-document-style="standard"] .markdown-body h2 {
   margin: 1.45em 0 0.6em;
   padding-bottom: 0.22em;
   border-bottom: 1px solid color-mix(in srgb, var(--md-border) 72%, transparent);
-  color: var(--md-text);
-  font-size: 1.55em;
 }
 
 html[data-document-style="standard"] .markdown-body h3 {
   margin: 1.25em 0 0.48em;
-  color: var(--md-text);
-  font-size: 1.26em;
 }
 
 html[data-document-style="standard"] .markdown-body h4 {
   margin: 1.15em 0 0.42em;
-  color: var(--md-text);
-  font-size: 1.08em;
 }
 
 html[data-document-style="standard"] .markdown-body h5 {
   margin: 1.05em 0 0.38em;
-  color: var(--md-text-muted);
-  font-size: 1em;
   letter-spacing: 0;
 }
 
 html[data-document-style="standard"] .markdown-body h6 {
   margin: 1em 0 0.35em;
-  color: var(--md-text-muted);
-  font-size: 0.86em;
   letter-spacing: 0.055em;
   text-transform: uppercase;
 }
@@ -289,24 +405,14 @@ html[data-document-style="standard"] .reader {
    every style and theme combination. */
 
 @media (max-width: 700px) {
-  html[data-document-style="standard"] .markdown-body {
-    font-size: 13px;
-  }
 
-  html[data-document-style="standard"] .markdown-body h1 {
+html[data-document-style="standard"] .markdown-body h1 {
     padding: 0 0 0.28em;
-    font-size: 1.85em;
   }
 
-  html[data-document-style="standard"] .markdown-body h2 {
-    font-size: 1.42em;
-  }
 
-  html[data-document-style="standard"] .markdown-body h3 {
-    font-size: 1.18em;
-  }
 
-  html[data-document-style="standard"] .reader {
+html[data-document-style="standard"] .reader {
     padding: 16px;
   }
 }

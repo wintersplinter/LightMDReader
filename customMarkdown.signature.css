@@ -1,0 +1,367 @@
+/* ==========================================================
+   SIGNATURE
+   The decorated style: a very large centred title flanked by dots, brown
+   headings, underlined h3 and h4, a tapered rule.
+
+   It used to live in customMarkdown.css, which is also the shared base, so
+   every other style opened by dismantling it. It is a style like any other
+   now, and the base carries only what the styles agree on.
+
+   Note the `:where(...)` scope. A plain html[data-document-style="signature"]
+   prefix would add an attribute selector's worth of specificity, and these
+   rules would start beating things they used to lose to — the base's own
+   `> *:first-child { margin-top: 0 }` reset, its `li > ul` padding, the theme
+   layer's kbd and details backgrounds. All three regressed when it was tried.
+   `:where()` contributes no specificity, so every rule keeps exactly the weight
+   it had in the base and the cascade is unchanged by the move.
+   ========================================================== */
+
+
+/* -- the type scale --------------------------------------------------------
+   The rules live in customMarkdown.css, once, and read these. Change a size
+   here and both the desktop and the mobile rule follow, because there is only
+   one rule. It used to mean editing two copies in this file, and the copy in
+   the media block was easy to miss.
+   -------------------------------------------------------------------------- */
+/* -- heading colour, weight, tracking and alignment ------------------------
+   Same contract as the type scale: the foundation carries the rule, this file
+   carries the values. Nothing here is a shorthand, so nothing can be split
+   from a longhand it argues with.
+   -------------------------------------------------------------------------- */
+:where(html[data-document-style="signature"]) .markdown-body {
+  --md-h1-colour: var(--md-brown-white);
+  --md-h1-weight: 300;
+  --md-h1-tracking: -0.01em;
+  --md-h1-align: center;
+  --md-h2-colour: var(--md-brown-light);
+  --md-h2-weight: 300;
+  --md-h2-tracking: -0.01em;
+  --md-h2-align: center;
+  --md-h3-colour: var(--md-brown-medium);
+  --md-h3-weight: 300;
+  --md-h4-colour: var(--md-brown-dark);
+  --md-h4-weight: 300;
+  --md-h5-colour: var(--md-brown-dark);
+  --md-h5-weight: 500;
+  --md-h6-colour: var(--md-brown-dark);
+  --md-h6-weight: 500;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body {
+  --md-body-family: var(--md-font-main);
+  --md-body-size: 16px;
+  --md-body-leading: 1.7;
+  --md-display-family: var(--font-Title);
+  --md-h1-size: 5em;
+  --md-h1-leading: 1.25;
+  --md-h2-size: 2.4em;
+  --md-h2-leading: 1.25;
+  --md-h3-size: 2em;
+  --md-h3-leading: 1.25;
+  --md-h4-size: 1.8em;
+  --md-h4-leading: 1.25;
+  --md-h5-size: 1.5em;
+  --md-h5-leading: 1.25;
+  --md-h6-size: 1.25em;
+  --md-h6-leading: 1.25;
+}
+
+/* Below 700px, only these numbers change. */
+@media (max-width: 700px) {
+:where(html[data-document-style="signature"]) .markdown-body {
+    --md-body-size: 13px;
+    --md-h1-size: 1.6em;
+    --md-h2-size: 1.35em;
+    --md-h3-size: 1.15em;
+  }
+}
+
+:where(html[data-document-style="signature"]) .markdown-body p,
+:where(html[data-document-style="signature"]) .markdown-body ul,
+:where(html[data-document-style="signature"]) .markdown-body ol,
+:where(html[data-document-style="signature"]) .markdown-body blockquote,
+:where(html[data-document-style="signature"]) .markdown-body pre,
+:where(html[data-document-style="signature"]) .markdown-body table,
+:where(html[data-document-style="signature"]) .markdown-body details,
+:where(html[data-document-style="signature"]) .markdown-body figure {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body h1 {
+  display: block;
+  margin: 1.4em 0 1em 0;
+  padding: 1.2em 0.5em 0.2em 0.5em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body h2,
+:where(html[data-document-style="signature"]) .markdown-body h3,
+:where(html[data-document-style="signature"]) .markdown-body h4,
+:where(html[data-document-style="signature"]) .markdown-body h5,
+:where(html[data-document-style="signature"]) .markdown-body h6 {
+  margin: 1.4em 0 1em 0;
+  padding: 1.2em 0.5em 0.2em 0.5em;
+}
+
+
+:where(html[data-document-style="signature"]) .markdown-body h1 {
+  display: flex;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body h1::before,
+:where(html[data-document-style="signature"]) .markdown-body h1::after {
+  content: "•  •";
+}
+
+:where(html[data-document-style="signature"]) .markdown-body h2 {
+  border-bottom: 1px solid var(--md-brown-medium);
+}
+
+:where(html[data-document-style="signature"]) .markdown-body h3 {
+  text-decoration: underline;
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+/* Deeper headings: included as active defaults, but modest. */
+:where(html[data-document-style="signature"]) .markdown-body h4 {
+  text-decoration: underline;
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+
+
+:where(html[data-document-style="signature"]) .markdown-body h1 + p,
+:where(html[data-document-style="signature"]) .markdown-body h2 + p,
+:where(html[data-document-style="signature"]) .markdown-body h3 + p,
+:where(html[data-document-style="signature"]) .markdown-body h4 + p,
+:where(html[data-document-style="signature"]) .markdown-body h5 + p,
+:where(html[data-document-style="signature"]) .markdown-body h6 + p {
+  margin-top: 0.6em;
+}
+
+/* The standfirst: the paragraph that opens a section.
+   MDrender marks it, so this styles a class rather than guessing at
+   "the paragraph next to an h1" - see the note in MDrender.js.
+
+   Scoped to Signature rather than written bare, because this file is the
+   shared base: a bare rule here would hand every style the same lede.
+   Signature's title is 5em, centred and flanked by dots, so its lede is
+   centred too, and it takes the title's brown rather than the body's grey -
+   the pair reads as one unit that way. margin-top is 0, not the 0.6em this
+   file gives every other heading-then-paragraph pair, or the lede floats
+   away from the title it belongs to. */
+html[data-document-style="signature"] .markdown-body .standfirst {
+  margin-top: 0;
+  color: var(--md-brown-light);
+  font-size: 1.15em;
+  line-height: 1.6;
+  text-align: center;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body strong,
+:where(html[data-document-style="signature"]) .markdown-body b {
+  font-weight: 700;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body mark {
+  background: rgba(255, 255, 0, 0.267);
+  border: yellow 1px solid;
+  padding: 0.05em 0.25em;
+  border-radius: 3px;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body a {
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-link) 55%, transparent);
+}
+
+:where(html[data-document-style="signature"]) .markdown-body kbd {
+  background: #151515;
+  padding: 0.1em 0.35em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body ul,
+:where(html[data-document-style="signature"]) .markdown-body ol {
+  padding-left: 1.6em;
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body li {
+  margin: 0.35em 0;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body li > p {
+  margin: 0.35em 0;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body li > ul,
+:where(html[data-document-style="signature"]) .markdown-body li > ol {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  color: var(--md-green);
+}
+
+/* Base spacing */
+:where(html[data-document-style="signature"]) .markdown-body ul,
+:where(html[data-document-style="signature"]) .markdown-body ol {
+  margin-top: 0.6em;
+  margin-bottom: 1.2em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body ul {
+  padding-left: 1.2em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body ol {
+  padding-left: 1.6em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body li {
+  margin: 0.9em 0;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body ul > li::before {
+  left: var(--md-list-marker-line-left);
+  top: var(--md-list-marker-line-top);
+  width: var(--md-list-marker-line-width);
+}
+
+/* Keep ordered list numbers styled */
+:where(html[data-document-style="signature"]) .markdown-body ol > li::marker {
+  color: var(--md-brown-medium);
+  font-size: 0.95em;
+}
+
+/* Add guide lines only to unordered lists */
+:where(html[data-document-style="signature"]) .markdown-body ul ul {
+  border-left: 1px solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
+}
+
+/* If an unordered list sits directly inside an ordered item, it may still have a line */
+:where(html[data-document-style="signature"]) .markdown-body li > ul {
+  border-left: 1px solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
+}
+
+/* Ordered lists inside unordered lists should still have no line */
+:where(html[data-document-style="signature"]) .markdown-body li > ol {
+  border-left: none;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body blockquote {
+  color: var(--md-text);
+  border-left: 4px solid var(--md-blue);
+  padding: 0.2em 0 0.2em 1em;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Optional stronger quote style. */
+:where(html[data-document-style="signature"]) .markdown-body blockquote {
+  color: inherit;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body :not(pre) > code {
+  border: 1px solid var(--md-color-code);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body pre {
+  padding: 0.8em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body pre code {
+  color: var(--md-color-code);
+  font-family: var(--md-font-code);
+  font-size: 1em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body hr {
+  border: none;
+  height: 8px; /* afstandsruimte tussen de lijnen */
+  width: 61.803398875%;
+  width: calc(((100% / 1.618) / 1.618) / 1); /* optionele gulden snede breedte */
+  margin: 1.5em auto;
+  border-top: 0.5px solid var(--md-color-code);
+  margin-top: 5em;
+  margin-bottom: 5em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body hr::before {
+  content: "";
+}
+
+:where(html[data-document-style="signature"]) .markdown-body table {
+  font-size: 0.95em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body tbody tr:nth-child(even) {
+  background: var(--md-table-row-alt-bg);
+}
+
+:where(html[data-document-style="signature"]) .markdown-body th,
+:where(html[data-document-style="signature"]) .markdown-body td {
+  padding: 0.45em 0.7em;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body th {
+  color: var(--md-green);
+  font-weight: 700;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body img {
+  margin: 1em auto;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body figure {
+  margin: 1.5em auto;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body figcaption {
+  color: var(--md-text-dim);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body details {
+  border: 1px solid var(--md-border);
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  background: #0f0f0f;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body summary {
+  color: var(--md-green);
+}
+
+:where(html[data-document-style="signature"]) .markdown-body dt {
+  color: var(--md-green);
+  font-weight: 700;
+}
+
+:where(html[data-document-style="signature"]) .markdown-body .footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--md-border);
+}
+
+/* Signature's own mobile sizes. These have to live in THIS file, not the
+   base: a media query adds no specificity, so they beat the rules above only
+   by coming after them. Left in customMarkdown.css they would be overridden
+   by this file instead of overriding it, and a phone would get the desktop
+   padding. */
+@media (max-width: 700px) {
+
+:where(html[data-document-style="signature"]) .markdown-body h1 {
+  padding: 0.5em 0.8em;
+  }
+
+
+
+}

@@ -22,6 +22,11 @@ __pycache__/
 # material, never part of the app.
 /Claude outputs/
 
+# A scratch copy of the pre-rewrite stylesheets, kept only so a rewrite step can
+# be diffed against what it replaced. Not part of the app; delete when the CSS
+# rewrite is finished.
+/experiments/css-rewrite/_origcss/
+
 # Node tooling (development only, the shipped app is plain static files)
 /node_modules/
 /test-results/

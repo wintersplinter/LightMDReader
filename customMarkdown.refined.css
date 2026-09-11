@@ -14,6 +14,139 @@
    themes. Print colours live in customMarkdown.print.css.
    ========================================================== */
 
+/* -- kept from the old shared base ----------------------------------------
+   These were Signature's, sitting in customMarkdown.css because that file was
+   both the base and a style. Most styles overrode them; this one did not, so
+   it was inheriting them by accident rather than by choice.
+
+   They sit above this style's own rules deliberately: the base set shorthands
+   that the rules below override with longhands, and reversing that order would
+   wipe them out. The :where() scope keeps the specificity they had.
+
+   Whether this style WANTS any of them is a design question, not a structural
+   one. Deciding that changes pixels, so it was left alone here.
+   -------------------------------------------------------------------------- */
+
+
+/* -- the type scale --------------------------------------------------------
+   The rules live in customMarkdown.css, once, and read these. Change a size
+   here and both the desktop and the mobile rule follow, because there is only
+   one rule. It used to mean editing two copies in this file, and the copy in
+   the media block was easy to miss.
+   -------------------------------------------------------------------------- */
+/* -- heading colour, weight, tracking and alignment ------------------------
+   Same contract as the type scale: the foundation carries the rule, this file
+   carries the values. Nothing here is a shorthand, so nothing can be split
+   from a longhand it argues with.
+   -------------------------------------------------------------------------- */
+html[data-document-style="refined"] .markdown-body {
+  --md-h1-colour: var(--md-brown-white);
+  --md-h1-weight: 300;
+  --md-h1-tracking: -0.015em;
+  --md-h1-align: center;
+  --md-h2-colour: var(--md-brown-light);
+  --md-h2-weight: 300;
+  --md-h2-tracking: -0.015em;
+  --md-h2-align: center;
+  --md-h3-colour: var(--md-refined-heading);
+  --md-h3-weight: 500;
+  --md-h4-colour: var(--md-refined-heading);
+  --md-h4-weight: 600;
+  --md-h5-colour: var(--md-refined-heading);
+  --md-h5-weight: 600;
+  --md-h6-colour: var(--md-text-muted);
+  --md-h6-weight: 600;
+}
+
+html[data-document-style="refined"] .markdown-body {
+  --md-body-family: var(--md-font-main);
+  --md-body-size: 16px;
+  --md-body-leading: 1.7;
+  --md-display-family: var(--md-refined-display);
+  --md-h1-size: 2.7em;
+  --md-h1-leading: 1.22;
+  --md-h2-size: 1.72em;
+  --md-h2-leading: 1.22;
+  --md-h3-size: 1.22em;
+  --md-h3-leading: 1.22;
+  --md-h4-size: 0.84em;
+  --md-h4-leading: 1.22;
+  --md-h5-size: 0.95em;
+  --md-h5-leading: 1.22;
+  --md-h6-size: 0.8em;
+  --md-h6-leading: 1.22;
+}
+
+/* Below 700px, only these numbers change. */
+@media (max-width: 700px) {
+html[data-document-style="refined"] .markdown-body {
+    --md-body-size: 14px;
+    --md-h1-size: 2em;
+    --md-h2-size: 1.42em;
+    --md-h3-size: 1.15em;
+  }
+}
+
+:where(html[data-document-style="refined"]) .markdown-body p {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body blockquote {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body pre {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body table {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body details {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body figure {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body h3 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body h4 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body ol > li::marker {
+  font-size: 0.95em;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body pre code {
+  font-family: var(--md-font-code);
+}
+
+:where(html[data-document-style="refined"]) .markdown-body hr {
+  margin-top: 5em;
+  margin-bottom: 5em;
+}
+
+:where(html[data-document-style="refined"]) .markdown-body figcaption {
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+:where(html[data-document-style="refined"]) .markdown-body h1 {
+    padding: 0.5em 0.8em;
+  }
+
+}
+
 html[data-document-style="refined"] .markdown-body {
   --md-refined-accent: var(--md-brown-medium);
   /* --md-brown-medium alone is only 4.4:1 on the brown theme's own tan
@@ -27,9 +160,6 @@ html[data-document-style="refined"] .markdown-body {
   --md-refined-surface: color-mix(in srgb, var(--md-brown-dark) 12%, transparent);
 
   --md-refined-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  font-size: 16px;
-  line-height: 1.7;
 }
 
 /* ----------------------------------------------------------
@@ -62,19 +192,12 @@ html[data-document-style="refined"] .markdown-body h5,
 html[data-document-style="refined"] .markdown-body h6 {
   display: block;
   padding: 0;
-  line-height: 1.22;
   text-decoration: none;
 }
 
 /* h1 and h2 stay centred, which is the Signature signature. */
 html[data-document-style="refined"] .markdown-body h1 {
   margin: 0.2em 0 0.3em;
-  color: var(--md-brown-white);
-  font-family: var(--md-refined-display);
-  font-size: 2.7em;
-  font-weight: 300;
-  letter-spacing: -0.015em;
-  text-align: center;
 }
 
 /* A centred hairline replaces the decorative dot clusters. */
@@ -96,32 +219,20 @@ html[data-document-style="refined"] .markdown-body h2 {
   margin: 2.1em 0 0.7em;
   padding-bottom: 0.32em;
   border-bottom: 1px solid var(--md-refined-accent);
-  color: var(--md-brown-light);
-  font-family: var(--md-refined-display);
-  font-size: 1.72em;
-  font-weight: 300;
-  letter-spacing: -0.015em;
-  text-align: center;
 }
 
 /* From h3 down the headings go left-aligned and switch to the body face, so
    long documents stay scannable. */
 html[data-document-style="refined"] .markdown-body h3 {
   margin: 1.75em 0 0.42em;
-  color: var(--md-refined-heading);
   font-family: var(--md-font-main);
-  font-size: 1.22em;
-  font-weight: 500;
   letter-spacing: 0;
   text-align: left;
 }
 
 html[data-document-style="refined"] .markdown-body h4 {
   margin: 1.45em 0 0.38em;
-  color: var(--md-refined-heading);
   font-family: var(--md-font-main);
-  font-size: 0.84em;
-  font-weight: 600;
   letter-spacing: 0.07em;
   text-align: left;
   text-transform: uppercase;
@@ -129,19 +240,13 @@ html[data-document-style="refined"] .markdown-body h4 {
 
 html[data-document-style="refined"] .markdown-body h5 {
   margin: 1.35em 0 0.35em;
-  color: var(--md-refined-heading);
   font-family: var(--md-font-main);
-  font-size: 0.95em;
-  font-weight: 600;
   text-align: left;
 }
 
 html[data-document-style="refined"] .markdown-body h6 {
   margin: 1.3em 0 0.32em;
-  color: var(--md-text-muted);
   font-family: var(--md-font-main);
-  font-size: 0.8em;
-  font-weight: 600;
   letter-spacing: 0.05em;
   text-align: left;
 }
@@ -380,23 +485,11 @@ html[data-document-style="refined"] .reader {
 }
 
 @media (max-width: 700px) {
-  html[data-document-style="refined"] .markdown-body {
-    font-size: 14px;
-  }
 
-  html[data-document-style="refined"] .markdown-body h1 {
-    font-size: 2em;
-  }
 
-  html[data-document-style="refined"] .markdown-body h2 {
-    font-size: 1.42em;
-  }
 
-  html[data-document-style="refined"] .markdown-body h3 {
-    font-size: 1.15em;
-  }
 
-  html[data-document-style="refined"] .reader {
+html[data-document-style="refined"] .reader {
     padding: 18px;
   }
 }

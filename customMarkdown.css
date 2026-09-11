@@ -64,9 +64,6 @@
 
   background: var(--md-bg);
   color: var(--md-text);
-  font-family: var(--md-font-main);
-  font-size: 16px;
-  line-height: 1.7;
   overflow-wrap: break-word;
 }
 
@@ -90,17 +87,6 @@
   margin-bottom: 0;
 }
 
-.markdown-body p,
-.markdown-body ul,
-.markdown-body ol,
-.markdown-body blockquote,
-.markdown-body pre,
-.markdown-body table,
-.markdown-body details,
-.markdown-body figure {
-  margin-top: 0;
-  margin-bottom: 1em;
-}
 
 /* Optional: slightly tighter text paragraphs. */
 .markdown-body p {
@@ -113,20 +99,18 @@
    Current style: full/partial green heading bars.
    ========================================================== */
 
-.markdown-body h1,
+.markdown-body h1 {
+  border-radius: 0;
+  /*font-weight: 400;*/
+}
 .markdown-body h2,
 .markdown-body h3,
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
   display: block;
-  margin: 1.4em 0 1em 0;
-  color: var(--md-text);
   border-radius: 0;
   /*font-weight: 400;*/
-  line-height: 1.25;
-  padding: 1.2em 0.5em 0.2em 0.5em;
-  font-weight: 300;
 }
 
 .markdown-body h1 {
@@ -136,26 +120,17 @@
   border-right: none; /*4px solid var(--md-hard-accent-color);*/
   /*border-bottom: 2.5px solid var(--md-brown-medium);*/
   border-radius: 0px;
-  color: var(--md-brown-white);
-  font-family: var(--font-Title);
-  letter-spacing: -0.01em;
-  font-size: 5em;
-  text-align: center;
 }
 
 /* Optional: add decorative dots around h1. */
 .markdown-body h1 {
-  display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.35em;
-
-  text-align: center;
 }
 
 .markdown-body h1::before,
 .markdown-body h1::after {
-  content: "•  •";
   color: var(--md-brown-white);
   font-size: 0.4em;
   letter-spacing: 0.35em;
@@ -166,75 +141,12 @@
 }
 /* end optional decorative dots */
 
-.markdown-body h2 {
-  border-bottom: 1px solid var(--md-brown-medium);
-  /*border-radius: 0;*/
-  color: var(--md-brown-light);
-  font-family: var(--font-Title);
-  letter-spacing: -0.01em;
-  font-size: 2.4em;
-  text-align: center;
-}
 
-.markdown-body h3 {
-  color: var(--md-brown-medium);
-  /*border-left: 2px solid var(--md-brown-dark);*/
-  font-size: 2em;
-  text-decoration: underline;
-  text-decoration-color: var(--md-brown-dark);
-  text-decoration-thickness: 1px;
-}
 
-/* Deeper headings: included as active defaults, but modest. */
-.markdown-body h4 {
-  color: var(--md-brown-dark);
-  /*border-left: 2px solid var(--md-brown-dark);*/
-  font-size: 1.8em;
-  text-decoration: underline;
-  text-decoration-color: var(--md-brown-dark);
-  text-decoration-thickness: 1px;
-}
 
-.markdown-body h5 {
-  color: var(--md-brown-dark);
-  font-size: 1.5em;
-  font-weight: 500;
-}
 
-.markdown-body h6 {
-  color: var(--md-brown-dark);
-  /*border-left: 2px solid var(--md-brown-dark);*/
-  font-size: 1.25em;
-  font-weight: 500;
-}
 
-.markdown-body h1 + p,
-.markdown-body h2 + p,
-.markdown-body h3 + p,
-.markdown-body h4 + p,
-.markdown-body h5 + p,
-.markdown-body h6 + p {
-  margin-top: 0.6em;
-}
 
-/* The standfirst: the paragraph that opens a section.
-   MDrender marks it, so this styles a class rather than guessing at
-   "the paragraph next to an h1" - see the note in MDrender.js.
-
-   Scoped to Signature rather than written bare, because this file is the
-   shared base: a bare rule here would hand every style the same lede.
-   Signature's title is 5em, centred and flanked by dots, so its lede is
-   centred too, and it takes the title's brown rather than the body's grey -
-   the pair reads as one unit that way. margin-top is 0, not the 0.6em this
-   file gives every other heading-then-paragraph pair, or the lede floats
-   away from the title it belongs to. */
-html[data-document-style="signature"] .markdown-body .standfirst {
-  margin-top: 0;
-  color: var(--md-brown-light);
-  font-size: 1.15em;
-  line-height: 1.6;
-  text-align: center;
-}
 
 /* Optional heading anchors, if your renderer adds them later. */
 .markdown-body .anchor {
@@ -249,7 +161,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 
 .markdown-body strong,
 .markdown-body b {
-  font-weight: 700;
   color: var(--md-text);
 }
 
@@ -265,11 +176,7 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 }
 
 .markdown-body mark {
-  background: rgba(255, 255, 0, 0.267);
-  border: yellow 1px solid;
   color: var(--md-text);
-  padding: 0.05em 0.25em;
-  border-radius: 3px;
 }
 
 .markdown-body small {
@@ -285,8 +192,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 
 .markdown-body a {
   color: var(--md-link);
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--md-link) 55%, transparent);
 }
 
 .markdown-body a:hover,
@@ -299,11 +204,9 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   font-family: var(--md-font-code);
   font-size: 0.9em;
   color: var(--md-text);
-  background: #151515;
   border: 1px solid var(--md-border);
   border-bottom-width: 2px;
   border-radius: 4px;
-  padding: 0.1em 0.35em;
 }
 
 /* ==========================================================
@@ -311,12 +214,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    Important because app-wide resets often break markdown lists.
    ========================================================== */
 
-.markdown-body ul,
-.markdown-body ol {
-  padding-left: 1.6em;
-  margin-top: 0;
-  margin-bottom: 1em;
-}
 
 .markdown-body ul {
   list-style-type: disc;
@@ -327,18 +224,12 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 }
 
 .markdown-body li {
-  margin: 0.35em 0;
   padding-left: 0.2em;
 }
 
-.markdown-body li > p {
-  margin: 0.35em 0;
-}
 
 .markdown-body li > ul,
 .markdown-body li > ol {
-  margin-top: 0.35em;
-  margin-bottom: 0.35em;
   padding-left: 1.4em;
 }
 
@@ -397,9 +288,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   font-weight: 700;
 }
 
-.markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
-  color: var(--md-green);
-}
 
 /* ==========================================================
    Refined list behavior
@@ -408,28 +296,19 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    - Works even when ul/ol are nested in any order
    ========================================================== */
 
-/* Base spacing */
-.markdown-body ul,
-.markdown-body ol {
-  margin-top: 0.6em;
-  margin-bottom: 1.2em;
-}
 
 /* Unordered lists: remove all bullets */
 .markdown-body ul {
   list-style-type: none;
-  padding-left: 1.2em;
 }
 
 /* Ordered lists: keep numbers */
 .markdown-body ol {
   list-style-type: decimal;
-  padding-left: 1.6em;
 }
 
 /* List items */
 .markdown-body li {
-  margin: 0.9em 0;
   padding-left: 0.35em;
   position: relative;
 }
@@ -439,10 +318,7 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 .markdown-body ul > li::before {
   border-top: var(--md-list-marker-line-weight) solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
   content: "";
-  left: var(--md-list-marker-line-left);
   position: absolute;
-  top: var(--md-list-marker-line-top);
-  width: var(--md-list-marker-line-width);
 }
 
 /* Remove markers only from unordered lists */
@@ -450,11 +326,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   content: "";
 }
 
-/* Keep ordered list numbers styled */
-.markdown-body ol > li::marker {
-  color: var(--md-brown-medium);
-  font-size: 0.95em;
-}
 
 /* Remove all previous nested guide lines from ordered lists */
 .markdown-body ol,
@@ -463,32 +334,15 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   border-left: none;
 }
 
-/* Add guide lines only to unordered lists */
-.markdown-body ul ul {
-  border-left: 1px solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
-}
 
-/* If an unordered list sits directly inside an ordered item, it may still have a line */
-.markdown-body li > ul {
-  border-left: 1px solid color-mix(in srgb, var(--md-brown-dark) 45%, transparent);
-}
 
-/* Ordered lists inside unordered lists should still have no line */
-.markdown-body li > ol {
-  border-left: none;
-}
 
 /* ==========================================================
    06. BLOCKQUOTES
    ========================================================== */
 
 .markdown-body blockquote {
-  color: var(--md-text);
-  border-left: 4px solid var(--md-blue);
   border-radius: 0;
-  padding: 0.2em 0 0.2em 1em;
-  margin-left: 0;
-  margin-right: 0;
 }
 
 .markdown-body blockquote > *:first-child {
@@ -499,12 +353,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   margin-bottom: 0;
 }
 
-/* Optional stronger quote style. */
-.markdown-body blockquote {
-  color: inherit;
-  /* background: var(--md-blue-soft); */
-  /* border-radius: 0 6px 6px 0; */
-}
 
 /* ==========================================================
    07. CODE
@@ -519,27 +367,20 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 
 .markdown-body :not(pre) > code {
   background: var(--md-code-bg);
-  border: 1px solid var(--md-color-code);
-  border-radius: 4px;
-  padding: 0.08em 0.35em;
 }
 
 .markdown-body pre {
   border-left: 1px solid var(--md-color-code);
   background: var(--md-code-bg);
   font-family: var(--md-font-code);
-  padding: 0.8em;
   overflow: auto;
   white-space: pre;
 }
 
 .markdown-body pre code {
-  color: var(--md-color-code);
   background: transparent;
   border: 0;
   padding: 0;
-  font-family: var(--md-font-code);
-  font-size: 1em;
 }
 
 /* Optional language label if your renderer adds language classes. */
@@ -553,19 +394,10 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    ========================================================== */
 
 .markdown-body hr {
-  border: none;
-  height: 8px; /* afstandsruimte tussen de lijnen */
-  width: 61.803398875%;
-  width: calc(((100% / 1.618) / 1.618) / 1); /* optionele gulden snede breedte */
-  margin: 1.5em auto;
-  border-top: 0.5px solid var(--md-color-code);
   position: relative;
-  margin-top: 5em;
-  margin-bottom: 5em;
 }
 
 .markdown-body hr::before {
-  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -581,7 +413,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   width: 100%;
   border-collapse: collapse;
   background: var(--md-table-bg);
-  font-size: 0.95em;
   overflow: auto;
 }
 
@@ -593,22 +424,14 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   border-bottom: 1px solid var(--md-border-soft);
 }
 
-.markdown-body tbody tr:nth-child(even) {
-  background: var(--md-table-row-alt-bg);
-}
 
 .markdown-body th,
 .markdown-body td {
   border: 1px solid var(--md-border);
-  padding: 0.45em 0.7em;
   text-align: left;
   vertical-align: top;
 }
 
-.markdown-body th {
-  color: var(--md-green);
-  font-weight: 700;
-}
 
 /* Optional table wrapper if you later wrap tables in a div. */
 .markdown-body .table-wrapper {
@@ -627,11 +450,9 @@ html[data-document-style="signature"] .markdown-body .standfirst {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 1em auto;
 }
 
 .markdown-body figure {
-  margin: 1.5em auto;
   text-align: center;
 }
 
@@ -641,11 +462,8 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 }
 
 .markdown-body figcaption {
-  color: var(--md-text-dim);
-  font-size: 0.9em;
   margin-top: 0.6em;
   text-align: center;
-  font-style: italic;
 }
 
 .markdown-body video,
@@ -668,16 +486,9 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    Useful if your markdown renderer allows raw HTML.
    ========================================================== */
 
-.markdown-body details {
-  border: 1px solid var(--md-border);
-  border-radius: 8px;
-  padding: 0.7em 1em;
-  background: #0f0f0f;
-}
 
 .markdown-body summary {
   cursor: pointer;
-  color: var(--md-green);
 }
 
 .markdown-body details > *:last-child {
@@ -694,8 +505,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
 }
 
 .markdown-body dt {
-  color: var(--md-green);
-  font-weight: 700;
   margin-top: 0.8em;
 }
 
@@ -710,9 +519,6 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    ========================================================== */
 
 .markdown-body .footnotes {
-  margin-top: 2em;
-  padding-top: 1em;
-  border-top: 1px solid var(--md-border);
   color: var(--md-text-muted);
   font-size: 0.9em;
 }
@@ -817,25 +623,100 @@ html[data-document-style="signature"] .markdown-body .standfirst {
    ========================================================== */
 
 @media (max-width: 700px) {
-  .markdown-body {
-    font-size: 13px;
-  }
 
-  .markdown-body h1 {
-    font-size: 1.6em;
-    padding: 0.5em 0.8em;
-  }
 
-  .markdown-body h2 {
-    font-size: 1.35em;
-  }
 
-  .markdown-body h3 {
-    font-size: 1.15em;
-  }
 
-  .markdown-body table {
+.markdown-body table {
     display: block;
     overflow-x: auto;
   }
+}
+
+/* ==========================================================
+   THE TYPE SCALE
+   One rule per thing, reading a token each style sets. This is the whole of
+   the scale: six heading sizes, six leadings, the body size, its leading and
+   the two families. A style says what its numbers are; it does not restate
+   the selectors, and it does not repeat the headings again below 700px.
+   ========================================================== */
+
+.markdown-body {
+  font-family: var(--md-body-family);
+  font-size: var(--md-body-size);
+  line-height: var(--md-body-leading);
+}
+
+.markdown-body h1,
+.markdown-body h2 {
+  font-family: var(--md-display-family);
+}
+
+.markdown-body h1 {
+  font-size: var(--md-h1-size);
+  line-height: var(--md-h1-leading);
+}
+
+.markdown-body h2 {
+  font-size: var(--md-h2-size);
+  line-height: var(--md-h2-leading);
+}
+
+.markdown-body h3 {
+  font-size: var(--md-h3-size);
+  line-height: var(--md-h3-leading);
+}
+
+.markdown-body h4 {
+  font-size: var(--md-h4-size);
+  line-height: var(--md-h4-leading);
+}
+
+.markdown-body h5 {
+  font-size: var(--md-h5-size);
+  line-height: var(--md-h5-leading);
+}
+
+.markdown-body h6 {
+  font-size: var(--md-h6-size);
+  line-height: var(--md-h6-leading);
+}
+
+/* ----------------------------------------------------------
+   Heading colour, weight, tracking and alignment. Same idea as the scale:
+   one rule each, the value comes from the style.
+   ---------------------------------------------------------- */
+
+.markdown-body h1 {
+  color: var(--md-h1-colour);
+  font-weight: var(--md-h1-weight);
+  letter-spacing: var(--md-h1-tracking);
+  text-align: var(--md-h1-align);
+}
+
+.markdown-body h2 {
+  color: var(--md-h2-colour);
+  font-weight: var(--md-h2-weight);
+  letter-spacing: var(--md-h2-tracking);
+  text-align: var(--md-h2-align);
+}
+
+.markdown-body h3 {
+  color: var(--md-h3-colour);
+  font-weight: var(--md-h3-weight);
+}
+
+.markdown-body h4 {
+  color: var(--md-h4-colour);
+  font-weight: var(--md-h4-weight);
+}
+
+.markdown-body h5 {
+  color: var(--md-h5-colour);
+  font-weight: var(--md-h5-weight);
+}
+
+.markdown-body h6 {
+  color: var(--md-h6-colour);
+  font-weight: var(--md-h6-weight);
 }

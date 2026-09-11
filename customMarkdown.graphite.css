@@ -19,6 +19,161 @@
    customMarkdown.print.css.
    ========================================================== */
 
+/* -- kept from the old shared base ----------------------------------------
+   These were Signature's, sitting in customMarkdown.css because that file was
+   both the base and a style. Most styles overrode them; this one did not, so
+   it was inheriting them by accident rather than by choice.
+
+   They sit above this style's own rules deliberately: the base set shorthands
+   that the rules below override with longhands, and reversing that order would
+   wipe them out. The :where() scope keeps the specificity they had.
+
+   Whether this style WANTS any of them is a design question, not a structural
+   one. Deciding that changes pixels, so it was left alone here.
+   -------------------------------------------------------------------------- */
+
+/* -- the type scale --------------------------------------------------------
+   The rules live in customMarkdown.css, once, and read these. Change a size
+   here and both the desktop and the mobile rule follow, because there is only
+   one rule. It used to mean editing two copies in this file, and the copy in
+   the media block was easy to miss.
+   -------------------------------------------------------------------------- */
+/* -- heading colour, weight, tracking and alignment ------------------------
+   Same contract as the type scale: the foundation carries the rule, this file
+   carries the values. Nothing here is a shorthand, so nothing can be split
+   from a longhand it argues with.
+   -------------------------------------------------------------------------- */
+html[data-document-style="graphite"] .markdown-body {
+  --md-h1-colour: var(--md-graphite-ink);
+  --md-h1-weight: 300;
+  --md-h1-tracking: -0.03em;
+  --md-h1-align: center;
+  --md-h2-colour: var(--md-graphite-ink);
+  --md-h2-weight: 600;
+  --md-h2-tracking: 0.06em;
+  --md-h2-align: center;
+  --md-h3-colour: var(--md-graphite-ink);
+  --md-h3-weight: 400;
+  --md-h4-colour: var(--md-graphite-quiet);
+  --md-h4-weight: 600;
+  --md-h5-colour: var(--md-graphite-quiet);
+  --md-h5-weight: 400;
+  --md-h6-colour: var(--md-graphite-quiet);
+  --md-h6-weight: 400;
+}
+
+html[data-document-style="graphite"] .markdown-body {
+  --md-body-family: var(--md-graphite-text);
+  --md-body-size: 15.5px;
+  --md-body-leading: 1.75;
+  --md-display-family: var(--md-graphite-display);
+  --md-h1-size: 3.05em;
+  --md-h1-leading: 1.06;
+  --md-h2-size: 1.45em;
+  --md-h2-leading: 1.22;
+  --md-h3-size: 1.2em;
+  --md-h3-leading: 1.22;
+  --md-h4-size: 0.98em;
+  --md-h4-leading: 1.22;
+  --md-h5-size: 0.98em;
+  --md-h5-leading: 1.22;
+  --md-h6-size: 0.8em;
+  --md-h6-leading: 1.22;
+}
+
+/* Below 700px, only these numbers change. */
+@media (max-width: 700px) {
+html[data-document-style="graphite"] .markdown-body {
+    --md-body-size: 14px;
+    --md-h1-size: 2.25em;
+    --md-h2-size: 1.32em;
+    --md-h3-size: 1.12em;
+  }
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body p {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body blockquote {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body pre {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body table {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body details {
+  margin-top: 0;
+  padding: 0.7em 1em;
+  background: #0f0f0f;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body figure {
+  margin-top: 0;
+  margin: 1.5em auto;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body h2 {
+  border-bottom: 1px solid var(--md-brown-medium);
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body h3 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body h4 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body h1 + p {
+  margin-top: 0.6em;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body b {
+  font-weight: 700;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body kbd {
+  background: #151515;
+  padding: 0.1em 0.35em;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body pre code {
+  font-family: var(--md-font-code);
+  font-size: 1em;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body hr {
+  margin-top: 5em;
+  margin-bottom: 5em;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body img {
+  margin: 1em auto;
+}
+
+:where(html[data-document-style="graphite"]) .markdown-body figcaption {
+  color: var(--md-text-dim);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+:where(html[data-document-style="graphite"]) .markdown-body h1 {
+    padding: 0.5em 0.8em;
+  }
+
+}
+
 html[data-document-style="graphite"] .markdown-body {
   /* Named so the intent is legible, but every one of these is a neutral. The
      style must never reach for --md-green or --md-blue. */
@@ -40,10 +195,6 @@ html[data-document-style="graphite"] .markdown-body {
      tiring for paragraphs. */
   --md-graphite-text:
     "Segoe UI", "Helvetica Neue", Helvetica, Arimo, "Liberation Sans", Arial, sans-serif;
-
-  font-family: var(--md-graphite-text);
-  font-size: 15.5px;
-  line-height: 1.75;
 }
 
 /* Headings are set on a modular scale rather than tuned one at a time, so the
@@ -80,7 +231,12 @@ html[data-document-style="graphite"] .markdown-body figure {
    ---------------------------------------------------------- */
 
 html[data-document-style="graphite"] .markdown-body h1,
-html[data-document-style="graphite"] .markdown-body h2,
+html[data-document-style="graphite"] .markdown-body h2 {
+  display: block;
+  padding: 0;
+  border: 0;
+  text-decoration: none;
+}
 html[data-document-style="graphite"] .markdown-body h3,
 html[data-document-style="graphite"] .markdown-body h4,
 html[data-document-style="graphite"] .markdown-body h5,
@@ -88,26 +244,11 @@ html[data-document-style="graphite"] .markdown-body h6 {
   display: block;
   padding: 0;
   border: 0;
-  color: var(--md-graphite-ink);
   font-family: var(--md-graphite-display);
-  line-height: 1.22;
   text-align: left;
   text-decoration: none;
 }
 
-/* Position carries the hierarchy, in three steps rather than two.
-
-   Centred (h1, h2) means "this is a title": it leaves the column and is read
-   as an event. Indented (h3) means "this is a subdivision": still in the
-   column, but stepped in, so it is read as belonging under what came before.
-   Flush left (h4 and below) means "this is a label": it belongs to the text
-   directly under it and is read in passing.
-
-   Three positions, three ranks, and not one line of ornament spent on it. */
-html[data-document-style="graphite"] .markdown-body h1,
-html[data-document-style="graphite"] .markdown-body h2 {
-  text-align: center;
-}
 
 /* Centred text that is letterspaced sits fractionally left of true centre:
    the tracking is added after every character including the last, so the line
@@ -135,10 +276,6 @@ html[data-document-style="graphite"] .markdown-body h1 {
   margin: 0 0 0.55em;
   padding-top: 0.5em;
   border-top: var(--md-graphite-hairline) solid var(--md-graphite-rule);
-  font-size: 3.05em;
-  font-weight: 300;
-  letter-spacing: -0.03em;
-  line-height: 1.06;
   text-wrap: balance;
 }
 
@@ -186,10 +323,7 @@ html[data-document-style="graphite"] .markdown-body .standfirst {
    the numbers differ. */
 html[data-document-style="graphite"] .markdown-body h2 {
   margin: 2.6em 0 0.95em;
-  font-size: 1.45em;
-  font-weight: 600;
   font-variant: small-caps;
-  letter-spacing: 0.06em;
   text-wrap: balance;
 }
 
@@ -202,7 +336,6 @@ html[data-document-style="graphite"] .markdown-body h2::after {
   background: var(--md-graphite-ink);
 }
 
-/* h3 sits at body size. Weight and tracking carry it, nothing else. */
 /* h3 is small caps too, which makes h1-h3 read as one centred family. Two
    small-cap levels in a row is a real risk when skimming, so they are held
    apart by four things at once, not one: position (centred against indented),
@@ -213,8 +346,6 @@ html[data-document-style="graphite"] .markdown-body h2::after {
    enough to wrap keeps every line stepped in, not just the first. */
 html[data-document-style="graphite"] .markdown-body h3 {
   margin: 2em 0 0.5em 1.6em;
-  font-size: 1.2em;
-  font-weight: 400;
   font-variant: small-caps;
   letter-spacing: 0.05em;
   text-wrap: balance;
@@ -224,28 +355,19 @@ html[data-document-style="graphite"] .markdown-body h3 {
    tracking rather than by size, which is nearly exhausted by this point. */
 html[data-document-style="graphite"] .markdown-body h4 {
   margin: 1.7em 0 0.45em;
-  color: var(--md-graphite-quiet);
-  font-size: 0.98em;
-  font-weight: 600;
   font-variant: small-caps;
   letter-spacing: 0.13em;
 }
 
 html[data-document-style="graphite"] .markdown-body h5 {
   margin: 1.55em 0 0.4em;
-  color: var(--md-graphite-quiet);
-  font-size: 0.98em;
-  font-weight: 400;
   font-variant: small-caps;
   letter-spacing: 0.13em;
 }
 
 html[data-document-style="graphite"] .markdown-body h6 {
   margin: 1.4em 0 0.4em;
-  color: var(--md-graphite-quiet);
   font-family: var(--md-font-code);
-  font-size: 0.8em;
-  font-weight: 400;
   letter-spacing: 0.02em;
 }
 
@@ -516,33 +638,23 @@ html[data-document-style="graphite"] .reader {
 }
 
 @media (max-width: 700px) {
-  html[data-document-style="graphite"] .markdown-body {
-    font-size: 14px;
-  }
 
-  html[data-document-style="graphite"] .markdown-body h1 {
-    font-size: 2.25em;
-  }
 
-  html[data-document-style="graphite"] .markdown-body h2 {
-    font-size: 1.32em;
-  }
 
-  html[data-document-style="graphite"] .markdown-body h3 {
+html[data-document-style="graphite"] .markdown-body h3 {
     margin-left: 0.9em;
-    font-size: 1.12em;
   }
 
-  html[data-document-style="graphite"] .markdown-body .standfirst {
+html[data-document-style="graphite"] .markdown-body .standfirst {
     font-size: 1.06em;
   }
 
   /* No gutter to hang into at this width, so the list markers come inside. */
-  html[data-document-style="graphite"] .markdown-body ul {
+html[data-document-style="graphite"] .markdown-body ul {
     padding-left: 1.3em;
   }
 
-  html[data-document-style="graphite"] .reader {
+html[data-document-style="graphite"] .reader {
     padding: 18px;
   }
 }

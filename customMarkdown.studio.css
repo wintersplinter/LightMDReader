@@ -12,6 +12,136 @@
    hard-coding anything. Print colours live in customMarkdown.print.css.
    ========================================================== */
 
+/* -- kept from the old shared base ----------------------------------------
+   These were Signature's, sitting in customMarkdown.css because that file was
+   both the base and a style. Most styles overrode them; this one did not, so
+   it was inheriting them by accident rather than by choice.
+
+   They sit above this style's own rules deliberately: the base set shorthands
+   that the rules below override with longhands, and reversing that order would
+   wipe them out. The :where() scope keeps the specificity they had.
+
+   Whether this style WANTS any of them is a design question, not a structural
+   one. Deciding that changes pixels, so it was left alone here.
+   -------------------------------------------------------------------------- */
+
+
+/* -- the type scale --------------------------------------------------------
+   The rules live in customMarkdown.css, once, and read these. Change a size
+   here and both the desktop and the mobile rule follow, because there is only
+   one rule. It used to mean editing two copies in this file, and the copy in
+   the media block was easy to miss.
+   -------------------------------------------------------------------------- */
+/* -- heading colour, weight, tracking and alignment ------------------------
+   Same contract as the type scale: the foundation carries the rule, this file
+   carries the values. Nothing here is a shorthand, so nothing can be split
+   from a longhand it argues with.
+   -------------------------------------------------------------------------- */
+html[data-document-style="studio"] .markdown-body {
+  --md-h1-colour: var(--md-text);
+  --md-h1-weight: 700;
+  --md-h1-tracking: -0.028em;
+  --md-h1-align: left;
+  --md-h2-colour: var(--md-text);
+  --md-h2-weight: 700;
+  --md-h2-tracking: -0.028em;
+  --md-h2-align: left;
+  --md-h3-colour: var(--md-studio-accent);
+  --md-h3-weight: 700;
+  --md-h4-colour: var(--md-text-muted);
+  --md-h4-weight: 700;
+  --md-h5-colour: var(--md-text-muted);
+  --md-h5-weight: 400;
+  --md-h6-colour: var(--md-text-muted);
+  --md-h6-weight: 400;
+}
+
+html[data-document-style="studio"] .markdown-body {
+  --md-body-family: var(--md-font-main);
+  --md-body-size: 15.5px;
+  --md-body-leading: 1.66;
+  --md-display-family: var(--md-studio-display);
+  --md-h1-size: 2.45em;
+  --md-h1-leading: 1.16;
+  --md-h2-size: 1.5em;
+  --md-h2-leading: 1.16;
+  --md-h3-size: 1.17em;
+  --md-h3-leading: 1.16;
+  --md-h4-size: 0.82em;
+  --md-h4-leading: 1.16;
+  --md-h5-size: 0.8em;
+  --md-h5-leading: 1.16;
+  --md-h6-size: 0.76em;
+  --md-h6-leading: 1.16;
+}
+
+/* Below 700px, only these numbers change. */
+@media (max-width: 700px) {
+html[data-document-style="studio"] .markdown-body {
+    --md-body-size: 13.5px;
+    --md-h1-size: 1.9em;
+    --md-h2-size: 1.35em;
+    --md-h3-size: 1.12em;
+  }
+}
+
+:where(html[data-document-style="studio"]) .markdown-body p {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body blockquote {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body pre {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body table {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body details {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body figure {
+  margin-top: 0;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body h3 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body h4 {
+  text-decoration-color: var(--md-brown-dark);
+  text-decoration-thickness: 1px;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body pre code {
+  font-family: var(--md-font-code);
+}
+
+:where(html[data-document-style="studio"]) .markdown-body hr {
+  border: none;
+  margin-top: 5em;
+  margin-bottom: 5em;
+}
+
+:where(html[data-document-style="studio"]) .markdown-body figcaption {
+  font-style: italic;
+}
+
+@media (max-width: 700px) {
+:where(html[data-document-style="studio"]) .markdown-body h1 {
+    padding: 0.5em 0.8em;
+  }
+
+}
+
 html[data-document-style="studio"] .markdown-body {
   --md-studio-accent: var(--md-green);
   --md-studio-accent-soft: var(--md-green-soft);
@@ -23,9 +153,6 @@ html[data-document-style="studio"] .markdown-body {
      font, so headings read as chosen rather than defaulted. */
   --md-studio-display:
     Corbel, Candara, "Segoe UI Variable Display", "Avenir Next", Avenir, "Trebuchet MS", var(--md-font-main);
-
-  font-size: 15.5px;
-  line-height: 1.66;
 }
 
 /* ----------------------------------------------------------
@@ -50,25 +177,25 @@ html[data-document-style="studio"] .markdown-body figure {
    ---------------------------------------------------------- */
 
 html[data-document-style="studio"] .markdown-body h1,
-html[data-document-style="studio"] .markdown-body h2,
+html[data-document-style="studio"] .markdown-body h2 {
+  display: block;
+  padding: 0;
+  text-decoration: none;
+}
 html[data-document-style="studio"] .markdown-body h3,
 html[data-document-style="studio"] .markdown-body h4,
 html[data-document-style="studio"] .markdown-body h5,
 html[data-document-style="studio"] .markdown-body h6 {
   display: block;
   padding: 0;
-  color: var(--md-text);
   font-family: var(--md-studio-display);
-  font-weight: 700;
   letter-spacing: -0.028em;
-  line-height: 1.16;
   text-align: left;
   text-decoration: none;
 }
 
 html[data-document-style="studio"] .markdown-body h1 {
   margin: 0 0 0.55em;
-  font-size: 2.45em;
 }
 
 /* A hairline under the title, stopped short so it reads as a mark rather
@@ -96,7 +223,6 @@ html[data-document-style="studio"] .markdown-body h2 {
   margin: 2em 0 0.55em;
   padding-left: 0.62em;
   border-bottom: 0;
-  font-size: 1.5em;
 }
 
 html[data-document-style="studio"] .markdown-body h2::before {
@@ -112,8 +238,6 @@ html[data-document-style="studio"] .markdown-body h2::before {
 
 html[data-document-style="studio"] .markdown-body h3 {
   margin: 1.65em 0 0.42em;
-  color: var(--md-studio-accent);
-  font-size: 1.17em;
   letter-spacing: -0.018em;
 }
 
@@ -121,29 +245,20 @@ html[data-document-style="studio"] .markdown-body h3 {
    and small. This keeps the hierarchy obvious without another size step. */
 html[data-document-style="studio"] .markdown-body h4 {
   margin: 1.4em 0 0.4em;
-  color: var(--md-text-muted);
-  font-size: 0.82em;
-  font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 html[data-document-style="studio"] .markdown-body h5 {
   margin: 1.3em 0 0.38em;
-  color: var(--md-text-muted);
   font-family: var(--md-font-code);
-  font-size: 0.8em;
-  font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 html[data-document-style="studio"] .markdown-body h6 {
   margin: 1.25em 0 0.35em;
-  color: var(--md-text-muted);
   font-family: var(--md-font-code);
-  font-size: 0.76em;
-  font-weight: 400;
   letter-spacing: 0.04em;
 }
 
@@ -382,23 +497,11 @@ html[data-document-style="studio"] .reader {
 }
 
 @media (max-width: 700px) {
-  html[data-document-style="studio"] .markdown-body {
-    font-size: 13.5px;
-  }
 
-  html[data-document-style="studio"] .markdown-body h1 {
-    font-size: 1.9em;
-  }
 
-  html[data-document-style="studio"] .markdown-body h2 {
-    font-size: 1.35em;
-  }
 
-  html[data-document-style="studio"] .markdown-body h3 {
-    font-size: 1.12em;
-  }
 
-  html[data-document-style="studio"] .reader {
+html[data-document-style="studio"] .reader {
     padding: 16px;
   }
 }
