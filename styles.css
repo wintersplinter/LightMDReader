@@ -155,12 +155,6 @@ body.topbar-locked .layout {
   display: inline-block;
 }
 
-.actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
 .select {
   background: var(--btn);
   color: var(--text);
@@ -235,15 +229,26 @@ body.has-unsaved-changes #quickSaveBtn::after {
 /* The column width is a variable so the drag handle has one number to write
    to. --sidebar-width is set on <html> by app.js from localStorage; the
    fallback here is what a first visit gets. */
+/* minmax(0, 1fr), not 1fr: a grid track's automatic minimum is the min-content
+   width of what is in it, so one unbreakable token - a long URL, a hashed
+   filename - made the document column demand its full width and pushed the
+   page wider than the window. Measured: a single 80-character token widened
+   the page to 1226px at every window size below that, which is a horizontal
+   scrollbar on a desktop and a zoomed-out interface on a phone. Zero as the
+   floor lets the track take its share and lets the text wrap inside it. */
 .layout {
   display: grid;
-  grid-template-columns: var(--sidebar-width, 280px) 1fr;
+  grid-template-columns: var(--sidebar-width, 280px) minmax(0, 1fr);
   min-height: calc(100vh - 57px);
+  /* dvh follows the browser's own bars as they slide away on a phone; 100vh
+     there is the tallest the viewport ever gets, which leaves a strip of empty
+     page under the document. The vh line stays as the fallback. */
+  min-height: calc(100dvh - 57px);
 }
 
 body.editor-active .layout,
 body.sidebar-hidden .layout {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 body.editor-active .sidebar,
@@ -331,15 +336,11 @@ body.topbar-locked .sidebar-inner {
   max-height: calc(100vh - var(--topbar-height, 57px));
 }
 
-/* Narrow screens stack the sidebar above the document, where sticking it to
-   the viewport would eat the screen. */
-@media (max-width: 720px) {
-  .sidebar-inner {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
-  }
-}
+/* Narrow screens turn the sidebar into a drawer over the document rather than
+   a band above it - see the PHONE section near the end of this file, which
+   owns every narrow-screen rule so there is one place to look. The 720px
+   breakpoint that used to live here left a 40px band where the layout had
+   already gone to one column but the panel was still sticky. */
 
 /* A quiet scrollbar: the sidebar is chrome, not content. */
 .sidebar-inner::-webkit-scrollbar {
@@ -515,6 +516,7 @@ body.topbar-locked .sidebar-inner {
 
 .drop-zone {
   min-height: calc(100vh - 101px);
+  min-height: calc(100dvh - 101px);
   border: 1px solid transparent;
   border-radius: 8px;
   transition:
@@ -538,6 +540,12 @@ body.topbar-locked .sidebar-inner {
 
 .empty.error {
   border-color: #d66;
+}
+
+/* A paragraph rather than a bare button, so it sits in the text flow with the
+   same rhythm as the line above it. */
+.empty-actions {
+  margin: 16px 0 0;
 }
 .empty h1 {
   margin: 0 0 6px;
@@ -897,6 +905,7 @@ html[data-document-style] .reader.editor-preview {
 .image-preview-stage {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -911,6 +920,7 @@ html[data-document-style] .reader.editor-preview {
 .image-preview-img {
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   object-fit: contain;
   transform-origin: center center;
   user-select: none;
@@ -1234,81 +1244,6 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   }
 }
 
-@media (max-width: 760px) {
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .actions {
-    width: 100%;
-  }
-
-  .btn,
-  .select {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .layout {
-    display: block;
-  }
-
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  /* The layout is a single block here, so there is no column to drag. */
-  .sidebar-resizer {
-    display: none;
-  }
-
-  .content {
-    padding: 14px;
-  }
-
-  .drop-zone {
-    min-height: 55vh;
-  }
-
-  .reader {
-    padding: 16px;
-  }
-
-  .cheatsheet-dialog {
-    padding: 10px;
-  }
-
-  .cheatsheet-panel {
-    max-height: calc(100vh - 20px);
-  }
-
-  .cheatsheet-header {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .editor-shell {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: 0;
-  }
-
-  .editor-pane {
-    min-height: 0;
-  }
-
-  .markdown-input,
-  .editor-preview {
-    flex: none;
-    height: 42vh;
-    min-height: 260px;
-  }
-}
-
 /* ==========================================================================
    Top menu
    The toolbar used to be one long row of buttons. It is now grouped: view
@@ -1363,6 +1298,7 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   background: var(--panel);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
   max-height: min(70vh, 520px);
+  max-height: min(70dvh, 520px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -1571,5 +1507,307 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   .md-math-block {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+}
+
+/* ==========================================================================
+   PHONE
+   Every narrow-screen rule lives here, because a layout that only exists below
+   760px is impossible to reason about when its pieces are scattered through
+   the file. Three things drive it:
+
+     - the document is the point, so chrome must not own the top of the screen
+     - a finger is not a mouse: 44px targets, and nothing that needs hover
+     - iOS Safari zooms into a focused field under 16px and never zooms back
+
+   Measured on 320, 375, 393 and 412px portrait, phone landscape and iPad.
+   ========================================================================== */
+
+/* A phone in landscape is 852x393: wide enough to miss a width-only
+   breakpoint, and far too short to spend 119px on a wrapped toolbar and 280px
+   on a sidebar column. The layout follows the SHORT side, so either dimension
+   can trigger it. */
+@media (max-width: 760px), (max-height: 480px) {
+  /* -- the toolbar ---------------------------------------------------------
+     Twelve controls will not fit across a phone, and wrapping them cost four
+     rows: 202px, nearly a third of a 667px screen, before a word of the
+     document. They get one row that scrolls sideways instead, which is the
+     phone convention for a toolbar with more in it than fits.
+
+     Nothing is hidden in a menu-of-menus: every control keeps its own place,
+     its own state and its own handler, and the row is swiped rather than
+     unfolded. The cut-off control at the right edge is the affordance.
+
+     The panels stay put: .menu is static here, so a panel's containing block
+     is .topbar, which sits outside this scroller and therefore does not clip
+     it. */
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 0 10px 16px;
+  }
+
+  .brand {
+    padding-right: 16px;
+  }
+
+  .actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding-right: 16px;
+  }
+
+  .actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* In a scroller a control keeps its natural width: stretching them to fill
+     a row is what a wrapped toolbar wanted, not this one. */
+  .actions > .btn,
+  .actions > .menu,
+  .actions .select {
+    flex: 0 0 auto;
+  }
+
+  /* -- one column ---------------------------------------------------------- */
+  .layout {
+    display: block;
+  }
+
+  /* The layout is a single block here, so there is no column to drag. */
+  .sidebar-resizer {
+    display: none;
+  }
+
+  .content {
+    padding: 14px;
+  }
+
+  .drop-zone {
+    min-height: 55vh;
+    min-height: 55dvh;
+  }
+
+  .reader {
+    padding: 16px;
+  }
+
+  /* -- the sidebar is a drawer, not a band ---------------------------------
+     Stacked above the document it pushed the first line of text off the
+     screen: on a 375px phone you scrolled past the file meta, the whole table
+     of contents and the tips before reaching the document you opened. Over
+     the document it costs nothing until you ask for it.
+
+     app.js starts it closed on a narrow screen when the reader has no stored
+     preference, and closes it again when you tap the page or pick a heading. */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(86vw, 320px);
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    transform: translateX(-100%);
+    transition: transform 160ms ease;
+  }
+
+  body:not(.sidebar-hidden) .sidebar {
+    transform: none;
+  }
+
+  /* display:none would cancel the slide. The :not() keeps editor mode, which
+     hides the sidebar outright, from being overridden here. */
+  body.sidebar-hidden:not(.editor-active) .sidebar {
+    display: block;
+    visibility: hidden;
+  }
+
+  /* The panel scrolls inside a fixed drawer; sticky has nothing to stick to. */
+  .sidebar-inner {
+    position: static;
+    max-height: 100%;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  /* Dimming the page is what says "this is a layer, tap away to dismiss".
+     app.js owns the tap; this is only the surface. */
+  body:not(.sidebar-hidden):not(.editor-active)::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  /* -- menus span the toolbar ----------------------------------------------
+     A panel anchored to its own trigger runs off the screen on a phone: File
+     and Style pushed the page wider than the viewport, which makes a mobile
+     browser shrink the whole interface to fit, and the read-aloud voice menu
+     sat 123px off the left edge at every width - permanently unreachable.
+
+     Making .menu static hands the panel to .topbar as its containing block,
+     so left and right pin it to the toolbar's own edges and it cannot miss. */
+  .menu {
+    position: static;
+  }
+
+  .menu-panel,
+  .menu-panel-right {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* -- dialogs -------------------------------------------------------------- */
+  .cheatsheet-dialog {
+    padding: 10px;
+  }
+
+  /* dvh tracks the visible area as the browser's own bars slide in and out;
+     the vh line stays first so a browser without dvh keeps the old value
+     rather than falling back to the desktop one. */
+  .cheatsheet-panel {
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  .cheatsheet-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* -- the split editor stacks ---------------------------------------------
+     Two panes side by side on a phone give each about 170px, which is not a
+     column of text. One above the other, each a little under half the screen. */
+  .editor-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+  }
+
+  .editor-pane {
+    min-height: 0;
+  }
+
+  .markdown-input,
+  .editor-preview {
+    flex: none;
+    height: 42vh;
+    height: 42dvh;
+    min-height: 260px;
+  }
+}
+
+/* A short screen is almost always a phone on its side, where a title line is
+   32px of 393 - 8% of everything there is. The name goes, the dot stays and
+   moves onto the toolbar row, which takes the chrome from 119px to 64. */
+@media (max-height: 480px) {
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand {
+    padding-right: 0;
+  }
+
+  .brand span:not(.dot) {
+    display: none;
+  }
+}
+
+/* -- touch, at any width ----------------------------------------------------
+   Keyed on the pointer rather than the width: a tablet with a keyboard is a
+   wide screen you still tap, and a narrow desktop window is not.
+   -------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  /* 44px is Apple's floor and 48 is Material's. Everything in the chrome was
+     31-36px, and the read-aloud caret was 26px wide. */
+  .btn,
+  .menu-item,
+  .select {
+    min-height: 44px;
+  }
+
+  .icon-btn {
+    min-width: 44px;
+  }
+
+  /* The caret half of the read-aloud control was 26px wide - the smallest
+     target in the app. It stays narrower than a full button because it is one
+     half of a pair, but not thumb-proof narrow. */
+  .split-caret {
+    min-width: 40px;
+  }
+
+  .return-top-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* padding-block rather than a height, so the ellipsis on a long heading
+     still works - that needs a block box, and centring these with flex would
+     take it away. min-height catches the deeper levels, whose smaller type
+     leaves the padded box a pixel or two short. */
+  .toc-item {
+    min-height: 44px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  /* The folder tree and the recent list are both already flex rows, so a
+     min-height is all they need: the contents stay centred in the taller box.
+     A folder twisty is its own target inside the row and gets the same floor. */
+  .folder-item,
+  .recent-item,
+  .folder-twisty {
+    min-height: 44px;
+  }
+
+  /* Block editing already does this; the side-by-side editor was missed, so
+     tapping into it zoomed iOS in with no way back. */
+  .markdown-input {
+    font-size: 16px;
+  }
+}
+
+/* -- the notch and the home indicator ---------------------------------------
+   env() is 0 on every screen without a cutout, so this costs nothing on a
+   desktop and nothing on a phone without one. Putting the inset on <body>
+   rather than on each panel means no rule has to restate a padding it does not
+   own - an earlier version set .content to 16px here and quietly undid its
+   22px on the desktop.
+
+   Anything position:fixed is laid out against the viewport, not the body, so
+   the two that exist get the inset themselves.
+   -------------------------------------------------------------------------- */
+@supports (padding: max(0px, env(safe-area-inset-left))) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  body.topbar-locked .topbar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  @media (max-width: 760px), (max-height: 480px) {
+    .sidebar {
+      padding-left: env(safe-area-inset-left);
+    }
   }
 }

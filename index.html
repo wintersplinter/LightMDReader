@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- viewport-fit=cover lets env(safe-area-inset-*) report real numbers on a
+         notched phone; without it they are always 0 and the insets in
+         styles.css do nothing. -->
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#171514" />
 
     <!--
@@ -406,6 +409,15 @@
           <div id="emptyState" class="empty">
             <h1>Open a Markdown file</h1>
             <p>Choose a <code>.md</code> file to preview it. Then export it to PDF.</p>
+
+            <!-- On a desktop you can drop a file onto this panel, and the File
+                 menu spells the action out. A phone can do neither: there is
+                 nothing to drag, and the menu is a swipe along the toolbar. So
+                 the empty state carries the action itself - it is the one
+                 screen whose whole job is to get a document open. -->
+            <p class="empty-actions">
+              <button id="emptyOpenBtn" class="btn" type="button">Open a .md file</button>
+            </p>
 
             <!-- Hidden until there is something to list, and permanently in
                  browsers that never hand out handles to remember. -->

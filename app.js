@@ -59,6 +59,7 @@ const topbar = document.querySelector(".topbar");
 const dropZone = document.getElementById("dropZone");
 
 const emptyState = document.getElementById("emptyState");
+const emptyOpenBtn = document.getElementById("emptyOpenBtn");
 const errorState = document.getElementById("errorState");
 const errorMessage = document.getElementById("errorMessage");
 const reader = document.getElementById("reader");
@@ -1642,9 +1643,13 @@ function currentSidebarWidth() {
   return Number(sidebarResizer.getAttribute("aria-valuenow")) || SIDEBAR_DEFAULT_WIDTH;
 }
 
-function setSidebarHidden(isHidden) {
+function setSidebarHidden(isHidden, { remember = true } = {}) {
   document.body.classList.toggle("sidebar-hidden", isHidden);
-  localStorage.setItem(SIDEBAR_HIDDEN_KEY, isHidden ? "true" : "false");
+
+  /* The stored preference describes the column layout only. A drawer opening
+     and closing on a phone is a gesture, not a setting, so those calls pass
+     remember: false and leave the desktop choice alone. */
+  if (remember) localStorage.setItem(SIDEBAR_HIDDEN_KEY, isHidden ? "true" : "false");
 
   sidebarToggleBtn.innerHTML = isHidden ? "&#x25E8;&#xFE0E;" : "&#x25E7;&#xFE0E;";
   sidebarToggleBtn.setAttribute("aria-pressed", String(isHidden));
@@ -1653,7 +1658,78 @@ function setSidebarHidden(isHidden) {
 }
 
 sidebarToggleBtn.addEventListener("click", () => {
-  setSidebarHidden(!document.body.classList.contains("sidebar-hidden"));
+  setSidebarHidden(!document.body.classList.contains("sidebar-hidden"), {
+    remember: !sidebarIsDrawer(),
+  });
+});
+
+/* -- the drawer -------------------------------------------------------------
+   Below 760px the sidebar is an overlay over the document rather than a column
+   beside it (see the PHONE section in styles.css). Three things follow:
+
+     - it starts closed, whatever is stored. Stacked above the document it used
+       to push the first line of text off a 375px screen entirely.
+     - tapping the page puts it away, which is what the dimmed backdrop
+       promises.
+     - so does picking a heading or a file, because the panel is covering the
+       thing it just navigated to.
+   -------------------------------------------------------------------------- */
+
+/* The same condition as the PHONE block in styles.css - a short landscape
+   phone gets the drawer too, so the two must not drift apart. */
+const sidebarDrawerQuery = window.matchMedia("(max-width: 760px), (max-height: 480px)");
+
+function sidebarIsDrawer() {
+  return sidebarDrawerQuery.matches;
+}
+
+function sidebarDrawerIsOpen() {
+  return sidebarIsDrawer() && !document.body.classList.contains("sidebar-hidden");
+}
+
+function closeSidebarDrawer() {
+  if (sidebarDrawerIsOpen()) setSidebarHidden(true, { remember: false });
+}
+
+/* Rotating a tablet crosses the breakpoint, so the state is re-derived rather
+   than left as whatever the other layout was showing. */
+sidebarDrawerQuery.addEventListener("change", (event) => {
+  setSidebarHidden(
+    event.matches ? true : localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "true",
+    { remember: false },
+  );
+});
+
+/* Capture, so a handler that stops propagation - the folder tree's twisty, for
+   one - cannot leave the drawer open over the document it just changed. */
+document.addEventListener(
+  "click",
+  (event) => {
+    if (!sidebarDrawerIsOpen()) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    /* The toggle closes it by its own handler; closing here as well would
+       immediately reopen it. */
+    if (target.closest("#sidebarToggleBtn")) return;
+
+    const insideSidebar = target.closest("#sidebar");
+    if (!insideSidebar) {
+      closeSidebarDrawer();
+      return;
+    }
+
+    /* Inside the panel, only the things that move you somewhere close it. A
+       twisty expanding a folder leaves it open, because you are still
+       choosing. */
+    if (target.closest(".toc-item, .folder-file")) closeSidebarDrawer();
+  },
+  true,
+);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeSidebarDrawer();
 });
 
 /* Pointer events rather than mouse events: one code path covers a mouse, a
@@ -1719,7 +1795,12 @@ window.addEventListener("resize", () => {
 setSidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT_WIDTH, {
   remember: false,
 });
-setSidebarHidden(localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "true");
+/* A phone starts with the document, not with the panel that describes it. The
+   stored preference is for the column layout and is left untouched here. */
+setSidebarHidden(
+  sidebarIsDrawer() ? true : localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "true",
+  { remember: false },
+);
 /**
  * A new service worker version activating reloads the page, which would throw
  * away whatever is in the editor. Updates therefore wait until the document is
@@ -5777,6 +5858,11 @@ async function refreshCurrentFolder() {
 }
 
 openFileBtn.addEventListener("click", () => {
+  openFile();
+});
+
+/* The same action, on the screen that exists to ask for it. */
+emptyOpenBtn.addEventListener("click", () => {
   openFile();
 });
 

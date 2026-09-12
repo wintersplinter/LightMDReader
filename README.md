@@ -319,6 +319,40 @@ Before restructuring any of these files, read `project_css_rewrite.md`: the
 cascade traps in there were all found the hard way, and the screenshot oracle in
 `experiments/css-rewrite/oracle/` is what proves a restructure changed nothing.
 
+## On a phone
+
+One breakpoint, and it follows the **short** side of the screen:
+`(max-width: 760px), (max-height: 480px)`. A phone in landscape is 852×393 —
+wide enough to miss a width-only rule and far too short for a full toolbar and
+a sidebar column. `styles.css` keeps every rule for it in one PHONE section at
+the end of the file, and `app.js` matches the same condition in
+`sidebarDrawerQuery`; if you change one, change the other.
+
+What it does:
+
+- the sidebar becomes a **drawer** over the document instead of a band above it,
+  closed by default, dismissed by tapping the page, picking a heading or a file,
+  or pressing Escape
+- the toolbar becomes **one row that scrolls sideways** rather than four wrapped
+  ones; in landscape the app name steps aside and only the dot stays
+- **menu panels pin to the toolbar's edges**, so none can run off the screen
+- the document styles keep their own type scale, with one exception: a ceiling
+  on `h1` and `h2` when the screen is under 480px tall, so a 4em title is not
+  taller than the viewport it is sitting in
+
+Touch is handled separately, keyed on `(pointer: coarse)` rather than on width,
+because a tablet with a keyboard is a wide screen you still tap: 44px minimum
+targets, and 16px in the side-by-side editor, since iOS Safari zooms into
+anything smaller and never zooms back.
+
+Safe-area insets go on `<body>` (plus the two `position: fixed` elements, which
+are laid out against the viewport instead). `env()` is 0 on a screen without a
+cutout, so none of it costs anything anywhere else — but it needs
+`viewport-fit=cover` in the viewport meta to report real numbers at all.
+
+`dvh` is written after `vh`, never instead of it: a browser without `dvh` keeps
+the old value rather than dropping the declaration.
+
 ## Development
 
 The app is plain static files with no build step. Edit, reload, done. There is no CI, no watcher, and nothing to install before you can work on it.

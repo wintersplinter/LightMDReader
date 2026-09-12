@@ -609,6 +609,30 @@ html[data-document-style] .markdown-body details > *:last-child {
   line-height: var(--md-h2-leading);
 }
 
+/* ----------------------------------------------------------
+   A ceiling for the display sizes when there is no height to spend.
+
+   A phone on its side is 393px tall. Signature's title is 4.35em, which comes
+   to 512px - the title alone is taller than the screen, and you scroll a full
+   page before the first sentence. The cap is keyed on HEIGHT, not width, so a
+   wide desktop window is untouched and a tall phone keeps the style's own
+   scale; it only fires where the room genuinely is not there.
+
+   min() leaves a style that is already smaller exactly as it was: of the six,
+   only Signature is meaningfully affected, which is the one that needed it.
+   html[data-document-style] outranks the scale above without outranking a
+   style file, so a style that wants a different answer can still give one.
+   ---------------------------------------------------------- */
+@media (max-height: 480px) {
+  html[data-document-style] .markdown-body h1 {
+    font-size: min(var(--md-h1-size), 2.6em);
+  }
+
+  html[data-document-style] .markdown-body h2 {
+    font-size: min(var(--md-h2-size), 1.7em);
+  }
+}
+
 .markdown-body h3 {
   font-size: var(--md-h3-size);
   line-height: var(--md-h3-leading);

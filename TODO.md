@@ -232,14 +232,97 @@ not see it, because those margins collapse into the heading's own.
 
 ---
 
+# Shipped 2026-09-12 — v4.11.0
+
+## The app on a phone
+
+Audited first, on real phone viewports (320 / 375 / 393 / 412 portrait, phone
+landscape, iPad) with touch emulation, driving the app through its own paths.
+The good news was that nothing overflowed sideways: long tokens, long URLs,
+wide tables and code blocks all already behaved. What was wrong was the shape
+of the chrome.
+
+**The document was below the fold.** The sidebar stacked *above* the document on
+a narrow screen, so opening a file put the file meta, the whole table of
+contents and the tips between you and your first line of text. It is a drawer
+now: it slides over the document, dims the page behind it, starts closed on a
+phone, and closes again when you tap the page, pick a heading, open a file from
+the folder tree, or press Escape. The stored show/hide preference belongs to the
+column layout only — opening a drawer is a gesture, not a setting.
+
+**The toolbar took a third of the screen.** Twelve controls wrapped onto four
+rows: 172px at 375px wide, 210px at 320, 44% of the screen in side-by-side mode.
+It is one row that scrolls sideways now — 96px, and 65px in landscape, where the
+app name steps aside and the dot moves onto the row. Nothing is hidden in a
+menu-of-menus: every control keeps its own place, its own state and its own
+handler.
+
+**Menus ignored the viewport.** Opening File or Style pushed the page wider than
+the screen, which makes a mobile browser shrink the whole interface to fit; the
+read-aloud voice menu sat 123px off the *left* edge at every width, permanently
+unreachable. Menu panels now pin to the toolbar's own edges.
+
+**Everything was too small to hit.** Every control in the chrome was 31–36px
+against a 44px guideline, the voice caret was 26px wide, menu items 35px,
+contents links 26px. All at 44 now, on touch devices only — the rule is keyed on
+the pointer, not the width, so a mouse is unaffected.
+
+**Tapping the side-by-side editor zoomed iOS in** and gave you no way back,
+because the field was 15px and Safari zooms anything under 16. Block editing
+already handled this; the split editor had been missed.
+
+**Two layout bugs fixed on the way, both of which also affected the desktop:**
+
+- A `1fr` grid track takes the min-content width of its contents as its floor,
+  so one unbreakable token — or, on Signature, just the title at its display
+  size — made the document column demand more than the window and pushed the
+  page sideways. At 761px wide the title was cut off mid-word. `minmax(0, 1fr)`
+  fixes it; this is the visible change on a narrow desktop window.
+- A phone in landscape is 852×393: wide enough to miss a width-only breakpoint
+  and far too short for a 119px toolbar and a 280px sidebar column. The phone
+  layout follows the *short* side now.
+
+**Also:** safe-area insets for notched phones (`viewport-fit=cover` plus
+`env()` on the body, zero everywhere else), `dvh` alongside `vh` so panes
+follow the browser's own bars rather than the tallest the viewport ever gets,
+and an **Open a .md file** button on the empty state — on a phone there is
+nothing to drag onto the drop zone and the File menu is a swipe away.
+
+Removed one dead rule: `.actions` was declared twice with all four properties
+restated, so the first never reached the page.
+
+**What to test on a real phone.** Open a document: it should be the first thing
+you see. The contents drawer from the ◧ button, and every way of dismissing it.
+Swiping the toolbar. Each menu, especially read-aloud. Tapping into a block and
+into the side-by-side editor — neither should zoom. Landscape. **Desktop is
+unchanged apart from the two fixes above**: the 144-render document oracle is
+identical, and the shell only differs where the title used to be clipped.
+
+---
+
 # Still open
 
-## Mobile
+## Mobile: two judgement calls left for Sem
 
-The reader has a 700px breakpoint and the styles have mobile token blocks, but
-the app as a whole has never had a proper pass on a phone: toolbar, sidebar,
-folder tree, the side-by-side editor and block editing. Agreed with Sem on
-2026-09-11 as the next piece of work after the CSS layering.
+The shell pass shipped in v4.11.0. Two things were deliberately *not* changed,
+because they are design decisions rather than bugs:
+
+- **Body type on a phone.** The six styles set 13–14.5px in their 700px blocks,
+  which computes to roughly 35–48 characters a line at 375px. Legible, but small
+  next to iOS's own 17px reading default. Raising each style's `--md-body-size`
+  by a point or two is a one-line change per file.
+- **The styles' breakpoint is 700px; the shell's is 760px (or 480px tall).**
+  Between 701 and 760 you get the phone shell with desktop type. Harmless, but
+  it is two numbers where one would do.
+
+Not yet exercised on a phone at all: the encryption flow, Google sign-in,
+read-aloud voice selection (iOS lists its own voices), and PDF export from
+mobile Safari.
+
+## The table of contents heading says "Inhoud"
+
+`index.html` line ~382. Everything else in the interface is English. Left alone
+in case it is deliberate.
 
 ## Knowledge-base features — deliberately not planned
 
