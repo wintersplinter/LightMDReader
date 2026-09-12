@@ -28,12 +28,6 @@
    -------------------------------------------------------------------------- */
 
 
-/* -- the type scale --------------------------------------------------------
-   The rules live in customMarkdown.css, once, and read these. Change a size
-   here and both the desktop and the mobile rule follow, because there is only
-   one rule. It used to mean editing two copies in this file, and the copy in
-   the media block was easy to miss.
-   -------------------------------------------------------------------------- */
 /* -- heading colour, weight, tracking and alignment ------------------------
    Same contract as the type scale: the foundation carries the rule, this file
    carries the values. Nothing here is a shorthand, so nothing can be split
@@ -87,9 +81,6 @@ html[data-document-style="refined"] .markdown-body {
   }
 }
 
-:where(html[data-document-style="refined"]) .markdown-body p {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="refined"]) .markdown-body blockquote {
   margin-top: 0;
@@ -97,17 +88,8 @@ html[data-document-style="refined"] .markdown-body {
   margin-right: 0;
 }
 
-:where(html[data-document-style="refined"]) .markdown-body pre {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="refined"]) .markdown-body table {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="refined"]) .markdown-body details {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="refined"]) .markdown-body figure {
   margin-top: 0;
@@ -127,18 +109,12 @@ html[data-document-style="refined"] .markdown-body {
   font-size: 0.95em;
 }
 
-:where(html[data-document-style="refined"]) .markdown-body pre code {
-  font-family: var(--md-font-code);
-}
 
 :where(html[data-document-style="refined"]) .markdown-body hr {
   margin-top: 5em;
   margin-bottom: 5em;
 }
 
-:where(html[data-document-style="refined"]) .markdown-body figcaption {
-  font-style: italic;
-}
 
 @media (max-width: 700px) {
 :where(html[data-document-style="refined"]) .markdown-body h1 {
@@ -264,7 +240,6 @@ html[data-document-style="refined"] .markdown-body h6 + p {
    settles into ordinary left-aligned reading. MDrender marks the paragraph;
    this no longer guesses from what sits next to the heading. */
 html[data-document-style="refined"] .markdown-body .standfirst {
-  margin-top: 0;
   max-width: 46em;
   margin-right: auto;
   margin-left: auto;

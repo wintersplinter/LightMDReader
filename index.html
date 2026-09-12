@@ -83,12 +83,13 @@
           &#x25E7;&#xFE0E;
         </button>
 
-        <!-- Both jobs in one control. It names the folder you are in, because
-             that name is the only piece of location a page is allowed to know,
-             and clicking it opens the folder picker already sitting there. -->
-        <button id="revealBtn" class="btn folder-btn" type="button" aria-label="Open folder" title="Open folder">
-          <span class="folder-glyph" aria-hidden="true">&#x1F5C1;&#xFE0E;</span>
-          <span id="revealLabel" class="folder-btn-label">Open folder</span>
+        <!-- Both jobs in one control: it opens the folder picker already sitting
+             at the open document's location. The folder's name is the only piece
+             of location a page is allowed to know, and it is in the tooltip and
+             at the top of the sidebar; the toolbar only needs the icon, and the
+             File menu spells the action out for anyone who wants words. -->
+        <button id="revealBtn" class="btn icon-btn" type="button" aria-label="Open folder" title="Open folder">
+          &#x1F5C1;&#xFE0E;
         </button>
 
         <!-- Save is the one file action worth a click of its own: the copy in
@@ -104,6 +105,13 @@
           disabled
         >
           <span class="save-glyph" aria-hidden="true">&#x1F4BE;&#xFE0E;</span>
+        </button>
+
+        <!-- Beside Save because they are the same conversation with the file on
+             disk: write what is here, or take what is there. Which of the two
+             refreshes it means depends on what is open, which the app knows. -->
+        <button id="refreshBtn" class="btn icon-btn" type="button" aria-label="Refresh" title="Refresh" disabled>
+          &#x21BB;
         </button>
 
         <span class="actions-sep" aria-hidden="true"></span>
@@ -139,11 +147,6 @@
 
         <button id="cheatsheetBtn" class="btn secondary" type="button">Cheatsheet</button>
 
-        <!-- One refresh. Which one it means depends on what is open, which is
-             something the app already knows. -->
-        <button id="refreshBtn" class="btn icon-btn" type="button" aria-label="Refresh" title="Refresh" disabled>
-          &#x21BB;
-        </button>
 
         <span class="actions-sep" aria-hidden="true"></span>
 

@@ -32,12 +32,6 @@
    one. Deciding that changes pixels, so it was left alone here.
    -------------------------------------------------------------------------- */
 
-/* -- the type scale --------------------------------------------------------
-   The rules live in customMarkdown.css, once, and read these. Change a size
-   here and both the desktop and the mobile rule follow, because there is only
-   one rule. It used to mean editing two copies in this file, and the copy in
-   the media block was easy to miss.
-   -------------------------------------------------------------------------- */
 /* -- heading colour, weight, tracking and alignment ------------------------
    Same contract as the type scale: the foundation carries the rule, this file
    carries the values. Nothing here is a shorthand, so nothing can be split
@@ -91,9 +85,6 @@ html[data-document-style="graphite"] .markdown-body {
   }
 }
 
-:where(html[data-document-style="graphite"]) .markdown-body p {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="graphite"]) .markdown-body blockquote {
   margin-top: 0;
@@ -101,16 +92,9 @@ html[data-document-style="graphite"] .markdown-body {
   margin-right: 0;
 }
 
-:where(html[data-document-style="graphite"]) .markdown-body pre {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="graphite"]) .markdown-body table {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="graphite"]) .markdown-body details {
-  margin-top: 0;
   padding: 0.7em 1em;
   background: #0f0f0f;
 }
@@ -148,7 +132,6 @@ html[data-document-style="graphite"] .markdown-body {
 }
 
 :where(html[data-document-style="graphite"]) .markdown-body pre code {
-  font-family: var(--md-font-code);
   font-size: 1em;
 }
 
@@ -164,7 +147,6 @@ html[data-document-style="graphite"] .markdown-body {
 :where(html[data-document-style="graphite"]) .markdown-body figcaption {
   color: var(--md-text-dim);
   font-size: 0.9em;
-  font-style: italic;
 }
 
 @media (max-width: 700px) {
@@ -305,7 +287,6 @@ html[data-document-style="graphite"] .markdown-body h1::after {
    of dropped at it. Costs no ornament and is the single clearest signal that
    a page was art-directed rather than merely styled. */
 html[data-document-style="graphite"] .markdown-body .standfirst {
-  margin-top: 0;
   margin-bottom: 1.6em;
   color: var(--md-graphite-quiet);
   font-size: 1.14em;

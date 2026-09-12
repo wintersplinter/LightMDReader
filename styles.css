@@ -195,31 +195,6 @@ body.topbar-locked .layout {
   line-height: 1;
 }
 
-/* The folder button carries the name of the folder you are in. That name is
-   the only piece of location the File System Access API will give a page — a
-   handle knows what it is called and nothing about the drive or the
-   directories above it — so it is also the most the button can honestly say.
-   With no folder open it names its own action instead. */
-.folder-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  max-width: 190px;
-}
-
-.folder-glyph {
-  flex: none;
-  line-height: 1;
-}
-
-/* Named apart from the folder tree's own .folder-label, which is a different
-   element with a different job. */
-.folder-btn-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* The quick Save button. The glyph is a right-pointing arrow turned a quarter
    turn clockwise so it points down — into the file. */
 #quickSaveBtn {
@@ -1288,12 +1263,6 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   /* The layout is a single block here, so there is no column to drag. */
   .sidebar-resizer {
     display: none;
-  }
-
-  /* The topbar buttons stretch to fill the row at this width; capping the
-     folder button would leave it short of its neighbours. */
-  .folder-btn {
-    max-width: none;
   }
 
   .content {

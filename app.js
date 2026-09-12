@@ -44,7 +44,6 @@ const quickSaveBtn = document.getElementById("quickSaveBtn");
 const encryptionBtn = document.getElementById("encryptionBtn");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
 const revealBtn = document.getElementById("revealBtn");
-const revealLabel = document.getElementById("revealLabel");
 const sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
 const sidebar = document.getElementById("sidebar");
 const sidebarResizer = document.getElementById("sidebarResizer");
@@ -957,11 +956,9 @@ function updateRevealControl() {
 
   revealBtn.disabled = !supported;
 
-  // In folder mode the button names where you are. In single-file mode nothing
-  // above the file is knowable, so it falls back to naming its own action
-  // rather than inventing a location.
-  revealLabel.textContent = folderName || "Open folder";
-
+  // The button is an icon, so the folder's name lives in the tooltip. In
+  // single-file mode nothing above the file is knowable, so it falls back to
+  // naming its own action rather than inventing a location.
   revealBtn.title = !supported
     ? "Opening a folder needs a Chromium-based browser"
     : folderName

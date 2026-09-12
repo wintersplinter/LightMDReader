@@ -79,11 +79,31 @@
    These rules rebuild sane spacing after an app-wide CSS reset.
    ========================================================== */
 
-.markdown-body > *:first-child {
+/* ----------------------------------------------------------
+   THE EDGE RESETS
+   A document never opens or closes with blank space. Neither does a quotation
+   or a disclosure box - see sections 06 and 11 for those two.
+
+   These four are the only rules in the project that outrank a style file, and
+   they are scoped `html[data-document-style]` - the attribute with ANY value -
+   to say so. That is what lets all six styles sit at one weight underneath:
+   they can set whatever margins they like without having to remember to zero
+   them again at the edges.
+
+   Written bare, as they were until v4.10.0, they landed BETWEEN Signature and
+   the other five. Signature obeyed them; Standard, Studio, Editorial, Refined
+   and Graphite quietly beat them, and every blockquote in those five carried
+   11-17px of dead space under its last paragraph.
+
+   app.js sets data-document-style at load, before anything is rendered, so
+   there is no moment where these do not apply.
+   ---------------------------------------------------------- */
+
+html[data-document-style] .markdown-body > *:first-child {
   margin-top: 0;
 }
 
-.markdown-body > *:last-child {
+html[data-document-style] .markdown-body > *:last-child {
   margin-bottom: 0;
 }
 
@@ -147,12 +167,6 @@
 
 
 
-
-/* Optional heading anchors, if your renderer adds them later. */
-.markdown-body .anchor {
-  color: inherit;
-  /* text-decoration: none; */
-}
 
 /* ==========================================================
    04. INLINE TEXT
@@ -228,30 +242,12 @@
 }
 
 
-.markdown-body li > ul,
-.markdown-body li > ol {
-  padding-left: 1.4em;
-}
-
 .markdown-body ul ul {
   list-style-type: circle;
 }
 
 .markdown-body ul ul ul {
   list-style-type: square;
-}
-
-/* GitHub-style task lists, if your renderer creates checkboxes later. */
-.markdown-body ul.contains-task-list,
-.markdown-body .contains-task-list {
-  color: inherit;
-  /* list-style: none; */
-  /* padding-left: 0; */
-}
-
-.markdown-body .task-list-item {
-  color: inherit;
-  /* list-style-type: none; */
 }
 
 .markdown-body input[type="checkbox"] {
@@ -345,11 +341,13 @@
   border-radius: 0;
 }
 
-.markdown-body blockquote > *:first-child {
+/* Edge resets again - see the note in section 02 for why these outrank the
+   style files. */
+html[data-document-style] .markdown-body blockquote > *:first-child {
   margin-top: 0;
 }
 
-.markdown-body blockquote > *:last-child {
+html[data-document-style] .markdown-body blockquote > *:last-child {
   margin-bottom: 0;
 }
 
@@ -381,12 +379,6 @@
   background: transparent;
   border: 0;
   padding: 0;
-}
-
-/* Optional language label if your renderer adds language classes. */
-.markdown-body pre[class*="language-"] {
-  color: inherit;
-  /* position: relative; */
 }
 
 /* ==========================================================
@@ -432,13 +424,6 @@
   vertical-align: top;
 }
 
-
-/* Optional table wrapper if you later wrap tables in a div. */
-.markdown-body .table-wrapper {
-  color: inherit;
-  /* overflow-x: auto; */
-  /* margin-bottom: 1em; */
-}
 
 /* ==========================================================
    10. IMAGES, FIGURES, MEDIA
@@ -491,7 +476,8 @@
   cursor: pointer;
 }
 
-.markdown-body details > *:last-child {
+/* Edge reset - see the note in section 02. */
+html[data-document-style] .markdown-body details > *:last-child {
   margin-bottom: 0;
 }
 
@@ -526,45 +512,6 @@
 .markdown-body .footnote-ref,
 .markdown-body .footnote-backref {
   color: var(--md-link);
-}
-
-/* ==========================================================
-   14. ALERTS / CALLOUTS
-   Not produced by your current parser yet. Placeholder for later.
-   Examples: > [!NOTE], > [!WARNING], etc.
-   ========================================================== */
-
-.markdown-body .callout,
-.markdown-body .markdown-alert {
-  color: inherit;
-  /* border-left: 4px solid var(--md-blue); */
-  /* background: var(--md-blue-soft); */
-  /* padding: 0.8em 1em; */
-  /* margin: 1em 0; */
-  /* border-radius: 0 8px 8px 0; */
-}
-
-.markdown-body .markdown-alert-title {
-  color: inherit;
-  /* color: var(--md-green); */
-  /* font-weight: 700; */
-  /* margin-bottom: 0.4em; */
-}
-
-/* ==========================================================
-   15. GENERATED HTML / RAW HTML SAFETY STYLING
-   These elements may appear if raw HTML is allowed.
-   ========================================================== */
-
-.markdown-body div,
-.markdown-body section,
-.markdown-body article,
-.markdown-body aside,
-.markdown-body header,
-.markdown-body footer,
-.markdown-body main {
-  color: inherit;
-  /* No default visual styling. Included as placeholders. */
 }
 
 .markdown-body button,
@@ -719,4 +666,46 @@
 .markdown-body h6 {
   color: var(--md-h6-colour);
   font-weight: var(--md-h6-weight);
+}
+
+/* ==========================================================
+   AGREED VALUES
+   Written once here because 4 or more of the six styles state exactly this.
+
+   Scoped `html[data-document-style]` — the attribute with ANY value — so these
+   keep the exact specificity they had inside a style file. Dropping them to a
+   bare .markdown-body would let the base's own more specific rules start
+   winning: `ul ul { list-style-type: circle }` would beat a consolidated
+   `ul { list-style: none }`, and nested bullets would come back.
+
+   A style that wants something else keeps its own rule and wins on source
+   order, because the style files load after this one.
+   ========================================================== */
+
+html[data-document-style] .markdown-body .standfirst {
+  margin-top: 0;
+}
+
+html[data-document-style] .markdown-body details {
+  margin-top: 0;
+}
+
+html[data-document-style] .markdown-body figcaption {
+  font-style: italic;
+}
+
+html[data-document-style] .markdown-body p {
+  margin-top: 0;
+}
+
+html[data-document-style] .markdown-body pre {
+  margin-top: 0;
+}
+
+html[data-document-style] .markdown-body pre code {
+  font-family: var(--md-font-code);
+}
+
+html[data-document-style] .markdown-body table {
+  margin-top: 0;
 }

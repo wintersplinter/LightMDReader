@@ -26,12 +26,6 @@
    -------------------------------------------------------------------------- */
 
 
-/* -- the type scale --------------------------------------------------------
-   The rules live in customMarkdown.css, once, and read these. Change a size
-   here and both the desktop and the mobile rule follow, because there is only
-   one rule. It used to mean editing two copies in this file, and the copy in
-   the media block was easy to miss.
-   -------------------------------------------------------------------------- */
 /* -- heading colour, weight, tracking and alignment ------------------------
    Same contract as the type scale: the foundation carries the rule, this file
    carries the values. Nothing here is a shorthand, so nothing can be split
@@ -85,9 +79,6 @@ html[data-document-style="editorial"] .markdown-body {
   }
 }
 
-:where(html[data-document-style="editorial"]) .markdown-body p {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="editorial"]) .markdown-body blockquote {
   margin-top: 0;
@@ -95,17 +86,8 @@ html[data-document-style="editorial"] .markdown-body {
   margin-right: 0;
 }
 
-:where(html[data-document-style="editorial"]) .markdown-body pre {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="editorial"]) .markdown-body table {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="editorial"]) .markdown-body details {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="editorial"]) .markdown-body figure {
   margin-top: 0;
@@ -125,9 +107,6 @@ html[data-document-style="editorial"] .markdown-body {
   font-size: 0.95em;
 }
 
-:where(html[data-document-style="editorial"]) .markdown-body pre code {
-  font-family: var(--md-font-code);
-}
 
 :where(html[data-document-style="editorial"]) .markdown-body hr {
   margin-top: 5em;
@@ -253,7 +232,6 @@ html[data-document-style="editorial"] .markdown-body h6 + p {
 /* The paragraph that opens a section acts as a standfirst. MDrender marks
    it; this no longer guesses from what sits next to the heading. */
 html[data-document-style="editorial"] .markdown-body .standfirst {
-  margin-top: 0;
   color: var(--md-text-muted);
   font-size: 1.14em;
   line-height: 1.62;
@@ -448,7 +426,6 @@ html[data-document-style="editorial"] .markdown-body figcaption {
   color: var(--md-text-muted);
   font-family: var(--md-editorial-display);
   font-size: 0.88em;
-  font-style: italic;
   text-align: center;
 }
 

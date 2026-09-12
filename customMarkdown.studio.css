@@ -26,12 +26,6 @@
    -------------------------------------------------------------------------- */
 
 
-/* -- the type scale --------------------------------------------------------
-   The rules live in customMarkdown.css, once, and read these. Change a size
-   here and both the desktop and the mobile rule follow, because there is only
-   one rule. It used to mean editing two copies in this file, and the copy in
-   the media block was easy to miss.
-   -------------------------------------------------------------------------- */
 /* -- heading colour, weight, tracking and alignment ------------------------
    Same contract as the type scale: the foundation carries the rule, this file
    carries the values. Nothing here is a shorthand, so nothing can be split
@@ -85,9 +79,6 @@ html[data-document-style="studio"] .markdown-body {
   }
 }
 
-:where(html[data-document-style="studio"]) .markdown-body p {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="studio"]) .markdown-body blockquote {
   margin-top: 0;
@@ -95,17 +86,8 @@ html[data-document-style="studio"] .markdown-body {
   margin-right: 0;
 }
 
-:where(html[data-document-style="studio"]) .markdown-body pre {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="studio"]) .markdown-body table {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="studio"]) .markdown-body details {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="studio"]) .markdown-body figure {
   margin-top: 0;
@@ -121,9 +103,6 @@ html[data-document-style="studio"] .markdown-body {
   text-decoration-thickness: 1px;
 }
 
-:where(html[data-document-style="studio"]) .markdown-body pre code {
-  font-family: var(--md-font-code);
-}
 
 :where(html[data-document-style="studio"]) .markdown-body hr {
   border: none;
@@ -131,9 +110,6 @@ html[data-document-style="studio"] .markdown-body {
   margin-bottom: 5em;
 }
 
-:where(html[data-document-style="studio"]) .markdown-body figcaption {
-  font-style: italic;
-}
 
 @media (max-width: 700px) {
 :where(html[data-document-style="studio"]) .markdown-body h1 {
@@ -274,7 +250,6 @@ html[data-document-style="studio"] .markdown-body h6 + p {
 /* The paragraph that opens a section acts as a standfirst. MDrender marks
    it; this no longer guesses from what sits next to the heading. */
 html[data-document-style="studio"] .markdown-body .standfirst {
-  margin-top: 0;
   color: var(--md-text-muted);
   font-size: 1.1em;
   line-height: 1.6;

@@ -203,7 +203,43 @@ fallback. Reverting is a matter of `git revert` on the commit, plus removing
 
 ---
 
+# Shipped 2026-09-11 — v4.10.0
+
+## All six document styles now sit at one level
+
+Signature used to be the shared base, and when it was split into its own file
+its rules were kept at base weight so nothing would move. That left the
+document's structural resets — "the first thing in a document has no space
+above it", "the last paragraph in a quotation has no space below it" — sitting
+*between* Signature and the other five: Signature obeyed them, the other five
+quietly beat them.
+
+Those resets are now scoped `html[data-document-style]`, which puts them above
+every style file, and Signature is written at the same weight as the other
+five. There are three layers and nothing in between — see "How the Markdown CSS
+is layered" in README.md.
+
+**What to test.** Blockquotes and `<details>` boxes in Standard, Studio,
+Editorial, Refined and Graphite: the last paragraph no longer leaves 11-17px of
+empty space inside the box. Refined's first title sits ~9px higher. The end of a
+document no longer carries a trailing margin. **Signature is unchanged — all 24
+of its renders are pixel-identical to before.**
+
+Two Signature rules came back to life in the process: a paragraph directly after
+a heading gets its 0.6em of air again, and paragraphs inside list items get
+0.35em. Both had been switched off by the v4.9.0 agreed-values pass; you could
+not see it, because those margins collapse into the heading's own.
+
+---
+
 # Still open
+
+## Mobile
+
+The reader has a 700px breakpoint and the styles have mobile token blocks, but
+the app as a whole has never had a proper pass on a phone: toolbar, sidebar,
+folder tree, the side-by-side editor and block editing. Agreed with Sem on
+2026-09-11 as the next piece of work after the CSS layering.
 
 ## Knowledge-base features — deliberately not planned
 

@@ -16,12 +16,6 @@
    -------------------------------------------------------------------------- */
 
 
-/* -- the type scale --------------------------------------------------------
-   The rules live in customMarkdown.css, once, and read these. Change a size
-   here and both the desktop and the mobile rule follow, because there is only
-   one rule. It used to mean editing two copies in this file, and the copy in
-   the media block was easy to miss.
-   -------------------------------------------------------------------------- */
 /* -- heading colour, weight, tracking and alignment ------------------------
    Same contract as the type scale: the foundation carries the rule, this file
    carries the values. Nothing here is a shorthand, so nothing can be split
@@ -75,9 +69,6 @@ html[data-document-style="standard"] .markdown-body {
   }
 }
 
-:where(html[data-document-style="standard"]) .markdown-body p {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="standard"]) .markdown-body blockquote {
   margin-top: 0;
@@ -85,16 +76,9 @@ html[data-document-style="standard"] .markdown-body {
   margin-right: 0;
 }
 
-:where(html[data-document-style="standard"]) .markdown-body pre {
-  margin-top: 0;
-}
 
-:where(html[data-document-style="standard"]) .markdown-body table {
-  margin-top: 0;
-}
 
 :where(html[data-document-style="standard"]) .markdown-body details {
-  margin-top: 0;
   border: 1px solid var(--md-border);
 }
 
@@ -112,9 +96,6 @@ html[data-document-style="standard"] .markdown-body {
   text-decoration-thickness: 1px;
 }
 
-:where(html[data-document-style="standard"]) .markdown-body pre code {
-  font-family: var(--md-font-code);
-}
 
 :where(html[data-document-style="standard"]) .markdown-body hr {
   border: none;
@@ -125,7 +106,6 @@ html[data-document-style="standard"] .markdown-body {
 :where(html[data-document-style="standard"]) .markdown-body figcaption {
   color: var(--md-text-dim);
   font-size: 0.9em;
-  font-style: italic;
 }
 
 :where(html[data-document-style="standard"]) .markdown-body .footnotes {

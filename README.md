@@ -275,9 +275,10 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 |-- lib/crypto.js               # Encryption envelope, key identifiers, recovery key validation
 |-- MDrender.js                 # markdown-it configuration
 |-- styles.css                  # App layout, controls, themes, responsive behavior, print behavior
-|-- customMarkdown.css          # Main rendered Markdown styling
+|-- customMarkdown.css          # The shared foundation: tokens, structure, the type scale
 |-- customMarkdown.light.css    # Light theme Markdown overrides
 |-- customMarkdown.brown.css    # Brown theme Markdown overrides
+|-- customMarkdown.signature.css # Signature document style
 |-- customMarkdown.standard.css # Compact Standard document style overrides
 |-- customMarkdown.studio.css   # Studio document style overrides
 |-- customMarkdown.editorial.css # Editorial document style overrides
@@ -293,6 +294,30 @@ Comment delimiters are intentionally simple. Visible comments cannot contain `:)
 |-- manifest.webmanifest        # PWA manifest
 `-- icons/                      # PWA icons
 ```
+
+## How the Markdown CSS is layered
+
+Three weights, and nothing in between. Knowing which one a change belongs in is
+the whole architecture.
+
+1. **The edge resets** — `html[data-document-style] .markdown-body > *:first-child`
+   and its four siblings, in `customMarkdown.css`. The attribute with *any* value
+   puts them above every style file. They are the only rules that outrank a
+   style: a document, a blockquote and a `<details>` box never open or close
+   with blank space, whatever the style says.
+2. **The theme layer** — `html[data-theme="dark|light|brown"]`.
+3. **The six document styles** — `html[data-document-style="signature|standard|…"]`,
+   all six at the same weight, Signature included.
+
+So a change meant for every style goes in `customMarkdown.css`; a change meant
+for one goes in that style's own file. A handful of rules inside the style files
+are wrapped in `:where()`, which contributes no specificity — that is the marker
+for "this one is meant to be beatable", almost always a surface fill the theme
+layer replaces in light and brown.
+
+Before restructuring any of these files, read `project_css_rewrite.md`: the
+cascade traps in there were all found the hard way, and the screenshot oracle in
+`experiments/css-rewrite/oracle/` is what proves a restructure changed nothing.
 
 ## Development
 
