@@ -70,7 +70,7 @@ html[data-document-style="studio"] .markdown-body {
 }
 
 /* Below 700px, only these numbers change. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 html[data-document-style="studio"] .markdown-body {
     --md-body-size: 13.5px;
     --md-h1-size: 1.9em;
@@ -111,7 +111,7 @@ html[data-document-style="studio"] .markdown-body {
 }
 
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 :where(html[data-document-style="studio"]) .markdown-body h1 {
     padding: 0.5em 0.8em;
   }
@@ -471,7 +471,7 @@ html[data-document-style="studio"] .reader {
   padding: 24px 30px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 
 
 

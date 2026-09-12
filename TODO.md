@@ -300,29 +300,156 @@ identical, and the shell only differs where the title used to be clipped.
 
 ---
 
+# Shipped 2026-09-12 — v4.11.1
+
+The first round of changes out of testing v4.11.0 on a real phone.
+
+## The toolbar carries six controls instead of twelve that scroll
+
+v4.11.0 answered "twelve controls will not fit" with a row that scrolls
+sideways. It kept every control in its own place, at the cost of a swipe to
+reach anything past the fifth — and a swipe to *see state*, since the unsaved
+dot is invisible when Save is off-screen. In practice neither the sidebar
+toggle (position 2) nor anything past it got found.
+
+Now: **Contents · Save/Download · Read aloud · Theme · File ▾ · ⋯ More**.
+Measured at 375px and up the row fits with no scrolling at all; at 320 it
+scrolls about 44px, so the scroller stays as the fallback it should have been.
+The top bar goes from 96px to 61, because the app name now steps aside at every
+phone width rather than only in landscape.
+
+**More is not a menu of menus.** The Mode, Style and voice triggers are hidden
+at this width and their *contents* reappear inside More as headed sections,
+built by `buildMenuChoices()` from the same hidden `<select>`s the desktop menus
+read. One state, two views: choosing Studio in the phone panel moves the marker
+in the desktop Style menu too, without either knowing the other exists. Only
+four plain buttons needed a real proxy (Cheatsheet, Encryption, Sign in, and
+Download), and each mirrors its original rather than owning anything.
+
+**Theme is a button** (☾ ☀ ◑), showing the theme you are in and naming the next
+in its tooltip — and therefore not also in More. It tracks the room, not the
+document, which is the one appearance choice worth a single tap.
+
+## The top bar tucks away instead of locking
+
+The lock button is a desktop answer to a desktop question. On a phone the bar is
+sticky and hides on the way down, returning on any scroll up — and refuses to
+tuck while a menu or the drawer is open, since it is what they are anchored to.
+A `topbar-locked` state stored from a desktop session is neutralised here, or it
+would leave a gap where the toolbar used to be.
+
+## Save or Download, decided by what the browser can do
+
+Saving needs the File System Access API. No phone browser has it, and neither
+does Firefox or Safari on the desktop — so the quick Save button was
+permanently disabled there, and the unsaved dot sat on a control that could do
+nothing about it: a notification with no remedy attached. The slot now holds
+**Download a copy** wherever saving is impossible, and the dot moves with it.
+Keyed on capability, never on width: a narrow Chrome window still saves, a wide
+Firefox window still cannot.
+
+## A phone opens in read mode, and cannot reach side-by-side
+
+Typing markdown on a touchscreen is a deliberate act, not a default, and block
+editing puts an editable surface under every tap in between. Side-by-side is
+hidden *and* refused in `changeEditorMode()`, which also catches a `?mode=split`
+link followed on a phone and a rotation mid-session. Neither decision is
+remembered, so the desktop preference survives.
+
+## The drawer opens on what it is for
+
+Contents, then Folder, then the file's details; the tips are gone on a phone,
+since dropping a file and printing are not phone gestures. Its button says
+**Contents** and wears ☰ at this width — "Show sidebar" described an object the
+reader could not see. The contents heading is English now (see below).
+
+## Read aloud holds the screen awake
+
+A phone locks itself after half a minute and speech dies with the screen. A
+screen wake lock is taken when reading starts and released on every path out —
+pause, stop, the page going away — because a leaked lock is a phone held awake
+in a pocket until it is flat. It is re-taken on the way back from a hidden tab,
+since the browser drops it whenever the page is hidden.
+
+**Background playback is not possible and should not be attempted again.** iOS
+stops speech when Safari is backgrounded mid-utterance; browsers grant
+background audio only to real media elements, and `speechSynthesis` is not one.
+The alternatives are a cloud voice, which breaks the privacy guarantee the
+feature is built on, or a bundled neural model, which is not a light app. The
+tooltip says plainly that only the automatic lock is defeated.
+
+## The stubborn cache
+
+Reported from the phone: the app kept serving the old version after an update.
+Three causes, all fixed:
+
+- **`cache.addAll()` fetches through the browser's HTTP cache.** A new worker
+  could faithfully build a new cache out of the *old* files — installing the
+  update and continuing to show the previous app, with no error anywhere. The
+  precache now uses `new Request(asset, { cache: "reload" })`.
+- **`updateViaCache` now says `"none"`.** The default leaves imports cacheable;
+  the one file that must never be stale is the one whose job is noticing
+  staleness.
+- **An installed app is almost never *loaded*.** It is opened once from the home
+  screen and then resumed for weeks, so a check that runs on `load` runs about
+  as often as the phone reboots. It now also checks when the app comes back to
+  the foreground, throttled to once every fifteen minutes.
+
+## The 700 / 760 breakpoint mismatch, measured rather than aligned
+
+The two numbers were never the problem, and aligning them would have made
+things worse. Measured characters-per-line across all six styles:
+
+| window | shell | small type scale | ordinary type scale |
+|---|---|---|---|
+| 375px | phone | **33–43 cpl** | 30 cpl — too tight |
+| 480px | phone | 45–58 cpl | 40–50 cpl |
+| 640px | phone | 62–80 cpl — too wide | **51–58 cpl** |
+| 700px | phone | 69–88 cpl — much too wide | **57–74 cpl** |
+
+The small scale was running to 88 characters a line at the top of its range.
+The breakpoint is **500px** now, in `customMarkdown.css` and all six style
+files — about where the text column stops being phone-width. Phone widths are
+untouched (320 / 393 / 480 measure identically before and after) and the desktop
+is untouched; the whole change lands between 501 and 700.
+
+The deeper answer is that a *type* scale should key on the width of the text
+column, not of the window — which is a container query, and belongs with the
+per-style view/print/edit pass rather than in a patch.
+
+## Also
+
+The contents heading says **Contents** rather than "Inhoud".
+
+**Verified:** Playwright across 320 / 375 / 393 portrait, 852×393 landscape,
+744 iPad and 1280 desktop, run twice — once as-is and once with the File System
+Access API deleted, which is what a phone actually is. No horizontal overflow,
+no sub-44px targets, panels in view at every width, drawer and tuck behaving
+including both refusals. 36 style/theme/viewport combinations measured
+old-against-new: **identical, no document style moved.**
+
+---
+
 # Still open
 
-## Mobile: two judgement calls left for Sem
+## Mobile: one judgement call left for Sem
 
-The shell pass shipped in v4.11.0. Two things were deliberately *not* changed,
-because they are design decisions rather than bugs:
-
-- **Body type on a phone.** The six styles set 13–14.5px in their 700px blocks,
-  which computes to roughly 35–48 characters a line at 375px. Legible, but small
-  next to iOS's own 17px reading default. Raising each style's `--md-body-size`
-  by a point or two is a one-line change per file.
-- **The styles' breakpoint is 700px; the shell's is 760px (or 480px tall).**
-  Between 701 and 760 you get the phone shell with desktop type. Harmless, but
-  it is two numbers where one would do.
+- **Body type on a phone.** The six styles set 13–14.5px in their small-scale
+  blocks, which computes to roughly 33–43 characters a line at 375px. Legible,
+  but small next to iOS's own 17px reading default. Raising each style's
+  `--md-body-size` by a point or two is a one-line change per file.
 
 Not yet exercised on a phone at all: the encryption flow, Google sign-in,
-read-aloud voice selection (iOS lists its own voices), and PDF export from
-mobile Safari.
+read-aloud voice selection (iOS lists its own voices), PDF export from mobile
+Safari, and the wake lock — which cannot be tested headlessly and wants one
+real reading session with the screen left alone.
 
-## The table of contents heading says "Inhoud"
+## Line length in landscape
 
-`index.html` line ~382. Everything else in the interface is English. Left alone
-in case it is deliberate.
+A phone in landscape is 852px wide with no sidebar, so the column runs the full
+width: Standard reaches 81 characters a line. That is the style's own measure
+rather than a breakpoint, and it belongs with [style measures] rather than with
+the shell.
 
 ## Knowledge-base features — deliberately not planned
 

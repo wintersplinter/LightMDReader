@@ -64,7 +64,7 @@ html[data-document-style="signature"] .markdown-body {
 }
 
 /* Below 700px, only these numbers change. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 html[data-document-style="signature"] .markdown-body {
     --md-body-size: 13px;
     --md-h1-size: 1.6em;
@@ -370,7 +370,7 @@ html[data-document-style="signature"] .markdown-body .footnotes {
    by coming after them. Left in customMarkdown.css they would be overridden
    by this file instead of overriding it, and a phone would get the desktop
    padding. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 
 html[data-document-style="signature"] .markdown-body h1 {
   padding: 0.5em 0.8em;

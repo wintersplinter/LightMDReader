@@ -70,7 +70,7 @@ html[data-document-style="editorial"] .markdown-body {
 }
 
 /* Below 700px, only these numbers change. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 html[data-document-style="editorial"] .markdown-body {
     --md-body-size: 14.5px;
     --md-h1-size: 1.95em;
@@ -113,7 +113,7 @@ html[data-document-style="editorial"] .markdown-body {
   margin-bottom: 5em;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 :where(html[data-document-style="editorial"]) .markdown-body h1 {
     padding: 0.5em 0.8em;
   }
@@ -457,7 +457,7 @@ html[data-document-style="editorial"] .reader {
   padding: 30px 36px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 
 
 

@@ -53,6 +53,28 @@ const refreshFileBtn = document.getElementById("refreshFileBtn");
 const refreshFolderBtn = document.getElementById("refreshFolderBtn");
 const exportBtn = document.getElementById("exportBtn");
 const topbarLockBtn = document.getElementById("topbarLockBtn");
+
+/* The one breakpoint, written once in JS. It follows the SHORT side, because a
+   phone in landscape is 852x393. It is the same query as the PHONE section of
+   styles.css and the two must not drift.
+ *
+ * It lives up here with the element handles, not beside the first thing that
+ * uses it: several blocks read it while the module is still evaluating, and a
+ * `const` further down is in its temporal dead zone at that moment. That throw
+ * aborts the rest of the module - the sidebar stops working, the menus stop
+ * opening - and nothing about the failure points at this line. */
+const PHONE_QUERY = "(max-width: 760px), (max-height: 480px)";
+
+/* The narrow-screen chrome. Every one of these is either a second view onto a
+   control that already exists (More, the phone menu items) or the other half
+   of a capability pair (quick Download). None of them owns state of its own. */
+const quickDownloadBtn = document.getElementById("quickDownloadBtn");
+const themeCycleBtn = document.getElementById("themeCycleBtn");
+const themeCycleGlyph = document.getElementById("themeCycleGlyph");
+const standfirstTogglePhone = document.getElementById("standfirstTogglePhone");
+const cheatsheetBtnPhone = document.getElementById("cheatsheetBtnPhone");
+const encryptionBtnPhone = document.getElementById("encryptionBtnPhone");
+const googleSignInBtnPhone = document.getElementById("googleSignInBtnPhone");
 const returnTopBtn = document.getElementById("returnTopBtn");
 const returnToReadBtn = document.getElementById("returnToReadBtn");
 const topbar = document.querySelector(".topbar");
@@ -924,6 +946,11 @@ function updateDirtyIndicator() {
   saveBtn.setAttribute("aria-label", saveBtn.title);
   quickSaveBtn.title = saveBtn.title;
   quickSaveBtn.setAttribute("aria-label", saveBtn.title);
+
+  quickDownloadBtn.title = dirty
+    ? "Download a copy \u2014 this document has changes that are not saved"
+    : "Download a copy";
+  quickDownloadBtn.setAttribute("aria-label", quickDownloadBtn.title);
 }
 
 function updateSaveControls() {
@@ -932,6 +959,19 @@ function updateSaveControls() {
   saveBtn.disabled = !canSaveOriginal();
   saveAsBtn.disabled = !hasDocument || !window.showSaveFilePicker;
   quickSaveBtn.disabled = saveBtn.disabled;
+
+  /* One slot in the toolbar, two controls, and the question is not how wide
+     the screen is but whether saving is possible at all. Save needs the File
+     System Access API; no phone browser has it, and neither does Firefox or
+     Safari on a desktop. Where it is missing, Save can never be anything but
+     greyed out - and the unsaved dot would then be a notification with no
+     remedy attached. Download is the remedy, so it takes the slot and the dot
+     goes with it. */
+  const canEverSave = canSaveOriginal() || Boolean(window.showSaveFilePicker);
+
+  quickSaveBtn.hidden = !canEverSave;
+  quickDownloadBtn.hidden = canEverSave;
+
   updateDirtyIndicator();
   updateEncryptionControls();
   updateRevealControl();
@@ -1017,6 +1057,7 @@ function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", safeTheme);
   localStorage.setItem("lightmdreader-theme", safeTheme);
   themeSelect.value = safeTheme;
+  updateThemeCycleControl();
 }
 
 const savedTheme = localStorage.getItem("lightmdreader-theme") || "dark";
@@ -1079,11 +1120,13 @@ function applyStandfirst(enabled, { remember = true, rerender = true } = {}) {
 
   if (remember) localStorage.setItem(standfirstKey, standfirstEnabled ? "true" : "false");
 
-  standfirstToggle.setAttribute("aria-checked", String(standfirstEnabled));
-  standfirstToggle.title = standfirstEnabled
-    ? "Stop setting the opening paragraph as a standfirst"
-    : "Set the opening paragraph of a section as a standfirst";
-  standfirstToggle.setAttribute("aria-label", standfirstToggle.title);
+  [standfirstToggle, standfirstTogglePhone].forEach((toggle) => {
+    toggle.setAttribute("aria-checked", String(standfirstEnabled));
+    toggle.title = standfirstEnabled
+      ? "Stop setting the opening paragraph as a standfirst"
+      : "Set the opening paragraph of a section as a standfirst";
+    toggle.setAttribute("aria-label", toggle.title);
+  });
 
   if (rerender) rerenderForStandfirst();
 }
@@ -1103,9 +1146,11 @@ function rerenderForStandfirst() {
   });
 }
 
-standfirstToggle.addEventListener("click", () => {
-  applyStandfirst(!standfirstEnabled);
-  closeMenus();
+[standfirstToggle, standfirstTogglePhone].forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    applyStandfirst(!standfirstEnabled);
+    closeMenus();
+  });
 });
 
 // No re-render at start-up: nothing is open yet, and the first render has not
@@ -1137,6 +1182,60 @@ let speechChunks = [];
 let speechChunkIndex = 0;
 let speechState = "idle";
 let speechKeepAliveTimer = null;
+
+/* --------------------------------------------------------------------------
+   Keeping the screen awake while reading
+
+   A phone locks itself after half a minute of no touching, and speech dies
+   with the screen. The Screen Wake Lock API defeats the *automatic* lock,
+   which is the whole of what a web page can do here: pressing the power
+   button, or switching apps, still stops the speech, because a browser gives
+   background audio only to real media elements and speechSynthesis is not
+   one. Getting past that would mean rendering the voice to an audio stream -
+   a cloud voice, which would break the promise that the text never leaves
+   this machine, or a local model, which would not be light. So: the automatic
+   lock, honestly labelled, and nothing pretending to be more.
+
+   The lock is released by the browser whenever the page is hidden, so it has
+   to be taken again on the way back. Every path out of reading releases it -
+   a lock left behind is a phone held awake in a pocket until it is flat.
+   -------------------------------------------------------------------------- */
+let screenWakeLock = null;
+
+async function requestScreenWakeLock() {
+  if (!("wakeLock" in navigator) || screenWakeLock) return;
+
+  try {
+    screenWakeLock = await navigator.wakeLock.request("screen");
+    // Released by the browser on hide, by us on stop; either way, forget it.
+    screenWakeLock.addEventListener("release", () => {
+      screenWakeLock = null;
+      updateSpeechControls();
+    });
+  } catch {
+    // Refused (no HTTPS, low battery, no support). Reading still works; it
+    // just will not outlast the screen.
+    screenWakeLock = null;
+  }
+
+  updateSpeechControls();
+}
+
+function releaseScreenWakeLock() {
+  if (!screenWakeLock) return;
+
+  const lock = screenWakeLock;
+
+  screenWakeLock = null;
+  lock.release().catch(() => {});
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (speechState === "speaking") requestScreenWakeLock();
+});
+
+window.addEventListener("pagehide", releaseScreenWakeLock);
 
 function getSelectedVoice() {
   return speechVoices.find((voice) => voice.voiceURI === voiceSelect.value) || null;
@@ -1174,8 +1273,9 @@ function populateVoiceSelect() {
 
   voiceSelect.replaceChildren(...options);
 
-  // The voice menu is a view onto this select, so it is rebuilt with it.
+  // The voice menus are a view onto this select, so they are rebuilt with it.
   buildMenuChoices("voiceChoices", "voiceSelect");
+  buildMenuChoices("voiceChoicesPhone", "voiceSelect");
   syncMenuChoices();
   voiceSelect.disabled = !speechVoices.length;
 
@@ -1305,6 +1405,7 @@ function startReading() {
   speechChunkIndex = 0;
   speechState = "speaking";
   startSpeechKeepAlive();
+  requestScreenWakeLock();
   updateSpeechControls();
   setStatus(`Reading aloud with ${voice.name}`);
   speakNextChunk();
@@ -1316,6 +1417,7 @@ function pauseReading() {
   window.speechSynthesis.pause();
   speechState = "paused";
   stopSpeechKeepAlive();
+  releaseScreenWakeLock();
   updateSpeechControls();
   setStatus("Reading paused");
 }
@@ -1326,6 +1428,7 @@ function resumeReading() {
   window.speechSynthesis.resume();
   speechState = "speaking";
   startSpeechKeepAlive();
+  requestScreenWakeLock();
   updateSpeechControls();
   setStatus("Reading aloud");
 }
@@ -1339,6 +1442,7 @@ function stopReading() {
   speechChunks = [];
   speechChunkIndex = 0;
   stopSpeechKeepAlive();
+  releaseScreenWakeLock();
   window.speechSynthesis.cancel();
   updateSpeechControls();
 
@@ -1364,7 +1468,10 @@ function updateSpeechControls() {
 
   speakBtn.innerHTML =
     speechState === "speaking" ? "&#x23F8;&#xFE0E;" : "&#x25B7;&#x266A;";
-  speakBtn.title = speakLabel;
+  // Say that the screen is being held awake, and say what that does not cover.
+  speakBtn.title = screenWakeLock
+    ? `${speakLabel} \u2014 the screen stays on while reading (the automatic lock only: locking it yourself, or leaving the app, still stops the speech)`
+    : speakLabel;
   speakBtn.setAttribute("aria-label", speakLabel);
   speakBtn.classList.toggle("is-active", speechState !== "idle");
   stopSpeakBtn.hidden = speechState === "idle";
@@ -1544,7 +1651,108 @@ buildMenuChoices("styleChoices", "documentStyleSelect");
 buildMenuChoices("themeChoices", "themeSelect");
 buildMenuChoices("paperChoices", "pdfPaperSelect");
 buildMenuChoices("voiceChoices", "voiceSelect");
+
+/* The phone's More panel. These are not copies of the desktop menu items with
+   a state of their own: they are a second view onto the very same hidden
+   selects, so a choice made in either place is the same write, and
+   syncMenuChoices() - which walks every .menu-choice in the document - moves
+   both dots without being told either exists.
+   Theme is absent on purpose: on a phone it is a button in the toolbar. */
+buildMenuChoices("styleChoicesPhone", "documentStyleSelect");
+buildMenuChoices("modeChoicesPhone", "editorModeSelect");
+buildMenuChoices("paperChoicesPhone", "pdfPaperSelect");
+buildMenuChoices("voiceChoicesPhone", "voiceSelect");
 syncMenuChoices();
+
+/* --------------------------------------------------------------------------
+   Phone chrome
+
+   Three kinds of thing live here and it is worth keeping them apart:
+
+     - the choice lists above, which need no code at all beyond being built
+     - the theme button, which writes to the same select the Style menu does
+     - four proxies, for controls whose desktop home is hidden at this width
+
+   A proxy never decides anything. It forwards the click and mirrors what the
+   original says about itself, so `disabled` has exactly one owner - the same
+   arrangement the File menu's Save and the toolbar's quick Save have had
+   since they were split, and the one #refreshBtn uses to stand in for two.
+   -------------------------------------------------------------------------- */
+
+/* The glyph is the theme you are in, not the one you would get: the button
+   reports state, and the tooltip names the next step.
+ *
+ * The map is inside the function on purpose. applyTheme() calls this during
+ * start-up, hundreds of lines above here; a `const` beside the function would
+ * still be in its temporal dead zone at that moment, and the throw would take
+ * the rest of the module with it. */
+function updateThemeCycleControl() {
+  if (!themeCycleBtn || !themeCycleGlyph) return;
+
+  const glyphs = {
+    dark: "\u263E\uFE0E",
+    light: "\u2600\uFE0E",
+    brown: "\u25D1\uFE0E",
+  };
+
+  const values = [...themeSelect.options].map((option) => option.value);
+  const current = themeSelect.value;
+  const next = values[(values.indexOf(current) + 1) % values.length];
+  const labelFor = (value) =>
+    [...themeSelect.options].find((option) => option.value === value)?.textContent || value;
+
+  themeCycleGlyph.textContent = glyphs[current] || glyphs.dark;
+  themeCycleBtn.title = `Colour theme: ${labelFor(current)} \u2014 tap for ${labelFor(next)}`;
+  themeCycleBtn.setAttribute("aria-label", themeCycleBtn.title);
+}
+
+themeCycleBtn.addEventListener("click", () => {
+  const values = [...themeSelect.options].map((option) => option.value);
+
+  themeSelect.value = values[(values.indexOf(themeSelect.value) + 1) % values.length];
+  themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
+updateThemeCycleControl();
+
+/** Forward a click, and let the original stay the only thing that knows. */
+function proxyControl(clone, original, { label = false, title = true } = {}) {
+  if (!clone || !original) return;
+
+  clone.addEventListener("click", () => {
+    closeMenus();
+    if (!original.disabled) original.click();
+  });
+
+  const sync = () => {
+    clone.disabled = original.disabled;
+    if (title) clone.title = original.title;
+    if (label) clone.textContent = original.textContent;
+  };
+
+  new MutationObserver(sync).observe(original, {
+    attributes: true,
+    attributeFilter: ["disabled", "title"],
+    childList: label,
+    characterData: label,
+    subtree: label,
+  });
+
+  sync();
+}
+
+proxyControl(cheatsheetBtnPhone, cheatsheetBtn);
+proxyControl(encryptionBtnPhone, encryptionBtn);
+// The sign-in item carries the account name once there is one, so it mirrors
+// its text as well as its state.
+proxyControl(googleSignInBtnPhone, googleSignInBtn, { label: true });
+
+/* The other half of the Save slot. downloadBtn's disabled state is written
+   from four places as documents open and close; watching it is cheaper and
+   safer than editing all four. */
+// Its tooltip is not the menu item's: updateDirtyIndicator() writes the
+// unsaved state into it, so only the disabled state is mirrored.
+proxyControl(quickDownloadBtn, downloadBtn, { title: false });
 
 /* One refresh button standing in for two.
  *
@@ -1589,6 +1797,78 @@ function setTopbarLocked(isLocked) {
 }
 
 setTopbarLocked(localStorage.getItem("lightmdreader-topbar-locked") === "true");
+
+/* --------------------------------------------------------------------------
+   The toolbar gets out of the way (phone only)
+
+   The lock button is a desktop answer to a desktop question - should the bar
+   stay put while the page moves. On a phone the bar is 8% of the screen and
+   the question is not whether it stays but whether it is there at all while
+   you read down a page. So it is sticky and tucks away on the way down,
+   coming back the moment you go up, which is the convention every phone
+   browser already teaches with its own address bar.
+
+   Two refusals matter more than the scrolling: the bar is the containing
+   block for any open menu panel and the anchor the drawer's toggle sits in,
+   so tucking it while either is open would take them off the screen.
+   -------------------------------------------------------------------------- */
+const TOPBAR_TUCK_THRESHOLD = 80;
+const TOPBAR_TUCK_HYSTERESIS = 6;
+
+/* Its own matchMedia rather than the sidebar's: this block runs earlier in the
+   module than sidebarDrawerQuery is declared. */
+const topbarTuckQuery = window.matchMedia(PHONE_QUERY);
+
+let lastTuckScrollY = window.scrollY;
+let tuckFrameQueued = false;
+
+function updateTopbarTuck() {
+  tuckFrameQueued = false;
+
+  if (!topbarTuckQuery.matches) {
+    document.body.classList.remove("topbar-tucked");
+    lastTuckScrollY = window.scrollY;
+    return;
+  }
+
+  const y = Math.max(0, window.scrollY);
+  const delta = y - lastTuckScrollY;
+
+  // Ignore the pixel-level noise of a finger resting on a scrolling page.
+  if (Math.abs(delta) < TOPBAR_TUCK_HYSTERESIS) return;
+
+  lastTuckScrollY = y;
+
+  const anchored =
+    Boolean(document.querySelector(".menu-panel:not([hidden])")) || sidebarDrawerIsOpen();
+
+  if (delta > 0 && y > TOPBAR_TUCK_THRESHOLD && !anchored) {
+    document.body.classList.add("topbar-tucked");
+    return;
+  }
+
+  if (delta < 0 || y <= TOPBAR_TUCK_THRESHOLD) {
+    document.body.classList.remove("topbar-tucked");
+  }
+}
+
+window.addEventListener(
+  "scroll",
+  () => {
+    if (tuckFrameQueued) return;
+
+    tuckFrameQueued = true;
+    window.requestAnimationFrame(updateTopbarTuck);
+  },
+  { passive: true },
+);
+
+// A bar tucked on a phone must not still be tucked on a rotated or resized
+// screen that no longer hides it.
+topbarTuckQuery.addEventListener("change", () => {
+  document.body.classList.remove("topbar-tucked");
+  lastTuckScrollY = window.scrollY;
+});
 
 window.addEventListener("resize", updateTopbarOffset);
 window.addEventListener("load", updateTopbarOffset);
@@ -1651,9 +1931,26 @@ function setSidebarHidden(isHidden, { remember = true } = {}) {
      remember: false and leave the desktop choice alone. */
   if (remember) localStorage.setItem(SIDEBAR_HIDDEN_KEY, isHidden ? "true" : "false");
 
-  sidebarToggleBtn.innerHTML = isHidden ? "&#x25E8;&#xFE0E;" : "&#x25E7;&#xFE0E;";
-  sidebarToggleBtn.setAttribute("aria-pressed", String(isHidden));
-  sidebarToggleBtn.title = isHidden ? "Show sidebar" : "Hide sidebar";
+  /* Two names for one control, because it is two different things. On a wide
+     screen it puts a column away and brings it back: a layout operation, and
+     the glyphs say so. On a phone there is no column - it opens a drawer whose
+     job is the table of contents and the folder, so it says Contents and wears
+     a list. Calling it "Show sidebar" there described an object the reader
+     could not see. */
+  const isDrawer = window.matchMedia(PHONE_QUERY).matches;
+
+  sidebarToggleBtn.innerHTML = isDrawer
+    ? "&#x2630;&#xFE0E;"
+    : isHidden
+      ? "&#x25E8;&#xFE0E;"
+      : "&#x25E7;&#xFE0E;";
+  // Pressed means "the panel is put away" on a desktop and "the drawer is
+  // open" on a phone - in both readings, the highlighted state is the
+  // unusual one.
+  sidebarToggleBtn.setAttribute("aria-pressed", String(isDrawer ? !isHidden : isHidden));
+  sidebarToggleBtn.title = isDrawer
+    ? (isHidden ? "Contents" : "Close contents")
+    : (isHidden ? "Show sidebar" : "Hide sidebar");
   sidebarToggleBtn.setAttribute("aria-label", sidebarToggleBtn.title);
 }
 
@@ -1677,7 +1974,7 @@ sidebarToggleBtn.addEventListener("click", () => {
 
 /* The same condition as the PHONE block in styles.css - a short landscape
    phone gets the drawer too, so the two must not drift apart. */
-const sidebarDrawerQuery = window.matchMedia("(max-width: 760px), (max-height: 480px)");
+const sidebarDrawerQuery = window.matchMedia(PHONE_QUERY);
 
 function sidebarIsDrawer() {
   return sidebarDrawerQuery.matches;
@@ -3355,17 +3652,38 @@ function applyEditorMode(mode, { remember = true } = {}) {
 const storedEditorMode = localStorage.getItem(editorModeKey);
 const requestedEditorMode = new URLSearchParams(window.location.search).get("mode");
 
-applyEditorMode(
-  editorModes.has(requestedEditorMode)
-    ? requestedEditorMode
-    : blockModeOverride !== null
-      ? (blockModeOverride === "0" ? "split" : "blocks")
-      : (editorModes.has(storedEditorMode) ? storedEditorMode : "blocks"),
-  { remember: false },
-);
+/* What a first visit gets, and what a stored preference is allowed to mean
+   here. A phone opens in read: typing markdown on a touchscreen is a
+   deliberate act, not a default, and block editing puts editable surfaces
+   under every tap in between. Side-by-side is not offered at all - two panes
+   of 170px are not two columns of text - so a mode stored from a desktop
+   session is read here rather than a broken screen. Neither decision is
+   remembered: the stored value still describes the desktop. */
+function initialEditorMode() {
+  if (editorModes.has(requestedEditorMode)) return requestedEditorMode;
+  if (blockModeOverride !== null) return blockModeOverride === "0" ? "split" : "blocks";
+
+  const onPhone = window.matchMedia(PHONE_QUERY).matches;
+
+  if (!editorModes.has(storedEditorMode)) return onPhone ? "read" : "blocks";
+  if (onPhone && storedEditorMode === "split") return "read";
+
+  return storedEditorMode;
+}
+
+applyEditorMode(initialEditorMode(), { remember: false });
 
 async function changeEditorMode(mode) {
   if (mode === editorMode) return;
+
+  // The menu item is hidden at this width; this catches every other way in
+  // (a ?mode= link followed on a phone, a rotation mid-session).
+  if (mode === "split" && sidebarDrawerQuery.matches) {
+    editorModeSelect.value = editorMode;
+    syncMenuChoices();
+    setStatus("Side-by-side editing needs a wider screen");
+    return;
+  }
 
   // A block open for editing holds text that is not in the document yet.
   await closeBlockEditor();
@@ -6260,6 +6578,10 @@ waitForMarkdownRenderer()
 
 showEmpty();
 
+// Fifteen minutes: often enough that an update lands the same day it ships,
+// rare enough that switching apps is not a stream of requests.
+const SERVICE_WORKER_CHECK_INTERVAL = 15 * 60 * 1000;
+
 if ("serviceWorker" in navigator) {
   let refreshing = false;
   // On a first visit the worker activates and calls clients.claim(), which
@@ -6282,6 +6604,11 @@ if ("serviceWorker" in navigator) {
     try {
       const registration = await navigator.serviceWorker.register("./sw.js", {
         scope: "./",
+        // The default, "imports", leaves the worker script itself out of the
+        // HTTP cache but not what it imports. "none" says plainly that no part
+        // of an update check may be answered from cache - the one thing that
+        // must never go stale is the file whose job is to notice staleness.
+        updateViaCache: "none",
       });
 
       registration.addEventListener("updatefound", () => {
@@ -6301,6 +6628,33 @@ if ("serviceWorker" in navigator) {
       if (registration.waiting && navigator.serviceWorker.controller) {
         handleServiceWorkerUpdate(registration);
       }
+
+      /* An installed app on a phone is almost never *loaded*. It is opened
+       * from the home screen once and then resumed - for weeks - so a check
+       * that only runs on `load` runs about as often as the phone reboots,
+       * and the app sits on an old version with no way to find out. Coming
+       * back to the foreground is the honest equivalent of opening it.
+       *
+       * Throttled, because a resume can fire several times in a row and each
+       * check is a network request. */
+      let lastUpdateCheck = Date.now();
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        if (Date.now() - lastUpdateCheck < SERVICE_WORKER_CHECK_INTERVAL) return;
+
+        lastUpdateCheck = Date.now();
+        registration
+          .update()
+          .then(() => {
+            if (registration.waiting && navigator.serviceWorker.controller) {
+              handleServiceWorkerUpdate(registration);
+            }
+          })
+          .catch(() => {
+            // Offline, most likely. The next resume tries again.
+          });
+      });
     } catch (err) {
       console.warn("Service worker registration failed:", err);
     }

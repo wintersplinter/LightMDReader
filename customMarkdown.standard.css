@@ -60,7 +60,7 @@ html[data-document-style="standard"] .markdown-body {
 }
 
 /* Below 700px, only these numbers change. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 html[data-document-style="standard"] .markdown-body {
     --md-body-size: 13px;
     --md-h1-size: 1.85em;
@@ -384,7 +384,7 @@ html[data-document-style="standard"] .reader {
 /* Print colours moved to customMarkdown.print.css so that one file covers
    every style and theme combination. */
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 
 html[data-document-style="standard"] .markdown-body h1 {
     padding: 0 0 0.28em;

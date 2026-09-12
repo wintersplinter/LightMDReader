@@ -110,6 +110,24 @@
           <span class="save-glyph" aria-hidden="true">&#x1F4BE;&#xFE0E;</span>
         </button>
 
+        <!-- The other half of the Save slot. Saving needs the File System
+             Access API, which no phone browser has, so on a phone the quick
+             Save button is permanently disabled - and the unsaved dot would
+             then sit on a control that can do nothing about it. Exactly one of
+             the two is ever shown: whichever can actually rescue the edits.
+             updateSaveControls() decides, by capability and not by width. -->
+        <button
+          id="quickDownloadBtn"
+          class="btn icon-btn"
+          type="button"
+          aria-label="Download a copy"
+          title="Download a copy"
+          hidden
+          disabled
+        >
+          <span class="save-glyph" aria-hidden="true">&#x21E9;&#xFE0E;</span>
+        </button>
+
         <!-- Beside Save because they are the same conversation with the file on
              disk: write what is here, or take what is there. Which of the two
              refreshes it means depends on what is open, which the app knows. -->
@@ -278,6 +296,79 @@
 
         <span class="actions-sep" aria-hidden="true"></span>
 
+        <!-- Phone only. Theme is the one appearance choice that tracks the
+             room rather than the document - daylight, a lamp, a dark train -
+             so it is a tap rather than two taps into a menu. It cycles the
+             same hidden select every other theme control writes to, and the
+             glyph shows the theme you are in. -->
+        <button
+          id="themeCycleBtn"
+          class="btn icon-btn phone-only"
+          type="button"
+          aria-label="Colour theme"
+          title="Colour theme"
+        >
+          <span id="themeCycleGlyph" aria-hidden="true">&#x263E;&#xFE0E;</span>
+        </button>
+
+        <!-- Phone only: everything the narrow toolbar does not have room for.
+             Not a menu of menus - the Mode, Style and voice *triggers* are
+             hidden at this width and their contents reappear here as sections,
+             built from the same hidden selects, so there is no second state to
+             keep in step. Appearance sits at the top because it is what gets
+             changed. -->
+        <div class="menu phone-only" data-menu="more">
+          <button
+            id="moreMenuBtn"
+            class="btn icon-btn menu-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-label="More"
+            title="More"
+          >
+            &#x22EF;
+          </button>
+
+          <div class="menu-panel menu-panel-right" role="menu" aria-labelledby="moreMenuBtn" hidden>
+            <div class="menu-heading" role="presentation">Document style</div>
+            <div id="styleChoicesPhone" class="menu-group"></div>
+
+            <button
+              id="standfirstTogglePhone"
+              class="menu-item menu-toggle"
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked="true"
+            >
+              Standfirst
+            </button>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <div class="menu-heading" role="presentation">Mode</div>
+            <div id="modeChoicesPhone" class="menu-group"></div>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <div class="menu-heading" role="presentation">Offline voice</div>
+            <div id="voiceChoicesPhone" class="menu-group"></div>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <div class="menu-heading" role="presentation">PDF paper</div>
+            <div id="paperChoicesPhone" class="menu-group"></div>
+
+            <div class="menu-sep" role="separator"></div>
+
+            <button id="cheatsheetBtnPhone" class="menu-item" type="button" role="menuitem">Cheatsheet</button>
+            <button id="encryptionBtnPhone" class="menu-item" type="button" role="menuitem" disabled>
+              Encryption
+            </button>
+            <button id="googleSignInBtnPhone" class="menu-item" type="button" role="menuitem">Sign in</button>
+          </div>
+        </div>
+
         <button
           id="encryptionBtn"
           class="btn icon-btn"
@@ -367,32 +458,40 @@
           tabindex="0"
         ></div>
 
+        <!-- The two loose blocks are wrapped so the phone can reorder them:
+             the drawer is opened to jump or to switch files, so Contents and
+             Folder come first there and the file's own details follow. On a
+             desktop the order in this markup is the order on screen. -->
         <div class="sidebar-inner">
-          <h2>Document</h2>
-          <div class="meta">
-            <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
-            <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
-            <div>
-              <span class="k">Status:</span>
-              <span id="statusText" role="status" aria-live="polite">Ready</span>
+          <div id="metaSection" class="sidebar-section">
+            <h2>Document</h2>
+            <div class="meta">
+              <div><span class="k">File:</span> <span id="fileName">&mdash;</span></div>
+              <div><span class="k">Size:</span> <span id="fileSize">&mdash;</span></div>
+              <div>
+                <span class="k">Status:</span>
+                <span id="statusText" role="status" aria-live="polite">Ready</span>
+              </div>
             </div>
           </div>
 
-          <div id="tocSection" hidden>
-            <h2>Inhoud</h2>
+          <div id="tocSection" class="sidebar-section" hidden>
+            <h2>Contents</h2>
             <nav id="tocNav" class="toc-nav" aria-label="Document contents"></nav>
           </div>
 
-          <div id="folderSection" hidden>
+          <div id="folderSection" class="sidebar-section" hidden>
             <h2 id="folderHeading">Folder</h2>
             <div id="folderNav" class="folder-nav" role="tree" aria-label="Folder contents"></div>
           </div>
 
-          <h2>Tips</h2>
-          <ul class="tips">
-            <li>PDF export uses your browser print dialog.</li>
-            <li>You can also drop a markdown file into the reader.</li>
-          </ul>
+          <div id="tipsSection" class="sidebar-section">
+            <h2>Tips</h2>
+            <ul class="tips">
+              <li>PDF export uses your browser print dialog.</li>
+              <li>You can also drop a markdown file into the reader.</li>
+            </ul>
+          </div>
         </div>
       </aside>
 

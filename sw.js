@@ -1,4 +1,4 @@
-const VERSION = "v4-11-0";
+const VERSION = "v4-11-1";
 const CACHE_NAME = `lightmdreader-${VERSION}`;
 const RUNTIME_CACHE_NAME = `lightmdreader-runtime-${VERSION}`;
 const RUNTIME_CACHE_LIMIT = 60;
@@ -55,9 +55,42 @@ const ASSETS = [
 // its own would reload the page and discard whatever is in the editor. The
 // page asks for activation via the SKIP_WAITING message once it knows there
 // is no unsaved work.
+//
+// `cache: "reload"` is load-bearing, not decoration. cache.addAll() fetches
+// through the browser's ordinary HTTP cache, so a new worker version could
+// dutifully build a new cache out of the *old* files the HTTP cache still
+// held - a phone that had seen the previous release would install the update
+// and go on showing the previous app, with nothing anywhere reporting a
+// failure. "reload" forces every precache fetch to the network and lets the
+// response refresh the HTTP cache on its way past.
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(precacheAssets());
 });
+
+/* One missing file used to cost the whole update.
+ *
+ * cache.addAll() is all-or-nothing: if a single entry in ASSETS answers 404,
+ * it rejects, the install fails, and the *previous* worker stays active and
+ * keeps serving the previous app - forever, and with nothing on screen to say
+ * so. A file renamed or left out of a deploy therefore does not look like a
+ * broken file, it looks like an app that refuses to update.
+ *
+ * Each asset is fetched on its own now. A missing one is reported and skipped;
+ * the update still lands, and anything skipped is picked up by the runtime
+ * cache the first time the page asks for it. */
+async function precacheAssets() {
+  const cache = await caches.open(CACHE_NAME);
+
+  const results = await Promise.allSettled(
+    ASSETS.map((asset) => cache.add(new Request(asset, { cache: "reload" }))),
+  );
+
+  const missing = ASSETS.filter((_, i) => results[i].status === "rejected");
+
+  if (missing.length) {
+    console.warn(`[sw ${VERSION}] not precached: ${missing.join(", ")}`);
+  }
+}
 
 // Activate: clean caches belonging to previous versions.
 self.addEventListener("activate", (event) => {

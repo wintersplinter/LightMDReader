@@ -133,6 +133,10 @@ Notes:
 - The document is spoken in short pieces, which works around a Chrome bug that truncates long utterances and makes **Stop** take effect immediately.
 - Reading stops by itself when you open another document, switch to the editor, or leave the page.
 
+**On a phone, the screen is held awake while reading.** A phone locks itself after half a minute of not being touched, and speech dies with the screen. LightMDReader takes a screen wake lock when reading starts and releases it the moment reading stops, pauses or the page goes away.
+
+It defeats the *automatic* lock and nothing else. Locking the phone yourself, or switching to another app, still stops the speech — browsers grant background audio only to real media playback, and speech synthesis is not that. Getting past it would mean sending the text to a server for synthesis, which is exactly the guarantee above, or bundling a neural voice model, which is not a light app. The read-aloud button's tooltip says so while it is reading, so a screen that will not sleep is never a mystery.
+
 ## Local Links And Images
 
 Folder mode can resolve local relative assets:
@@ -230,9 +234,10 @@ LightMDReader is designed for modern browsers.
 - Single-file opening works through the standard file input fallback.
 - Folder opening uses the File System Access API and is mainly supported in Chromium-based browsers such as Chrome and Edge.
 - Direct Save and Save as use the File System Access API and are mainly supported in Chromium-based browsers.
+- Where that API is missing — every phone browser, and Firefox and Safari on the desktop — the toolbar's quick Save button is replaced by **Download a copy**, and the unsaved-changes dot moves onto it. The choice follows the browser's capability, not the width of the window, so a narrow Chrome window still offers Save and a wide Firefox window still does not.
 - Encryption uses the browser Web Crypto API and Google OAuth/Drive APIs, so it requires HTTPS or localhost and a configured Google OAuth Client ID.
 - PWA installation and service worker caching depend on browser support and a secure context such as HTTPS. `localhost` also works for local development.
-- The renderer, renderer plugins, sanitizer, and optional Google sign-in script are loaded from CDNs, so the first load needs network access unless those scripts are already cached by the browser.
+- The renderer, its plugins and the sanitizer are vendored in `vendor/` and load from the app's own origin, so no part of rendering needs a connection. Only the optional Google sign-in script is fetched from a CDN, and only if you use encryption.
 - PDF output depends on the browser print engine, so exact pagination can vary slightly between browsers.
 
 ## Private Markdown Comments
@@ -325,20 +330,67 @@ One breakpoint, and it follows the **short** side of the screen:
 `(max-width: 760px), (max-height: 480px)`. A phone in landscape is 852×393 —
 wide enough to miss a width-only rule and far too short for a full toolbar and
 a sidebar column. `styles.css` keeps every rule for it in one PHONE section at
-the end of the file, and `app.js` matches the same condition in
-`sidebarDrawerQuery`; if you change one, change the other.
+the end of the file, and `app.js` matches the same condition in `PHONE_QUERY`,
+declared at the top of the module; if you change one, change the other.
 
-What it does:
+### The toolbar
 
-- the sidebar becomes a **drawer** over the document instead of a band above it,
+Six controls, one row, in the order a phone needs them:
+
+**Contents · Save/Download · Read aloud · Theme · File ▾ · ⋯ More**
+
+At 375px and up they fit outright; at 320 the row still scrolls a little
+sideways, which is what the rest of the toolbar's controls used to do. The app
+name steps aside at every phone width and only the dot stays, which takes the
+top bar from 96px to 61.
+
+**More is not a menu of menus.** The Mode, Style and read-aloud-voice *triggers*
+are hidden at this width, and their contents reappear inside More as headed
+sections. They are built by `buildMenuChoices()` from the same hidden `<select>`
+elements the desktop menus read, so a choice made in either place is the same
+write and the marker moves in both. Nothing has a second copy of its state.
+
+Four controls that have no phone home of their own — Cheatsheet, Encryption,
+Sign in, and the Download button described below — forward their click to the
+original and mirror its `disabled` state from it. The original stays the only
+thing that knows anything.
+
+**Theme is a button, not a menu item**, because it tracks the room rather than
+the document: daylight, a lamp, a dark train. The glyph shows the theme you are
+in (☾ ☀ ◑) and the tooltip names the next one.
+
+**Not on the toolbar on a phone:** the top-menu lock (replaced, below), the
+folder picker and Refresh (both need the File System Access API, which no phone
+browser has), and the separators. All of them are hidden rather than removed —
+each keeps its handler and its desktop place, and File ▾ still spells out
+"Open folder".
+
+### The top bar gets out of the way
+
+Instead of the lock button, which is a desktop answer to a desktop question, the
+bar is sticky and tucks itself away as you scroll down, returning the moment you
+scroll up. It refuses to tuck while a menu panel or the drawer is open, because
+it is what both are anchored to.
+
+### The rest
+
+- the sidebar is a **drawer** over the document instead of a band above it,
   closed by default, dismissed by tapping the page, picking a heading or a file,
-  or pressing Escape
-- the toolbar becomes **one row that scrolls sideways** rather than four wrapped
-  ones; in landscape the app name steps aside and only the dot stays
+  or pressing Escape. Its button says **Contents** here, because there is no
+  column to hide and the drawer's job is the table of contents
+- inside it, **Contents and Folder come first** and the file's own details
+  follow them; the tips are hidden, since dropping files and printing are not
+  phone gestures
+- a phone **opens in read mode** on a first visit, and **side-by-side editing is
+  not offered at all** — two panes of about 170px are not two columns of text.
+  Neither decision is remembered, so a desktop preference survives
 - **menu panels pin to the toolbar's edges**, so none can run off the screen
-- the document styles keep their own type scale, with one exception: a ceiling
-  on `h1` and `h2` when the screen is under 480px tall, so a 4em title is not
-  taller than the viewport it is sitting in
+- the document styles switch to their small type scale under **500px**, which is
+  about where the text column stops being phone-width. Above that the ordinary
+  scale reads better even though the shell is still in phone mode: at 640px the
+  column is around 550px wide, and the small scale would run to 80 characters a
+  line. There is also a ceiling on `h1` and `h2` when the screen is under 480px
+  tall, so a 4em title is not taller than the viewport it is sitting in
 
 Touch is handled separately, keyed on `(pointer: coarse)` rather than on width,
 because a tablet with a keyboard is a wide screen you still tap: 44px minimum

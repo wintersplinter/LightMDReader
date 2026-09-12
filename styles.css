@@ -189,19 +189,29 @@ body.topbar-locked .layout {
   line-height: 1;
 }
 
+/* Controls that exist only on a narrow screen. Declared off here and turned on
+   in the PHONE section, so a control is never in two toolbars at once and the
+   desktop pays nothing for them. */
+.phone-only {
+  display: none !important;
+}
+
 /* The quick Save button. The glyph is a right-pointing arrow turned a quarter
    turn clockwise so it points down — into the file. */
-#quickSaveBtn {
+#quickSaveBtn,
+#quickDownloadBtn {
   position: relative;
 }
-#quickSaveBtn .save-glyph {
+#quickSaveBtn .save-glyph,
+#quickDownloadBtn .save-glyph {
   display: inline-block;
   /* transform: rotate(00deg); */
   font-size: 1.05em;
   line-height: 1;
 }
 /* Same signal the File menu gives with "Save •", without the room for a word. */
-body.has-unsaved-changes #quickSaveBtn::after {
+body.has-unsaved-changes #quickSaveBtn::after,
+body.has-unsaved-changes #quickDownloadBtn::after {
   content: "";
   position: absolute;
   top: 5px;
@@ -1529,27 +1539,111 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
    can trigger it. */
 @media (max-width: 760px), (max-height: 480px) {
   /* -- the toolbar ---------------------------------------------------------
-     Twelve controls will not fit across a phone, and wrapping them cost four
-     rows: 202px, nearly a third of a 667px screen, before a word of the
-     document. They get one row that scrolls sideways instead, which is the
-     phone convention for a toolbar with more in it than fits.
+     Twelve controls will not fit across a phone. The first answer was one row
+     that scrolls sideways, which kept every control in its own place at the
+     cost of a swipe to reach anything past the fifth - and a swipe to see
+     state, because the unsaved dot is invisible when Save is off-screen.
 
-     Nothing is hidden in a menu-of-menus: every control keeps its own place,
-     its own state and its own handler, and the row is swiped rather than
-     unfolded. The cut-off control at the right edge is the affordance.
+     Now the row carries six, chosen by how often a phone needs them:
+
+       Contents . Save/Download . Read aloud . Theme . File . More
+
+     and everything else is in More, which is not a menu of menus: the Mode,
+     Style and voice triggers are hidden at this width and their *contents*
+     reappear inside More as sections, built by buildMenuChoices() from the
+     same hidden selects the desktop menus read. One state, two views.
+
+     Six 44px targets plus the dot fit a 375px screen outright; at 320 the row
+     still scrolls a little, which is why the scroller below stays.
 
      The panels stay put: .menu is static here, so a panel's containing block
      is .topbar, which sits outside this scroller and therefore does not clip
      it. */
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
     gap: 10px;
-    padding: 10px 0 10px 16px;
+    padding: 8px 0 8px 16px;
+
+    /* Sticky, not static: auto-hide is only worth having if scrolling back up
+       brings the bar with you rather than making you travel to the top. */
+    position: sticky;
+    top: 0;
+    transition: transform 180ms ease;
   }
 
+  /* The name goes, the dot stays. A title line is 32px of a 667px screen and
+     the six controls have better uses for it; the app's name is in the tab,
+     the installed icon and the window title either way. */
   .brand {
-    padding-right: 16px;
+    padding-right: 0;
+  }
+
+  .brand span:not(.dot) {
+    display: none;
+  }
+
+  /* Auto-hide, in place of the lock button - which is a desktop idea about a
+     bar that never moves. Here the document gets the whole screen while you
+     read down, and the chrome comes back the moment you scroll up. app.js
+     owns the class and refuses to set it while a menu or the drawer is open,
+     because both are anchored to a bar that would take them with it. */
+  body.topbar-tucked .topbar {
+    transform: translateY(-100%);
+  }
+
+  /* The stored lock state must not follow a desktop session onto a phone:
+     fixed positioning plus the layout's compensating padding would fight the
+     sticky bar above and leave a gap where the toolbar used to be. */
+  body.topbar-locked .topbar {
+    position: sticky;
+  }
+
+  body.topbar-locked .layout {
+    padding-top: 0;
+  }
+
+  /* -- what the row carries, and what it does not --------------------------
+     Hidden here rather than removed: every one of these keeps its handler, its
+     disabled state and its place on a desktop, and the phone reaches them
+     through File or More. The folder picker, Refresh and the lock have no job
+     on a phone at all - the first two need the File System Access API, which
+     no phone browser implements. */
+  .phone-only {
+    display: inline-flex !important;
+  }
+
+  #topbarLockBtn,
+  #revealBtn,
+  #refreshBtn,
+  #cheatsheetBtn,
+  #googleSignInBtn,
+  #encryptionBtn,
+  .actions-sep,
+  .menu[data-menu="mode"],
+  .menu[data-menu="style"],
+  #voiceMenuBtn {
+    display: none;
+  }
+
+  /* With the caret half gone the read-aloud control is one button again, so it
+     gets its right-hand corners back. */
+  .split .split-main {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-right-color: var(--line);
+  }
+
+  /* Side-by-side gives each pane about 170px here, which is not a column of
+     text. Offering a mode that cannot work is worse than not offering it;
+     app.js also refuses to restore it from a desktop session. */
+  .menu-choice[data-select="editorModeSelect"][data-value="split"] {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .topbar {
+      transition: none;
+    }
   }
 
   .actions {
@@ -1635,6 +1729,34 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
     max-height: 100%;
     height: 100%;
     overflow-y: auto;
+
+    /* Flex only so the sections can be reordered below. */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* A drawer is opened to jump to a heading or to switch files, so those come
+     first; the file's own details follow them rather than standing between
+     the drawer and its purpose. Tips are desktop help about dropping files and
+     printing - neither is a phone gesture - so they go entirely. */
+  .sidebar-section {
+    flex: none;
+  }
+
+  #tocSection {
+    order: 1;
+  }
+
+  #folderSection {
+    order: 2;
+  }
+
+  #metaSection {
+    order: 3;
+  }
+
+  #tipsSection {
+    display: none;
   }
 
   /* Dimming the page is what says "this is a layer, tap away to dismiss".
@@ -1709,24 +1831,10 @@ body.has-unsaved-changes #saveBtn:not(:disabled) {
   }
 }
 
-/* A short screen is almost always a phone on its side, where a title line is
-   32px of 393 - 8% of everything there is. The name goes, the dot stays and
-   moves onto the toolbar row, which takes the chrome from 119px to 64. */
-@media (max-height: 480px) {
-  .topbar {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .brand {
-    padding-right: 0;
-  }
-
-  .brand span:not(.dot) {
-    display: none;
-  }
-}
+/* The block that used to live here - one row, no app name - said what the
+   PHONE section above now says for every narrow screen, portrait included.
+   Six controls and a dot fit one line at any phone width, so the exception a
+   short screen needed became the rule. */
 
 /* -- touch, at any width ----------------------------------------------------
    Keyed on the pointer rather than the width: a tablet with a keyboard is a

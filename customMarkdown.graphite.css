@@ -76,7 +76,7 @@ html[data-document-style="graphite"] .markdown-body {
 }
 
 /* Below 700px, only these numbers change. */
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 html[data-document-style="graphite"] .markdown-body {
     --md-body-size: 14px;
     --md-h1-size: 2.25em;
@@ -149,7 +149,7 @@ html[data-document-style="graphite"] .markdown-body {
   font-size: 0.9em;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 :where(html[data-document-style="graphite"]) .markdown-body h1 {
     padding: 0.5em 0.8em;
   }
@@ -618,7 +618,7 @@ html[data-document-style="graphite"] .reader {
   padding: 28px 34px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 500px) {
 
 
 
